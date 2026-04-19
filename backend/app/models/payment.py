@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, date, datetime
+from decimal import Decimal
+
+from sqlalchemy import CheckConstraint, Date, DateTime, Enum, ForeignKey, Index, Numeric, String, Uuid
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.enums import PaymentMode
+
+
+class Payment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "payments"
+    __table_args__ = (
+        CheckConstraint("amount <> 0", name="ck_payments_amount_nonzero"),
+        Index("ix_payments_student_paid_at", "student_id", "paid_at"),
+        Index("ux_payments_academic_period_bill_no", "academic_period", "bill_no", unique=True),
+    )
+
+    receipt_no: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    academic_period: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    bill_no: Mapped[int] = mapped_column(nullable=False)
+    student_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("students.id"), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    mode: Mapped[PaymentMode] = mapped_column(Enum(PaymentMode, name="payment_mode"), nullable=False)
+    reference_no: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    billing_start_month: Mapped[date | None] = mapped_column(Date, nullable=True)
+    billing_cycle_months: Mapped[int | None] = mapped_column(nullable=True)
+    paid_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+    created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    student: Mapped["Student"] = relationship(back_populates="payments")
+    billing_periods: Mapped[list["StudentBillingPeriod"]] = relationship(back_populates="payment")
