@@ -4,7 +4,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get('access_token')?.value;
 
-  const isAuthRoute = pathname.startsWith('/login');
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/setup-password');
   const isAppRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/students') ||
@@ -34,6 +34,7 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/login',
+    '/setup-password',
     '/dashboard/:path*',
     '/students/:path*',
     '/collect/:path*',
@@ -44,4 +45,3 @@ export const config = {
     '/savings/:path*'
   ]
 };
-

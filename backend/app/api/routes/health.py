@@ -17,6 +17,8 @@ def health() -> dict:
 
 @router.get("/health/db", response_model=dict)
 def health_db(db: Session = Depends(get_db)) -> dict:
-    db.execute(text("SELECT 1"))
-    return {"status": "ok", "db": "ok"}
-
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "ok"}
+    except Exception:
+        return {"status": "error", "db": "unreachable"}

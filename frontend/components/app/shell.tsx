@@ -6,29 +6,30 @@ import {
   HandCoins,
   LayoutDashboard,
   LogOut,
-  Moon,
   PiggyBank,
   ReceiptText,
   Settings,
-  SunMedium,
+  UserCog,
   UsersRound
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 
+import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 
 const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/students', label: 'Students', icon: UsersRound },
-  { href: '/collect', label: 'Collect', icon: Banknote },
-  { href: '/savings', label: 'Savings', icon: PiggyBank },
-  { href: '/expenses', label: 'Expenses', icon: HandCoins },
-  { href: '/transactions', label: 'Transactions', icon: ReceiptText },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
-  { href: '/settings', label: 'Settings', icon: Settings }
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { href: '/students', label: 'Students', icon: UsersRound, adminOnly: false },
+  { href: '/collect', label: 'Collect', icon: Banknote, adminOnly: false },
+  { href: '/savings', label: 'Savings', icon: PiggyBank, adminOnly: false },
+  { href: '/expenses', label: 'Expenses', icon: HandCoins, adminOnly: false },
+  { href: '/transactions', label: 'Transactions', icon: ReceiptText, adminOnly: false },
+  { href: '/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
+  { href: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
+  { href: '/settings/users', label: 'Users', icon: UserCog, adminOnly: true }
 ];
 
 export function AppShell({
@@ -43,42 +44,45 @@ export function AppShell({
   action?: ReactNode;
 }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [role, setRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('billing-theme');
-    const nextTheme = saved === 'light' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
+    document.documentElement.setAttribute('data-theme', 'light');
+    apiFetch<{ role: string; username: string }>('/auth/me')
+      .then((data) => { setRole(data.role); setUsername(data.username); })
+      .catch(() => {});
   }, []);
 
-  function toggleTheme() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    window.localStorage.setItem('billing-theme', nextTheme);
-  }
+  const visibleNav = nav.filter((item) => !item.adminOnly || role === 'admin');
 
   return (
     <div className="min-h-screen lg:grid lg:h-screen lg:grid-cols-[290px_minmax(0,1fr)] lg:overflow-hidden">
-      <aside className="theme-sidebar flex flex-col border-b px-5 py-5 backdrop-blur lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside className="theme-sidebar flex flex-col border-b px-5 py-5 lg:h-screen lg:border-b-0 lg:border-r">
         <div className="px-2 py-3">
-          <div>
-            <div className="theme-sidebar-brand font-[var(--font-display)] text-xl font-semibold">MYACADEMY</div>
-            <div className="theme-sidebar-subtitle text-sm">Institution Billing Suite</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="theme-sidebar-brand font-[var(--font-display)] text-xl font-semibold">MYACADEMY</div>
+              <div className="theme-sidebar-subtitle text-sm">Institution Billing Suite</div>
+            </div>
+            {role && (
+              <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--sidebar-muted)]">
+                {role}
+              </span>
+            )}
           </div>
         </div>
 
-        <nav className="mt-8 grid gap-1.5">
-          {nav.map((item) => {
-            const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+        <nav className="mt-6 grid gap-1">
+          {visibleNav.map((item) => {
+            const active = pathname === item.href || (item.href !== '/settings' && pathname?.startsWith(`${item.href}/`));
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'theme-nav-item flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors duration-150',
+                  'theme-nav-item flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors duration-150',
                   active
                     ? 'theme-nav-item-active shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                     : 'border-transparent'
@@ -91,18 +95,10 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="mt-8 border-t border-[var(--sidebar-border)] pt-5 lg:mt-auto lg:pt-6">
-          {/* <Button
-            variant="outline"
-            className="mb-3 w-full justify-start border-[var(--sidebar-border)] bg-[var(--sidebar-hover)] text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] [&_svg]:text-[var(--sidebar-muted)]"
-            onClick={toggleTheme}
-          >
-            {theme === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-          </Button> */}
+        <div className="mt-auto border-t border-[var(--sidebar-border)] pt-4">
           <Button
             variant="outline"
-            className="w-full justify-start text-[#172033] [&_svg]:text-[#172033]"
+            className="w-full justify-start border-[var(--sidebar-border)] bg-transparent text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] [&_svg]:text-[var(--sidebar-muted)]"
             onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
               window.location.assign('/login');

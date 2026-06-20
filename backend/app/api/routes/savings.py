@@ -116,17 +116,25 @@ def list_student_savings_balances(
         .all()
     )
 
+    # Batch query for savings totals
+    student_ids = [s.id for s in students]
+    savings_totals: dict = {}
+    if student_ids:
+        savings_rows = db.execute(
+            select(SavingsEntry.student_id, func.coalesce(func.sum(SavingsEntry.amount), 0))
+            .where(SavingsEntry.student_id.in_(student_ids))
+            .group_by(SavingsEntry.student_id)
+        ).all()
+        savings_totals = {sid: total for sid, total in savings_rows}
+
     items: list[StudentSavingsBalanceRead] = []
     for student in students:
-        total_savings = db.execute(
-            select(func.coalesce(func.sum(SavingsEntry.amount), 0)).where(SavingsEntry.student_id == student.id)
-        ).scalar_one()
         items.append(
             StudentSavingsBalanceRead(
                 student_id=student.id,
                 student_code=student.student_code,
                 student_name=student.name,
-                total_savings=Decimal(total_savings),
+                total_savings=Decimal(savings_totals.get(student.id, 0)),
             )
         )
     return {"items": items, "total": total}

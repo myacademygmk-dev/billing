@@ -4,7 +4,8 @@ import uuid
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -25,7 +26,7 @@ def get_current_user(
         if not sub:
             raise ValueError("missing sub")
         user_id = uuid.UUID(sub)
-    except (JWTError, ValueError):
+    except (PyJWTError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = db.get(User, user_id)

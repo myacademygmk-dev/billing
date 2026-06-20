@@ -23,6 +23,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.79",
@@ -37,4 +38,3 @@
     "vitest": "^2.1.9"
   }
 }
-

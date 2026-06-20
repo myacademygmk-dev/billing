@@ -16,7 +16,12 @@ def _create_engine(url: str):
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
-    return create_engine(url, pool_pre_ping=True)
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+    )
 
 
 engine = _create_engine(settings.database_url)

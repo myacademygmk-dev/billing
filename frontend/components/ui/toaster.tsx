@@ -27,7 +27,7 @@ export function Toaster({ children }: { children?: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <div className="fixed right-4 top-4 z-50 space-y-3">
+      <div className="fixed right-4 top-4 z-50 space-y-3" role="status" aria-live="polite" aria-atomic="true">
         {items.map((t) => (
           <div key={t.id} className="glass-panel w-80 rounded-2xl px-4 py-3">
             <div className="text-sm font-semibold text-white">{t.title}</div>

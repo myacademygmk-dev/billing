@@ -19,10 +19,13 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
   const url = new URL(req.url);
   const target = `${backendBaseUrl()}/${path}${url.search}`;
 
-  const headers = new Headers(req.headers);
+  const headers = new Headers();
   headers.set('Authorization', `Bearer ${token}`);
-  headers.delete('host');
-  headers.delete('content-length');
+  // Only forward content-type for requests with body
+  const contentType = req.headers.get('content-type');
+  if (contentType) headers.set('Content-Type', contentType);
+  const accept = req.headers.get('accept');
+  if (accept) headers.set('Accept', accept);
 
   const reqBody = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer();
 
@@ -36,8 +39,8 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const contentType = res.headers.get('content-type') ?? '';
-  const isJson = contentType.includes('application/json');
+  const contentTypeRes = res.headers.get('content-type') ?? '';
+  const isJson = contentTypeRes.includes('application/json');
   const resBody = isJson ? await res.text() : await res.arrayBuffer();
 
   const out = new NextResponse(resBody as any, { status: res.status });

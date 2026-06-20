@@ -20,4 +20,27 @@ class TokenResponse(BaseModel):
 class UserMeResponse(BaseModel):
     id: uuid.UUID
     username: str
+    email: str | None = None
     role: UserRole
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    role: UserRole = UserRole.staff
+
+
+class SetupPasswordRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UserRead(BaseModel):
+    id: uuid.UUID
+    username: str
+    email: str | None = None
+    role: UserRole
+    has_password: bool = False
+
+    class Config:
+        from_attributes = True

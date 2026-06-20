@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -68,7 +69,7 @@ def export_students_csv(
 def export_payments_csv(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-    student_id: str | None = None,
+    student_id: uuid.UUID | None = None,
     from_dt: datetime | None = Query(default=None, alias="from"),
     to_dt: datetime | None = Query(default=None, alias="to"),
 ) -> Response:

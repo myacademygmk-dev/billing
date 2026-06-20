@@ -99,6 +99,9 @@ export function LoginClient() {
                 Sign in
                 <ArrowRight className="h-4 w-4" />
               </Button>
+              <div className="text-center text-sm text-[#91a1bc]">
+                New user? <a href="/setup-password" className="text-[#a7c1ff] hover:underline">Set your password</a>
+              </div>
             </form>
           </CardContent>
         </Card>

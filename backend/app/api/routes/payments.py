@@ -154,6 +154,9 @@ def list_payments(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> dict:
+    from sqlalchemy.orm import selectinload, joinedload
+    from app.models.student_billing_period import StudentBillingPeriod
+
     stmt = select(Payment)
     if student_id:
         stmt = stmt.where(Payment.student_id == student_id)
@@ -172,7 +175,13 @@ def list_payments(
             stmt.order_by(Payment.paid_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
+            .options(
+                joinedload(Payment.student).selectinload(Student.fee),
+                joinedload(Payment.student).selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment),
+                selectinload(Payment.billing_periods),
+            )
         )
+        .unique()
         .scalars()
         .all()
     )

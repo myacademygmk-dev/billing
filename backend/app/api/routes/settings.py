@@ -14,6 +14,7 @@ from app.models.billing_settings import BillingSettings
 from app.models.enums import PaymentCycle
 from app.models.payment import Payment
 from app.models.receipt_sequence import ReceiptSequence
+from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
 from app.models.student_billing_period import StudentBillingPeriod
 from app.models.student_fee import StudentFee
@@ -75,6 +76,10 @@ def reset_database_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_user),
 ) -> DatabaseResetRead:
+    import os
+    if os.getenv("APP_ENV") == "production":
+        raise HTTPException(status_code=403, detail="Database reset is disabled in production")
+
     if payload.confirmation_text.strip() != RESET_CONFIRMATION_TEXT:
         raise HTTPException(status_code=422, detail=f'Type "{RESET_CONFIRMATION_TEXT}" to confirm this action')
 
@@ -86,6 +91,7 @@ def reset_database_route(
     settings = get_billing_settings(db)
     receipt_sequence = db.get(ReceiptSequence, 1)
     try:
+        db.execute(delete(SavingsEntry))
         db.execute(delete(StudentBillingPeriod))
         db.execute(delete(Payment))
         db.execute(delete(StudentFee))

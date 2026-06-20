@@ -257,7 +257,11 @@ async def preview_students_import(
     if not filename.endswith(".xlsx"):
         raise HTTPException(status_code=415, detail="Only .xlsx files are supported")
 
-    data = await file.read()
+    from app.core.config import settings
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=413, detail=f"File too large. Max {settings.max_upload_size_mb}MB allowed.")
     _, rows, ordered_headers, headers = _read_workbook(data)
     sample_rows: list[dict[str, str | None]] = []
     for row in rows:
@@ -295,7 +299,11 @@ async def import_students_from_excel(
     if not filename.endswith(".xlsx"):
         raise HTTPException(status_code=415, detail="Only .xlsx files are supported")
 
-    data = await file.read()
+    from app.core.config import settings as _settings
+    max_bytes = _settings.max_upload_size_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=413, detail=f"File too large. Max {_settings.max_upload_size_mb}MB allowed.")
     _, rows, ordered_headers, headers = _read_workbook(data)
     normalized_batch = _validate_batch(batch)
     normalized_batch_start_month = _parse_batch_start_month(batch_start_month) if batch_start_month else None
@@ -529,6 +537,9 @@ def list_student_balances(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> dict:
+    from sqlalchemy.orm import selectinload
+    from app.models.student_billing_period import StudentBillingPeriod
+
     stmt = select(Student)
 
     if search:
@@ -552,17 +563,30 @@ def list_student_balances(
             stmt.order_by(Student.student_code)
             .offset((page - 1) * page_size)
             .limit(page_size)
+            .options(
+                selectinload(Student.fee),
+                selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment),
+            )
         )
         .scalars()
         .all()
     )
+
+    # Batch query for paid totals
+    student_ids = [s.id for s in rows]
+    paid_totals: dict = {}
+    if student_ids:
+        paid_rows = db.execute(
+            select(Payment.student_id, func.coalesce(func.sum(Payment.amount), 0))
+            .where(Payment.student_id.in_(student_ids))
+            .group_by(Payment.student_id)
+        ).all()
+        paid_totals = {sid: total for sid, total in paid_rows}
+
     items = []
     for student in rows:
         overview = get_student_billing_overview(db, student)
         snapshot = billing_list_snapshot(overview)
-        paid_total = db.execute(
-            select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.student_id == student.id)
-        ).scalar_one()
         items.append(
             StudentListItem(
                 id=student.id,
@@ -578,7 +602,7 @@ def list_student_balances(
                 billing_start_month=student.billing_start_month,
                 billing_end_month=student.billing_end_month,
                 expected_fee=overview.monthly_fee,
-                paid_total=paid_total,
+                paid_total=paid_totals.get(student.id, 0),
                 pending=pending_amount(overview),
                 last_paid_label=snapshot.last_paid_label,
                 next_due_label=snapshot.next_due_label,
@@ -664,9 +688,15 @@ def update_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
+    _ALLOWED_UPDATE_FIELDS = {
+        "name", "class_name", "section", "payment_period", "joined_date",
+        "batch", "batch_start_month", "billing_start_month", "billing_end_month",
+        "status", "serial_no", "student_code",
+    }
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
-        setattr(student, key, value)
+        if key in _ALLOWED_UPDATE_FIELDS:
+            setattr(student, key, value)
 
     db.commit()
     db.refresh(student)
