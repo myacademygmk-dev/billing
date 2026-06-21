@@ -1,0 +1,606 @@
+'use client';
+
+import { useState } from 'react';
+import { AlertTriangle, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { AppShell } from '@/components/app/shell';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { useToast } from '@/components/ui/toaster';
+import { apiFetch } from '@/lib/api';
+
+type ImportFieldKey =
+  | 'serial_no'
+  | 'student_code'
+  | 'name'
+  | 'class_name'
+  | 'expected_fee'
+  | 'payment_period'
+  | 'joined_date'
+  | 'billing_start_period'
+  | 'billing_end_period';
+
+type StudentImportMapping = Record<ImportFieldKey, string>;
+
+type ImportPreview = {
+  headers: string[];
+  suggested_mapping: Partial<Record<ImportFieldKey, string | null>>;
+  sample_rows: Array<Record<string, string | null>>;
+  required_fields: ImportFieldKey[];
+};
+
+type DatabaseResetResult = {
+  students_deleted: number;
+  payments_deleted: number;
+  billing_periods_deleted: number;
+  fee_records_deleted: number;
+  receipt_sequence_reset: boolean;
+  billing_cycle_reset_to_default: boolean;
+};
+
+type RandomBillField = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+const RESET_CONFIRMATION_TEXT = 'DELETE ALL DATA';
+const IMPORT_FIELD_META: Array<{ key: ImportFieldKey; label: string; hint: string }> = [
+  { key: 'serial_no', label: 'Serial No', hint: 'Map the source serial / row number column.' },
+  { key: 'student_code', label: 'Roll No', hint: 'Student roll number or student code.' },
+  { key: 'name', label: 'Student Name', hint: 'Full student name.' },
+  { key: 'class_name', label: 'Class', hint: 'Class or standard. Values like 10-A will be split automatically.' },
+  { key: 'expected_fee', label: 'Fee', hint: 'Single-month fee amount.' },
+  { key: 'payment_period', label: 'Period', hint: 'Monthly, Quarterly, Half Yearly, or source label.' },
+  { key: 'joined_date', label: 'Joined Date', hint: 'Student joining/admission date.' },
+  { key: 'billing_start_period', label: 'Start Period', hint: 'Student-specific billing start month, for example Jun.' },
+  { key: 'billing_end_period', label: 'End Period', hint: 'Student-specific billing end month, for example Apr.' }
+];
+function createRandomBillField(): RandomBillField {
+  return {
+    id: Math.random().toString(36).slice(2, 10),
+    label: '',
+    value: ''
+  };
+}
+
+export default function SettingsPage() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [importOpen, setImportOpen] = useState(false);
+  const [randomBillOpen, setRandomBillOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<'upsert' | 'create_only'>('upsert');
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importMapping, setImportMapping] = useState<StudentImportMapping>({
+    serial_no: '',
+    student_code: '',
+    name: '',
+    class_name: '',
+    expected_fee: '',
+    payment_period: '',
+    joined_date: '',
+    billing_start_period: '',
+    billing_end_period: ''
+  });
+  const [importBatch, setImportBatch] = useState('');
+  const [resetText, setResetText] = useState('');
+  const [randomBillFileName, setRandomBillFileName] = useState('');
+  const [randomBillFields, setRandomBillFields] = useState<RandomBillField[]>(() => [
+    { id: 'bill-no', label: 'Bill No', value: '' },
+    { id: 'student', label: 'Student', value: '' },
+    { id: 'amount', label: 'Amount', value: '' }
+  ]);
+  const importStudents = useMutation({
+    mutationFn: async () => {
+      if (!importFile) throw new Error('Please choose an .xlsx file');
+      if (!importBatch.trim()) throw new Error('Please enter the batch value');
+      const fd = new FormData();
+      fd.append('file', importFile);
+      fd.append('mapping_json', JSON.stringify(importMapping));
+      fd.append('batch', importBatch.trim());
+
+      const res = await fetch(`/api/backend/students/import?mode=${encodeURIComponent(importMode)}`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include'
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail ? JSON.stringify(data.detail) : 'Import failed');
+      return data as { created: number; updated: number; fee_updated: number };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Import completed',
+        description: `Created: ${data.created}, Updated: ${data.updated}, Fee updated: ${data.fee_updated}`
+      });
+      setImportOpen(false);
+      setImportFile(null);
+      setImportPreview(null);
+      setImportBatch('');
+      setImportMapping({
+        serial_no: '',
+        student_code: '',
+        name: '',
+        class_name: '',
+        expected_fee: '',
+        payment_period: '',
+        joined_date: '',
+        billing_start_period: '',
+        billing_end_period: ''
+      });
+      qc.invalidateQueries({ queryKey: ['students'] });
+    },
+    onError: (e) => toast({ title: 'Import failed', description: String(e) })
+  });
+
+  const previewImport = useMutation({
+    mutationFn: async () => {
+      if (!importFile) throw new Error('Please choose an .xlsx file');
+      const fd = new FormData();
+      fd.append('file', importFile);
+      const res = await fetch('/api/backend/students/import/preview', {
+        method: 'POST',
+        body: fd,
+        credentials: 'include'
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail ? JSON.stringify(data.detail) : 'Preview failed');
+      return data as ImportPreview;
+    },
+    onSuccess: (data) => {
+      setImportPreview(data);
+      setImportMapping({
+        serial_no: data.suggested_mapping.serial_no ?? '',
+        student_code: data.suggested_mapping.student_code ?? '',
+        name: data.suggested_mapping.name ?? '',
+        class_name: data.suggested_mapping.class_name ?? '',
+        expected_fee: data.suggested_mapping.expected_fee ?? '',
+        payment_period: data.suggested_mapping.payment_period ?? '',
+        joined_date: data.suggested_mapping.joined_date ?? '',
+        billing_start_period: data.suggested_mapping.billing_start_period ?? '',
+        billing_end_period: data.suggested_mapping.billing_end_period ?? ''
+      });
+    },
+    onError: (e) => toast({ title: 'Preview failed', description: String(e) })
+  });
+
+  const resetDatabase = useMutation({
+    mutationFn: () =>
+      apiFetch<DatabaseResetResult>('/settings/database/reset', {
+        method: 'POST',
+        body: JSON.stringify({ confirmation_text: resetText })
+      }),
+    onSuccess: (data) => {
+      toast({
+        title: 'Operational data deleted',
+        description: `Students: ${data.students_deleted}, Payments: ${data.payments_deleted}, Billing periods: ${data.billing_periods_deleted}`
+      });
+      setResetOpen(false);
+      setResetText('');
+      qc.invalidateQueries();
+    },
+    onError: (e) => toast({ title: 'Delete failed', description: String(e) })
+  });
+  const generateRandomBill = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/backend/settings/random-bill.pdf', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_name: randomBillFileName.trim() || null,
+          fields: randomBillFields.map((field) => ({
+            label: field.label.trim(),
+            value: field.value.trim()
+          }))
+        })
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.detail ? JSON.stringify(error.detail) : 'Bill generation failed');
+      }
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = `${randomBillFileName.trim() || 'random-bill'}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    },
+    onSuccess: () => {
+      toast({ title: 'Bill generated', description: 'The bill PDF has been downloaded.' });
+      setRandomBillOpen(false);
+      setRandomBillFileName('');
+      setRandomBillFields([
+        { id: 'bill-no', label: 'Bill No', value: '' },
+        { id: 'student', label: 'Student', value: '' },
+        { id: 'amount', label: 'Amount', value: '' }
+      ]);
+    },
+    onError: (e) => toast({ title: 'Bill generation failed', description: String(e) })
+  });
+
+  const isImportReady =
+    importPreview !== null &&
+    IMPORT_FIELD_META.every((field) => importMapping[field.key].trim() !== '') &&
+    /^\d{4}\s*-\s*\d{4}$/.test(importBatch.trim());
+  const isRandomBillReady =
+    randomBillFields.length > 0 &&
+    randomBillFields.every((field) => field.label.trim() !== '' && field.value.trim() !== '');
+
+  return (
+    <AppShell title="Admin Settings" subtitle="Manage student imports and controlled maintenance actions.">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <Card className="shadow-none">
+          <CardContent className="space-y-4 p-5">
+            <div className="space-y-2">
+              <CardTitle>Student Import</CardTitle>
+              <div className="text-sm text-[#91a1bc]">
+                Import the student list from Excel and derive billing months from the uploaded <span className="theme-heading font-medium">Period</span> column.
+              </div>
+            </div>
+            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-[#91a1bc]">
+              Use this section when starting a new academic batch or refreshing the student master data.
+            </div>
+            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Upload Student Excel
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardContent className="space-y-4 p-5">
+            <div className="space-y-2">
+              <CardTitle>Random Bill Generator</CardTitle>
+              <div className="text-sm text-[#91a1bc]">
+                Create a manual bill PDF with custom label and value rows, then download it directly.
+              </div>
+            </div>
+            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-[#91a1bc]">
+              Useful for one-off bills that should not depend on the normal student payment workflow.
+            </div>
+            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setRandomBillOpen(true)}>
+              <FileText className="h-4 w-4" />
+              Open Bill Generator
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[rgba(255,108,127,0.18)] shadow-none xl:col-span-2">
+          <CardContent className="space-y-4 p-5">
+            <div className="space-y-2">
+              <CardTitle>Danger Zone</CardTitle>
+              <div className="text-sm text-[#91a1bc]">
+                Permanently remove operational data when you need to reset the environment for a fresh setup.
+              </div>
+            </div>
+            <div className="rounded-[18px] border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <AlertTriangle className="h-4 w-4 text-[#ff8a9c]" />
+                Delete all operational data
+              </div>
+              <div className="mt-2 text-sm text-[#91a1bc]">
+                This clears students, fees, payments, and month-tracking records. Admin login stays preserved and receipt numbering is reset.
+              </div>
+              <div className="mt-2 text-sm text-[#91a1bc]">
+                After deletion, use <span className="theme-heading font-medium">Student Import</span> above to load a fresh dataset.
+              </div>
+            </div>
+            <Button variant="destructive" className="h-10 rounded-xl" onClick={() => setResetOpen(true)}>
+              <AlertTriangle className="h-4 w-4" />
+              Delete Entire Database Data
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog
+        open={importOpen}
+        onOpenChange={(v) => {
+          setImportOpen(v);
+          if (!v) {
+            setImportFile(null);
+            setImportMode('upsert');
+            setImportPreview(null);
+            setImportBatch('');
+            setImportMapping({
+              serial_no: '',
+              student_code: '',
+              name: '',
+              class_name: '',
+              expected_fee: '',
+              payment_period: '',
+              joined_date: '',
+              billing_start_period: '',
+              billing_end_period: ''
+            });
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Import Students (Excel)</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="max-h-[78vh] overflow-y-auto">
+            <div className="space-y-3">
+              <div className="text-sm text-[#91a1bc]">
+                Upload an <span className="font-medium text-white">.xlsx</span>, load its headers, map the required fields,
+                enter the academic <span className="font-medium text-white">batch</span>, then import into the database.
+                Student billing will follow each row's mapped <span className="font-medium text-white">Start Period</span> and <span className="font-medium text-white">End Period</span>.
+              </div>
+
+              <div>
+                <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Mode</div>
+                <select
+                  className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-white outline-none"
+                  value={importMode}
+                  onChange={(e) => setImportMode(e.target.value as 'upsert' | 'create_only')}
+                >
+                  <option value="upsert">Upsert (create or update)</option>
+                  <option value="create_only">Create only (error if exists)</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Excel file</div>
+                <input
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="block w-full rounded-2xl border border-[rgba(151,164,187,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-3 text-sm text-[var(--text)] file:mr-4 file:rounded-xl file:border-0 file:bg-[#2f6fed] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#255ed1]"
+                  onChange={(e) => {
+                    setImportFile(e.target.files?.[0] ?? null);
+                    setImportPreview(null);
+                  }}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[rgba(151,164,187,0.12)] bg-[rgba(255,255,255,0.03)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-white">Column Mapping</div>
+                    <div className="mt-1 text-sm text-[#91a1bc]">
+                      Load the file headers first, then confirm which source column maps to each required app field.
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => previewImport.mutate()}
+                    disabled={previewImport.isPending || !importFile}
+                  >
+                    {previewImport.isPending ? <Spinner className="mr-2" /> : null}
+                    Load Headers
+                  </Button>
+                </div>
+
+                {importPreview ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {IMPORT_FIELD_META.map((field) => (
+                        <div key={field.key}>
+                          <div className="mb-2 text-sm font-medium text-[#dbe6ff]">{field.label}</div>
+                          <select
+                            className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-white outline-none"
+                            value={importMapping[field.key]}
+                            onChange={(e) =>
+                              setImportMapping((current) => ({
+                                ...current,
+                                [field.key]: e.target.value
+                              }))
+                            }
+                          >
+                            <option value="">Select a column</option>
+                            {importPreview.headers.map((header) => (
+                              <option key={`${field.key}-${header}`} value={header}>
+                                {header}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="mt-1 text-xs text-[#91a1bc]">{field.hint}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Batch</div>
+                      <Input
+                        value={importBatch}
+                        onChange={(e) => setImportBatch(e.target.value)}
+                        placeholder="2026-2027"
+                      />
+                      <div className="mt-1 text-xs text-[#91a1bc]">
+                        Enter the academic batch for all imported rows, for example <span className="text-white">2026-2027</span>. Each student's
+                        mapped <span className="text-white">Start Period</span> and <span className="text-white">End Period</span> will control that student's billing range.
+                      </div>
+                    </div>
+
+                    {importPreview.sample_rows.length ? (
+                      <div>
+                        <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Sample Preview</div>
+                        <div className="max-h-72 overflow-auto rounded-2xl border border-[rgba(151,164,187,0.12)]">
+                          <table className="min-w-full text-left text-sm text-[#dbe6ff]">
+                            <thead className="bg-[rgba(255,255,255,0.03)] text-xs uppercase tracking-[0.18em] text-[#91a1bc]">
+                              <tr>
+                                {importPreview.headers.map((header) => (
+                                  <th key={header} className="px-3 py-3 font-medium">
+                                    {header}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {importPreview.sample_rows.map((row, rowIndex) => (
+                                <tr key={rowIndex} className="border-t border-[rgba(151,164,187,0.08)]">
+                                  {importPreview.headers.map((header) => (
+                                    <td key={`${rowIndex}-${header}`} className="px-3 py-3 text-[#91a1bc]">
+                                      {row[header] ?? '-'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => importStudents.mutate()} disabled={importStudents.isPending || !isImportReady}>
+              {importStudents.isPending ? <Spinner className="mr-2" /> : null}
+              Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={randomBillOpen}
+        onOpenChange={(v) => {
+          setRandomBillOpen(v);
+          if (!v) {
+            setRandomBillFileName('');
+            setRandomBillFields([
+              { id: 'bill-no', label: 'Bill No', value: '' },
+              { id: 'student', label: 'Student', value: '' },
+              { id: 'amount', label: 'Amount', value: '' }
+            ]);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Random Bill Generator</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-3">
+            <div className="text-sm text-[#91a1bc]">
+              Add the exact bill fields you want. You can create new label/value rows and the PDF will use those rows directly.
+            </div>
+            <div>
+              <div className="mb-2 text-sm font-medium text-[#dbe6ff]">File Name</div>
+              <Input value={randomBillFileName} onChange={(e) => setRandomBillFileName(e.target.value)} placeholder="random-bill" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-medium text-[#dbe6ff]">Bill Fields</div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRandomBillFields((current) => [...current, createRandomBillField()])}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Field
+                </Button>
+              </div>
+              {randomBillFields.map((field) => (
+                <div key={field.id} className="grid gap-3 md:grid-cols-[0.42fr_0.48fr_auto]">
+                  <Input
+                    value={field.label}
+                    onChange={(e) =>
+                      setRandomBillFields((current) =>
+                        current.map((item) => (item.id === field.id ? { ...item, label: e.target.value } : item))
+                      )
+                    }
+                    placeholder="Label"
+                  />
+                  <Input
+                    value={field.value}
+                    onChange={(e) =>
+                      setRandomBillFields((current) =>
+                        current.map((item) => (item.id === field.id ? { ...item, value: e.target.value } : item))
+                      )
+                    }
+                    placeholder="Value"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setRandomBillFields((current) =>
+                        current.length === 1 ? [createRandomBillField()] : current.filter((item) => item.id !== field.id)
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRandomBillOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => generateRandomBill.mutate()} disabled={generateRandomBill.isPending || !isRandomBillReady}>
+              {generateRandomBill.isPending ? <Spinner className="mr-2" /> : null}
+              Generate & Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetOpen}
+        onOpenChange={(v) => {
+          setResetOpen(v);
+          if (!v) {
+            setResetText('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Entire Operational Dataset</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] p-4 text-sm text-[#ffd9df]">
+                This action permanently removes students, fees, payments, and billing periods. It cannot be undone.
+              </div>
+              <div className="text-sm text-[#91a1bc]">
+                To confirm, type <span className="font-semibold text-white">{RESET_CONFIRMATION_TEXT}</span>.
+              </div>
+              <Input
+                value={resetText}
+                onChange={(e) => setResetText(e.target.value)}
+                placeholder={RESET_CONFIRMATION_TEXT}
+                autoComplete="off"
+              />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResetOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => resetDatabase.mutate()}
+              disabled={resetDatabase.isPending || resetText.trim() !== RESET_CONFIRMATION_TEXT}
+            >
+              {resetDatabase.isPending ? <Spinner className="mr-2" /> : null}
+              Delete Data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppShell>
+  );
+}
