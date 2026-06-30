@@ -35,6 +35,7 @@ class PaymentRead(BaseModel):
     notes: str | None = None
     paid_at: datetime
     created_by: uuid.UUID
+    created_by_name: str | None = None
     created_at: datetime
     billing_start_month: date | None = None
     billing_cycle_months: int | None = None

@@ -35,6 +35,7 @@ class SavingsEntryRead(BaseModel):
     notes: str | None = None
     recorded_at: datetime
     created_by: uuid.UUID
+    created_by_name: str | None = None
     created_at: datetime
     retracted_from_id: uuid.UUID | None = None
     is_retraction: bool = False

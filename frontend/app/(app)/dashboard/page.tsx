@@ -35,6 +35,7 @@ type Payment = {
 };
 
 function toMonthDate(value: string) {
+  if (!value) return `${new Date().toISOString().slice(0, 7)}-01`;
   return `${value}-01`;
 }
 
@@ -56,15 +57,11 @@ export default function DashboardPage() {
     queryKey: ['recentPayments'],
     queryFn: () => apiFetch<{ items: Payment[]; total: number }>('/payments?page=1&page_size=5')
   });
-  const studentCount = useQuery({
-    queryKey: ['dashboardStudentCount'],
-    queryFn: () => apiFetch<{ items: any[]; total: number }>('/students?status=active&page=1&page_size=1')
-  });
 
   const statCards = [
     {
       label: 'Total Students',
-      value: summary.data?.active_students?.toString() ?? studentCount.data?.total?.toString() ?? '-',
+      value: summary.data?.active_students?.toString() ?? '-',
       caption: 'Active students in selected month window',
       icon: Users,
       tone: 'text-[#dbe6ff]'

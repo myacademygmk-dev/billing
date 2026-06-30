@@ -30,4 +30,5 @@ class SavingsEntry(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     is_edited: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     student: Mapped["Student"] = relationship(back_populates="savings_entries")
+    creator: Mapped["User"] = relationship(foreign_keys=[created_by], lazy="joined")
     retracted_from: Mapped["SavingsEntry | None"] = relationship(remote_side="SavingsEntry.id")

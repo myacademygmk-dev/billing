@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
 from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
@@ -144,7 +144,7 @@ def list_student_savings_balances(
 def delete_savings_entry(
     entry_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_admin_user),
 ) -> None:
     entry = db.get(SavingsEntry, entry_id)
     if not entry:
@@ -153,12 +153,48 @@ def delete_savings_entry(
     db.commit()
 
 
+@router.post("/{entry_id}/retract", response_model=SavingsEntryRead, status_code=201)
+def retract_savings_entry(
+    entry_id: uuid.UUID,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SavingsEntryRead:
+    """Create a counter-entry that negates the original entry."""
+    original = db.get(SavingsEntry, entry_id)
+    if not original:
+        raise HTTPException(status_code=404, detail="Savings entry not found")
+
+    # Check if already retracted
+    existing = db.execute(
+        select(SavingsEntry).where(SavingsEntry.retracted_from_id == entry_id)
+    ).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="This entry has already been retracted")
+
+    reason = payload.get("reason", "")
+    retraction = SavingsEntry(
+        student_id=original.student_id,
+        amount=-original.amount,
+        mode=original.mode,
+        reference_no=original.reference_no,
+        notes=f"RETRACTION: {reason}" if reason else "RETRACTION",
+        recorded_at=datetime.now(UTC),
+        created_by=current_user.id,
+        retracted_from_id=original.id,
+    )
+    db.add(retraction)
+    db.commit()
+    db.refresh(retraction)
+    return _savings_entry_read(retraction)
+
+
 @router.patch("/{entry_id}", response_model=SavingsEntryRead)
 def edit_savings_entry(
     entry_id: uuid.UUID,
     payload: SavingsEntryEdit,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin_user),
 ) -> SavingsEntryRead:
     entry = db.get(SavingsEntry, entry_id)
     if not entry:
@@ -180,6 +216,7 @@ def _savings_entry_read(entry: SavingsEntry) -> SavingsEntryRead:
     data = SavingsEntryRead.model_validate(entry).model_dump()
     data["student_name"] = entry.student.name if entry.student else None
     data["student_code"] = entry.student.student_code if entry.student else None
+    data["created_by_name"] = entry.creator.username if entry.creator else None
     data["is_retraction"] = entry.retracted_from_id is not None
     data["is_edited"] = entry.is_edited
     return SavingsEntryRead.model_validate(data)

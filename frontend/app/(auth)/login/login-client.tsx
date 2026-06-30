@@ -45,7 +45,7 @@ export function LoginClient() {
     },
     onSuccess: () => {
       const next = params.get('next') || '/dashboard';
-      router.replace(next);
+      window.location.href = next;
     },
     onError: (e) => toast({ title: 'Login failed', description: String(e) })
   });

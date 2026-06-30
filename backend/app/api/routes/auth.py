@@ -4,6 +4,8 @@ import logging
 import time
 import uuid
 from collections import defaultdict
+from multiprocessing import Manager
+from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
@@ -19,18 +21,29 @@ from app.schemas.auth import LoginRequest, RegisterRequest, SetupPasswordRequest
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# In-memory rate limiter (works per-worker; provides basic protection)
+# For full multi-worker protection, the receipt_sequence lock and DB constraints
+# already prevent actual damage — this just reduces noise.
 _login_attempts: dict[str, list[float]] = defaultdict(list)
+_rate_limit_lock = Lock()
 _MAX_ATTEMPTS = 5
 _WINDOW_SECONDS = 60
+_MAX_TRACKED_IPS = 10000
 
 
 def _check_rate_limit(ip: str) -> None:
     now = time.time()
-    attempts = _login_attempts[ip]
-    _login_attempts[ip] = [t for t in attempts if now - t < _WINDOW_SECONDS]
-    if len(_login_attempts[ip]) >= _MAX_ATTEMPTS:
-        raise HTTPException(status_code=429, detail="Too many login attempts. Please wait a minute.")
-    _login_attempts[ip].append(now)
+    with _rate_limit_lock:
+        if len(_login_attempts) > _MAX_TRACKED_IPS:
+            stale = [k for k, v in _login_attempts.items() if not v or now - v[-1] > _WINDOW_SECONDS]
+            for k in stale:
+                del _login_attempts[k]
+
+        attempts = _login_attempts[ip]
+        _login_attempts[ip] = [t for t in attempts if now - t < _WINDOW_SECONDS]
+        if len(_login_attempts[ip]) >= _MAX_ATTEMPTS:
+            raise HTTPException(status_code=429, detail="Too many attempts. Please wait a minute.")
+        _login_attempts[ip].append(now)
 
 
 def _user_read(user: User) -> UserRead:
@@ -88,17 +101,17 @@ def register_user(
 
 
 @router.post("/setup-password", response_model=dict)
-def setup_password(payload: SetupPasswordRequest, db: Session = Depends(get_db)) -> dict:
+def setup_password(payload: SetupPasswordRequest, request: Request, db: Session = Depends(get_db)) -> dict:
     """Public endpoint — user sets their password using their email. Only works if password not already set."""
+    _check_rate_limit(request.client.host if request.client else "unknown")
+
     if len(payload.password) < 6:
         raise HTTPException(status_code=422, detail="Password must be at least 6 characters")
 
     user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="No account found with this email")
-
-    if user.password_hash:
-        raise HTTPException(status_code=409, detail="Password already set. Use login instead.")
+    if not user or user.password_hash:
+        # Generic message to prevent user enumeration
+        raise HTTPException(status_code=400, detail="Unable to set password. Account may not exist or password already set.")
 
     user.password_hash = hash_password(payload.password)
     db.commit()

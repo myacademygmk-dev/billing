@@ -29,16 +29,8 @@ export function Dialog({ open, onOpenChange, children }: { open: boolean; onOpen
       }
     };
     document.addEventListener('keydown', handleKeyDown);
-    // Focus first element
-    const timer = setTimeout(() => {
-      const first = containerRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      first?.focus();
-    }, 0);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      clearTimeout(timer);
     };
   }, [open, onOpenChange]);
 

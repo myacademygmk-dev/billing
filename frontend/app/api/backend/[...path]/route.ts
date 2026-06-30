@@ -21,7 +21,6 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
 
   const headers = new Headers();
   headers.set('Authorization', `Bearer ${token}`);
-  // Only forward content-type for requests with body
   const contentType = req.headers.get('content-type');
   if (contentType) headers.set('Content-Type', contentType);
   const accept = req.headers.get('accept');
@@ -43,7 +42,7 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
   const isJson = contentTypeRes.includes('application/json');
   const resBody = isJson ? await res.text() : await res.arrayBuffer();
 
-  const out = new NextResponse(resBody as any, { status: res.status });
+  const out = new NextResponse(resBody as BodyInit, { status: res.status });
   res.headers.forEach((v, k) => {
     if (k.toLowerCase() === 'transfer-encoding') return;
     out.headers.set(k, v);

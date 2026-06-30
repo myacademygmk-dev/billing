@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export type ReceiptData = {
   id: string;
@@ -21,58 +20,91 @@ export type ReceiptData = {
 
 export function Receipt({ data, onClose }: { data: ReceiptData; onClose: () => void }) {
   return (
-    <div className="space-y-3">
-      <Card className="print:border-0 print:shadow-none">
-        <CardHeader className="print:border-0">
-          <CardTitle>Receipt</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-sm">
-            <div className="text-[#91a1bc]">Receipt No</div>
-            <div className="font-semibold text-white">{data.receipt_no}</div>
-          </div>
-          <div className="text-sm">
-            <div className="text-[#91a1bc]">Student</div>
-            <div className="font-semibold text-white">
-              {data.student_name ?? 'Student'}{data.student_code ? ` (${data.student_code})` : ''}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-[#91a1bc]">Amount</div>
-              <div className="font-semibold text-white">{data.amount}</div>
-            </div>
-            <div>
-              <div className="text-[#91a1bc]">Mode</div>
-              <div className="font-semibold text-white">{data.mode}</div>
-            </div>
-          </div>
-          {data.fee_period_label ? (
-            <div className="text-sm">
-              <div className="text-[#91a1bc]">Fee Period</div>
-              <div className="font-semibold text-white">{data.fee_period_label}</div>
-            </div>
-          ) : null}
-          <div className="text-sm">
-            <div className="text-[#91a1bc]">Paid At</div>
-            <div className="font-semibold text-white">{new Date(data.paid_at).toLocaleString()}</div>
-          </div>
-          {data.reference_no || data.notes ? (
-            <div className="text-sm">
-              <div className="text-[#91a1bc]">Remarks</div>
-              <div className="font-semibold text-white">{data.reference_no ?? data.notes}</div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[var(--panel-line)] bg-white p-6 shadow-sm print:border print:shadow-none">
+        {/* Header */}
+        <div className="border-b border-gray-200 pb-4 text-center">
+          <h2 className="text-xl font-bold text-gray-900">MYACADEMY</h2>
+          <p className="mt-1 text-xs text-gray-500">Fee Collection Receipt</p>
+        </div>
 
+        {/* Receipt No & Date */}
+        <div className="mt-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+          <div>
+            <div className="text-xs font-medium uppercase text-gray-500">Receipt No</div>
+            <div className="mt-0.5 text-lg font-bold text-gray-900">{data.receipt_no}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-medium uppercase text-gray-500">Date</div>
+            <div className="mt-0.5 text-sm font-semibold text-gray-800">
+              {new Date(data.paid_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+            <div className="text-xs text-gray-500">
+              {new Date(data.paid_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+        </div>
+
+        {/* Student Info */}
+        <div className="mt-4 rounded-lg bg-gray-50 p-3">
+          <div className="text-xs font-medium uppercase text-gray-500">Student</div>
+          <div className="mt-1 text-base font-semibold text-gray-900">
+            {data.student_name ?? 'Student'}
+          </div>
+          {data.student_code && (
+            <div className="mt-0.5 text-sm text-gray-600">Roll No: {data.student_code}</div>
+          )}
+        </div>
+
+        {/* Amount */}
+        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-4 text-center">
+          <div className="text-xs font-medium uppercase text-blue-600">Amount Paid</div>
+          <div className="mt-1 text-2xl font-bold text-blue-700">₹{data.amount}</div>
+          <div className="mt-1 text-xs font-medium text-blue-500 capitalize">{data.mode}</div>
+        </div>
+
+        {/* Details */}
+        <div className="mt-4 space-y-2">
+          {data.fee_period_label && (
+            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-sm">
+              <span className="text-gray-500">Fee Period</span>
+              <span className="font-medium text-gray-800">{data.fee_period_label}</span>
+            </div>
+          )}
+          {data.next_due_label && (
+            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-sm">
+              <span className="text-gray-500">Next Due</span>
+              <span className="font-medium text-gray-800">{data.next_due_label}</span>
+            </div>
+          )}
+          {data.pending_amount && Number(data.pending_amount) > 0 && (
+            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-sm">
+              <span className="text-gray-500">Pending Balance</span>
+              <span className="font-medium text-orange-600">₹{data.pending_amount}</span>
+            </div>
+          )}
+          {(data.reference_no || data.notes) && (
+            <div className="flex items-center justify-between py-2 text-sm">
+              <span className="text-gray-500">Remarks</span>
+              <span className="font-medium text-gray-800">{data.reference_no || data.notes}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-5 border-t border-dashed border-gray-200 pt-3 text-center text-xs text-gray-400">
+          This is a computer-generated receipt. Thank you for the payment.
+        </div>
+      </div>
+
+      {/* Actions */}
       <div className="flex gap-2 print:hidden">
+        <Button onClick={() => window.print()}>Print Receipt</Button>
         <Button variant="outline" onClick={() => window.location.assign(`/api/backend/payments/${data.id}/receipt.pdf`)}>
           Download PDF
         </Button>
-        <Button onClick={() => window.print()}>Print</Button>
         <Button variant="outline" onClick={onClose}>
-          Close
+          Done
         </Button>
       </div>
     </div>
