@@ -26,7 +26,7 @@ const nav = [
   { href: '/students', label: 'Students', icon: UsersRound, adminOnly: false },
   { href: '/collect', label: 'Collect', icon: Banknote, adminOnly: false },
   { href: '/savings', label: 'Savings', icon: PiggyBank, adminOnly: false },
-  { href: '/expenses', label: 'Expenses', icon: HandCoins, adminOnly: false },
+  { href: '/expenses', label: 'Expenses', icon: HandCoins, adminOnly: true },
   { href: '/transactions', label: 'Transactions', icon: ReceiptText, adminOnly: false },
   { href: '/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
   { href: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
