@@ -230,3 +230,6 @@ __marimo__/
 
 # Excel temporary lock files
 ~$*
+
+# Database backup files
+backup_*.sql

@@ -5,9 +5,10 @@ import io
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Generator
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -29,14 +30,18 @@ _BILLING_OPTS = [
 ]
 
 
-def _csv_response(filename: str, rows: list[list[str]]) -> Response:
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    for row in rows:
-        writer.writerow(row)
-    content = buf.getvalue()
-    return Response(
-        content,
+def _csv_streaming_response(filename: str, row_generator: Generator[list[str], None, None]) -> StreamingResponse:
+    def generate():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        for row in row_generator:
+            writer.writerow(row)
+            yield buf.getvalue()
+            buf.seek(0)
+            buf.truncate(0)
+
+    return StreamingResponse(
+        generate(),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
@@ -46,23 +51,15 @@ def _csv_response(filename: str, rows: list[list[str]]) -> Response:
 def export_students_csv(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> Response:
+) -> StreamingResponse:
     students = db.execute(select(Student).order_by(Student.student_code)).scalars().all()
-    rows = [
-        ["student_code", "name", "class_name", "section", "status", "created_at"],
-        *[
-            [
-                s.student_code,
-                s.name,
-                s.class_name or "",
-                s.section or "",
-                s.status.value,
-                s.created_at.isoformat(),
-            ]
-            for s in students
-        ],
-    ]
-    return _csv_response("students.csv", rows)
+
+    def rows():
+        yield ["student_code", "name", "class_name", "section", "status", "created_at"]
+        for s in students:
+            yield [s.student_code, s.name, s.class_name or "", s.section or "", s.status.value, s.created_at.isoformat()]
+
+    return _csv_streaming_response("students.csv", rows())
 
 
 @router.get("/payments.csv")
@@ -72,7 +69,7 @@ def export_payments_csv(
     student_id: uuid.UUID | None = None,
     from_dt: datetime | None = Query(default=None, alias="from"),
     to_dt: datetime | None = Query(default=None, alias="to"),
-) -> Response:
+) -> StreamingResponse:
     stmt = select(Payment).order_by(Payment.paid_at.desc())
     if student_id:
         stmt = stmt.where(Payment.student_id == student_id)
@@ -81,41 +78,25 @@ def export_payments_csv(
     if to_dt:
         stmt = stmt.where(Payment.paid_at <= to_dt)
     payments = db.execute(stmt).scalars().all()
-    rows = [
-        [
-            "receipt_no",
-            "student_id",
-            "amount",
-            "mode",
-            "reference_no",
-            "notes",
-            "fee_period",
-            "paid_at",
-            "created_by",
-        ],
-        *[
-            [
-                p.receipt_no,
-                str(p.student_id),
-                str(p.amount),
-                p.mode.value,
-                p.reference_no or "",
-                p.notes or "",
+
+    def rows():
+        yield ["receipt_no", "student_id", "amount", "mode", "reference_no", "notes", "fee_period", "paid_at", "created_by"]
+        for p in payments:
+            yield [
+                p.receipt_no, str(p.student_id), str(p.amount), p.mode.value,
+                p.reference_no or "", p.notes or "",
                 fee_period_label(p.billing_start_month, p.billing_cycle_months) or "",
-                p.paid_at.isoformat(),
-                str(p.created_by),
+                p.paid_at.isoformat(), str(p.created_by),
             ]
-            for p in payments
-        ],
-    ]
-    return _csv_response("payments.csv", rows)
+
+    return _csv_streaming_response("payments.csv", rows())
 
 
 @router.get("/pending.csv")
 def export_pending_csv(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> Response:
+) -> StreamingResponse:
     students = db.execute(select(Student).order_by(Student.student_code).options(*_BILLING_OPTS)).scalars().all()
 
     student_ids = [s.id for s in students]
@@ -144,20 +125,13 @@ def export_pending_csv(
             }
         )
     rows_data.sort(key=lambda item: Decimal(item["pending"]), reverse=True)
-    rows = [
-        ["student_code", "name", "expected_fee", "paid_total", "pending"],
-        *[
-            [
-                r["student_code"],
-                r["name"],
-                str(r["expected_fee"]),
-                str(r["paid_total"]),
-                str(r["pending"]),
-            ]
-            for r in rows_data
-        ],
-    ]
-    return _csv_response("pending.csv", rows)
+
+    def rows():
+        yield ["student_code", "name", "expected_fee", "paid_total", "pending"]
+        for r in rows_data:
+            yield [r["student_code"], r["name"], str(r["expected_fee"]), str(r["paid_total"]), str(r["pending"])]
+
+    return _csv_streaming_response("pending.csv", rows())
 
 
 @router.get("/monthly-students.csv")
@@ -168,7 +142,7 @@ def export_monthly_students_csv(
     class_code: str | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> Response:
+) -> StreamingResponse:
     selected_month = normalize_month(month)
     stmt = select(Student).where(Student.status == StudentStatus.active).order_by(Student.student_code)
     if search:
@@ -203,8 +177,9 @@ def export_monthly_students_csv(
                 target_month["receipt_no"] or "",
             ]
         )
-    rows = [
-        ["student_code", "name", "class_name", "section", "payment_period", "monthly_fee", "month", "status", "receipt_no"],
-        *rows_data,
-    ]
-    return _csv_response(f"students_{payment_state}_{selected_month.isoformat()}.csv", rows)
+
+    def rows():
+        yield ["student_code", "name", "class_name", "section", "payment_period", "monthly_fee", "month", "status", "receipt_no"]
+        yield from rows_data
+
+    return _csv_streaming_response(f"students_{payment_state}_{selected_month.isoformat()}.csv", rows())

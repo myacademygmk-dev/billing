@@ -36,4 +36,5 @@ class Payment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     student: Mapped["Student"] = relationship(back_populates="payments")
+    creator: Mapped["User"] = relationship(foreign_keys=[created_by], lazy="joined")
     billing_periods: Mapped[list["StudentBillingPeriod"]] = relationship(back_populates="payment")

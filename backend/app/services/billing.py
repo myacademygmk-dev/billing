@@ -363,7 +363,7 @@ def validate_selected_months_unpaid(
             select(StudentBillingPeriod).where(
                 StudentBillingPeriod.student_id == student.id,
                 StudentBillingPeriod.period_month.in_(target_months),
-            )
+            ).with_for_update()
         )
         .scalars()
         .all()

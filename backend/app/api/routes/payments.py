@@ -131,7 +131,7 @@ def create_payment(
         assign_periods_to_payment(db, student, payment, selected_months)
         db.flush()
         db.refresh(payment)
-        response = _payment_read(db, payment)
+        response = _payment_read(db, payment, include_overview=True)
         db.commit()
     except ValueError as exc:
         db.rollback()
@@ -199,6 +199,13 @@ def reverse_payment(
     if not original:
         raise HTTPException(status_code=404, detail="Payment not found")
 
+    # Prevent double reversal
+    existing_reversal = db.execute(
+        select(Payment).where(Payment.notes.contains(f"REVERSAL of {original.receipt_no}:"))
+    ).scalar_one_or_none()
+    if existing_reversal:
+        raise HTTPException(status_code=409, detail="This payment has already been reversed")
+
     if payload.amount is not None and payload.amount == 0:
         raise HTTPException(status_code=422, detail="amount must be non-zero")
 
@@ -232,7 +239,7 @@ def reverse_payment(
         release_payment_periods(original)
         db.flush()
         db.refresh(reversal)
-        response = _payment_read(db, reversal)
+        response = _payment_read(db, reversal, include_overview=True)
         db.commit()
     except Exception:
         db.rollback()
@@ -249,7 +256,7 @@ def get_payment_receipt(
     payment = db.get(Payment, payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    return _payment_read(db, payment)
+    return _payment_read(db, payment, include_overview=True)
 
 
 @router.get("/{payment_id}/receipt.pdf")
@@ -281,15 +288,16 @@ def download_receipt_pdf(
     return Response(content=pdf, media_type="application/pdf", headers=headers)
 
 
-def _payment_read(db: Session, payment: Payment) -> PaymentRead:
+def _payment_read(db: Session, payment: Payment, *, include_overview: bool = False) -> PaymentRead:
     data = PaymentRead.model_validate(payment).model_dump()
     data["bill_no"] = format_bill_no(payment.bill_no)
     data["student_name"] = payment.student.name if payment.student else None
     data["student_code"] = payment.student.student_code if payment.student else None
+    data["created_by_name"] = payment.creator.username if payment.creator else None
     data["cycle_mode"] = cycle_mode_for_months(payment.billing_cycle_months)
     selected_months = [period.period_month for period in payment.billing_periods]
     data["fee_period_label"] = fee_period_label_for_months(selected_months) or fee_period_label(payment.billing_start_month, payment.billing_cycle_months)
-    if payment.student:
+    if include_overview and payment.student:
         overview = get_student_billing_overview(db, payment.student)
         snapshot = billing_list_snapshot(overview)
         data["next_due_label"] = snapshot.next_due_label

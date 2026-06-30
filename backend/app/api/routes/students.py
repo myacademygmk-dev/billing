@@ -694,6 +694,13 @@ def update_student(
         "status", "serial_no", "student_code",
     }
     data = payload.model_dump(exclude_unset=True)
+
+    # Check student_code uniqueness if being updated
+    if "student_code" in data and data["student_code"] != student.student_code:
+        existing = db.execute(select(Student).where(Student.student_code == data["student_code"])).scalar_one_or_none()
+        if existing:
+            raise HTTPException(status_code=409, detail="student_code already exists")
+
     for key, value in data.items():
         if key in _ALLOWED_UPDATE_FIELDS:
             setattr(student, key, value)

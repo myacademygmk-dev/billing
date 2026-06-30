@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -21,4 +22,4 @@ def health_db(db: Session = Depends(get_db)) -> dict:
         db.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception:
-        return {"status": "error", "db": "unreachable"}
+        return JSONResponse(status_code=503, content={"status": "error", "db": "unreachable"})

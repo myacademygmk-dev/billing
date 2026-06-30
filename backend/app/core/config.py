@@ -20,7 +20,9 @@ class Settings(BaseSettings):
 
     # DB pool
     db_pool_size: int = 10
-    db_max_overflow: int = 20
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 1800
 
     # File upload
     max_upload_size_mb: int = 5
@@ -37,8 +39,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _check_production_secrets(self):
         if os.getenv("APP_ENV") == "production":
-            if self.jwt_secret in ("dev-secret-change-me", "change-me"):
-                raise ValueError("JWT_SECRET must be set to a strong value in production")
+            weak = ("dev-secret-change-me", "change-me", "change-me-dev")
+            if self.jwt_secret in weak or len(self.jwt_secret) < 32:
+                raise ValueError("JWT_SECRET must be at least 32 characters in production")
         return self
 
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -61,6 +61,7 @@ export default function CollectPage() {
   const params = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const studentId = params.get('student_id') ?? '';
   const rollNoFromQuery = params.get('student_code') ?? '';
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -192,6 +193,11 @@ export default function CollectPage() {
     onSuccess: (data) => {
       toast({ title: 'Payment recorded', description: `Receipt: ${data.receipt_no}` });
       setReceipt(data);
+      qc.invalidateQueries({ queryKey: ['studentBillingOverview'] });
+      qc.invalidateQueries({ queryKey: ['studentByCode'] });
+      qc.invalidateQueries({ queryKey: ['students'] });
+      qc.invalidateQueries({ queryKey: ['summary'] });
+      qc.invalidateQueries({ queryKey: ['recentPayments'] });
     },
     onError: (e) => toast({ title: 'Failed', description: String(e) })
   });

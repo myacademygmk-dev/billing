@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -44,16 +45,15 @@ export function AppShell({
   action?: ReactNode;
 }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'light');
-    apiFetch<{ role: string; username: string }>('/auth/me')
-      .then((data) => { setRole(data.role); setUsername(data.username); })
-      .catch(() => {});
-  }, []);
+  const { data: me } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => apiFetch<{ role: string; username: string }>('/auth/me'),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: false,
+  });
 
+  const role = me?.role ?? null;
   const visibleNav = nav.filter((item) => !item.adminOnly || role === 'admin');
 
   return (
@@ -81,6 +81,7 @@ export function AppShell({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'theme-nav-item flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors duration-150',
                   active
@@ -116,7 +117,7 @@ export function AppShell({
             <div>
               <h1 className="theme-heading text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">{title}</h1>
               {subtitle ? (
-                <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-base text-[#91a1bc]">
+                <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-base text-[var(--text-muted)]">
                   {subtitle}
                 </p>
               ) : null}

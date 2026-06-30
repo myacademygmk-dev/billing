@@ -25,6 +25,7 @@ class StudentCreate(BaseModel):
 
 class StudentUpdate(BaseModel):
     serial_no: int | None = None
+    student_code: str | None = Field(default=None, min_length=1, max_length=50)
     name: str | None = Field(default=None, min_length=1, max_length=200)
     class_name: str | None = Field(default=None, max_length=100)
     section: str | None = Field(default=None, max_length=50)

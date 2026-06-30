@@ -58,6 +58,10 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
+    # Clear rate limit state between tests
+    from app.api.routes.auth import _login_attempts
+    _login_attempts.clear()
+
     app = create_app()
     return TestClient(app)
 
