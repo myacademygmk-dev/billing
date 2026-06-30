@@ -76,10 +76,6 @@ def reset_database_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_user),
 ) -> DatabaseResetRead:
-    import os
-    if os.getenv("APP_ENV") == "production":
-        raise HTTPException(status_code=403, detail="Database reset is disabled in production")
-
     if payload.confirmation_text.strip() != RESET_CONFIRMATION_TEXT:
         raise HTTPException(status_code=422, detail=f'Type "{RESET_CONFIRMATION_TEXT}" to confirm this action')
 
