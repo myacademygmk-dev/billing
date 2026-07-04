@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     jwt_algorithm: str = "HS256"
     jwt_access_token_exp_minutes: int = 60 * 2  # 2 hours
+    jwt_refresh_token_exp_days: int = 30
 
     # DB pool
     db_pool_size: int = 10

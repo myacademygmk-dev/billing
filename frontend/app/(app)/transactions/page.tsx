@@ -26,6 +26,7 @@ type Payment = {
   amount: string;
   notes?: string | null;
   fee_period_label?: string | null;
+  created_by_name?: string | null;
 };
 
 export default function TransactionsPage() {
@@ -134,6 +135,7 @@ export default function TransactionsPage() {
                   <TH>Fee Period</TH>
                   <TH>Mode</TH>
                   <TH>Amount</TH>
+                  <TH>Added By</TH>
                   <TH>Notes</TH>
                   <TH></TH>
                 </tr>
@@ -141,7 +143,7 @@ export default function TransactionsPage() {
               <TBody>
                 {q.isLoading ? (
                   <tr className="bg-[var(--panel)]">
-                    <TD colSpan={9}>
+                    <TD colSpan={10}>
                       <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
                         <Spinner /> Loading
                       </div>
@@ -149,7 +151,7 @@ export default function TransactionsPage() {
                   </tr>
                 ) : q.isError ? (
                   <tr className="bg-[var(--panel)]">
-                    <TD colSpan={9} className="text-sm text-rose-300">Failed to load</TD>
+                    <TD colSpan={10} className="text-sm text-rose-300">Failed to load</TD>
                   </tr>
                 ) : (
                   q.data?.items.map((p) => (
@@ -161,6 +163,7 @@ export default function TransactionsPage() {
                       <TD>{p.fee_period_label ?? '-'}</TD>
                       <TD className="capitalize">{p.mode}</TD>
                       <TD className={Number(p.amount) < 0 ? 'font-semibold text-rose-300' : 'theme-heading font-semibold'}>{p.amount}</TD>
+                      <TD className="text-[#91a1bc]">{p.created_by_name ?? '-'}</TD>
                       <TD className="max-w-[320px] truncate text-[#91a1bc]" title={p.notes ?? ''}>
                         {p.notes ?? '-'}
                       </TD>

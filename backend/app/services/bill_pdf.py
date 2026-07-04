@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+
+@dataclass
+class InstitutionBranding:
+    name: str = "MY Academy"
+    tagline: str = "Educational Institutions"
+    registration_no: str = "Regd.No - 469/2016"
+
 
 def format_bill_no(bill_no: int | str) -> str:
     if isinstance(bill_no, str):
@@ -12,33 +21,48 @@ def render_bill_pdf(
     bill_no: int | str,
     student_name: str,
     student_code: str,
+    student_class: str,
     fee_period: str,
     amount: str,
+    payment_mode: str,
     payment_date: str,
     next_due: str,
     pending: str,
-    remarks: str,
+    remarks: str | None = None,
+    branding: InstitutionBranding | None = None,
 ) -> bytes:
+    if branding is None:
+        branding = InstitutionBranding()
+
     def esc(value: str) -> str:
         return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
-    lines = [
-        ("F2", 22, 210, 760, "MYACADEMY"),
-        ("F1", 12, 226, 740, "gain more knowledge"),
-        ("F1", 10, 50, 720, "Regd.No - 469/2016"),
+    lines: list[tuple[str, int, int, int, str]] = [
+        ("F2", 22, 210, 760, branding.name),
+        ("F1", 12, 226, 740, branding.tagline),
+        ("F1", 10, 50, 720, branding.registration_no),
         ("F1", 11, 50, 680, f"ROLL NO : {student_code}"),
         ("F1", 11, 330, 680, f"DATE : {payment_date}"),
         ("F1", 11, 50, 650, f"BILL NO (0001 - 4000) : {format_bill_no(bill_no)}"),
         ("F1", 11, 330, 650, f"NEXT DUE : {next_due}"),
-        ("F1", 11, 50, 620, f"PENDING : {pending}"),
-        ("F1", 11, 330, 620, f"AMOUNT PAID : {amount}"),
-        ("F1", 11, 50, 590, f"STUDENT : {student_name}"),
-        ("F1", 11, 50, 560, f"FEE PERIOD : {fee_period}"),
-        ("F1", 11, 50, 520, f"REMARKS : {remarks}"),
+        ("F1", 11, 50, 620, f"STUDENT : {student_name}"),
+        ("F1", 11, 330, 620, f"CLASS : {student_class}"),
+        ("F1", 11, 50, 590, f"FEE PERIOD : {fee_period}"),
+        ("F1", 11, 330, 590, f"MODE : {payment_mode.upper()}"),
+        ("F1", 11, 50, 560, f"AMOUNT PAID : {amount}"),
+        ("F1", 11, 330, 560, f"PENDING : {pending}"),
     ]
+
+    # Only include remarks if provided and non-empty
+    if remarks and remarks.strip() and remarks.strip() != "-":
+        lines.append(("F1", 11, 50, 530, f"REMARKS : {remarks}"))
+        box_bottom = 510
+    else:
+        box_bottom = 540
+
     content = [
         "0.2 w",
-        "36 500 540 280 re S",
+        f"36 {box_bottom} 540 {720 - box_bottom} re S",
         "36 700 540 0 re S",
         "36 605 540 0 re S",
         "306 605 0 95 re S",
@@ -77,15 +101,18 @@ def render_bill_pdf(
     return bytes(pdf)
 
 
-def render_custom_bill_pdf(*, fields: list[tuple[str, str]]) -> bytes:
+def render_custom_bill_pdf(*, fields: list[tuple[str, str]], branding: InstitutionBranding | None = None) -> bytes:
+    if branding is None:
+        branding = InstitutionBranding()
+
     def esc(value: str) -> str:
         return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
     y = 700
     lines = [
-        ("F2", 22, 210, 760, "MYACADEMY"),
-        ("F1", 12, 226, 740, "gain more knowledge"),
-        ("F1", 10, 50, 720, "Regd.No - 469/2016"),
+        ("F2", 22, 210, 760, branding.name),
+        ("F1", 12, 226, 740, branding.tagline),
+        ("F1", 10, 50, 720, branding.registration_no),
     ]
     for label, value in fields:
         lines.append(("F1", 11, 50, y, f"{label} : {value}"))

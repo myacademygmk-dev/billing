@@ -414,3 +414,54 @@ def fee_period_label(start_month: date | None, cycle_months: int | None) -> str 
 
 def pending_amount(overview: BillingOverview) -> Decimal:
     return overview.monthly_fee * Decimal(len(overview.pending_months))
+
+
+def pending_details(overview: BillingOverview) -> dict:
+    """Return structured pending info for past and current month only (not future).
+
+    Label logic:
+    - No pending: returns empty
+    - 1-4 months: "Apr, May, Jun 2025"
+    - 5+ months: "Apr 2025 to Sep 2025"
+    - Includes year badge when spanning multiple years
+    """
+    pending_months_data = overview.pending_months
+    if not pending_months_data:
+        return {"amount": "0", "months_count": 0, "label": ""}
+
+    # Only include past and current month — exclude future months
+    today = datetime.now(UTC).date()
+    current_month = date(today.year, today.month, 1)
+    months = sorted([item["month"] for item in pending_months_data if item["month"] <= current_month])
+
+    if not months:
+        return {"amount": "0", "months_count": 0, "label": ""}
+
+    amount = overview.monthly_fee * Decimal(len(months))
+
+    if len(months) == 1:
+        label = month_label(months[0])
+    elif len(months) <= 4:
+        # Short list: "Apr, May, Jun 2025" or "Nov, Dec 2024, Jan 2025"
+        parts: list[str] = []
+        for i, m in enumerate(months):
+            if i == len(months) - 1:
+                # Last month always shows year
+                parts.append(month_label(m))
+            elif i < len(months) - 1 and months[i + 1].year != m.year:
+                # Year changes after this month, show year
+                parts.append(month_label(m))
+            else:
+                parts.append(month_abbr[m.month])
+        label = ", ".join(parts)
+    else:
+        # 5+ months: "Apr 2025 to Sep 2025"
+        first = months[0]
+        last = months[-1]
+        label = f"{month_label(first)} to {month_label(last)}"
+
+    return {
+        "amount": str(amount),
+        "months_count": len(months),
+        "label": label,
+    }

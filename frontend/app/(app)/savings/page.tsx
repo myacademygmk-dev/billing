@@ -43,6 +43,7 @@ type SavingsEntry = {
   is_retraction: boolean;
   is_edited: boolean;
   retracted_from_id?: string | null;
+  created_by_name?: string | null;
 };
 
 const schema = z.object({
@@ -313,6 +314,7 @@ export default function SavingsPage() {
                     <TH>Student</TH>
                     <TH>Mode</TH>
                     <TH>Amount</TH>
+                    <TH>Added By</TH>
                     <TH>Notes</TH>
                     <TH></TH>
                   </tr>
@@ -320,7 +322,7 @@ export default function SavingsPage() {
                 <TBody>
                   {entries.isLoading ? (
                     <tr className="bg-[var(--panel)]">
-                      <TD colSpan={7}>
+                      <TD colSpan={8}>
                         <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
                           <Spinner /> Loading
                         </div>
@@ -328,7 +330,7 @@ export default function SavingsPage() {
                     </tr>
                   ) : entries.isError ? (
                     <tr className="bg-[var(--panel)]">
-                      <TD colSpan={7} className="text-sm text-rose-300">Failed to load savings entries</TD>
+                      <TD colSpan={8} className="text-sm text-rose-300">Failed to load savings entries</TD>
                     </tr>
                   ) : (
                     entries.data?.items.map((item) => (
@@ -341,6 +343,7 @@ export default function SavingsPage() {
                           {item.amount}
                           {item.is_edited && <span className="ml-2 rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs text-yellow-400">Edited</span>}
                         </TD>
+                        <TD className="text-[#91a1bc]">{item.created_by_name ?? '-'}</TD>
                         <TD className="max-w-[360px] truncate text-[#91a1bc]" title={item.notes ?? ''}>
                           {item.notes ?? '-'}
                         </TD>

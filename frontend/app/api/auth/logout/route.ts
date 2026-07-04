@@ -9,6 +9,12 @@ export async function POST() {
     path: '/',
     maxAge: 0
   });
+  response.cookies.set('refresh_token', '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 0
+  });
   return response;
 }
-

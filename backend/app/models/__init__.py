@@ -1,5 +1,6 @@
 from app.models.base import Base
 from app.models.billing_settings import BillingSettings
+from app.models.institution_settings import InstitutionSettings
 from app.models.payment import Payment
 from app.models.receipt_sequence import ReceiptSequence
 from app.models.savings_entry import SavingsEntry
@@ -12,6 +13,7 @@ from app.models.user import User
 __all__ = [
     "Base",
     "BillingSettings",
+    "InstitutionSettings",
     "User",
     "Student",
     "StudentFee",

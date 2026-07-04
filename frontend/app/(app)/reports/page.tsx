@@ -39,7 +39,7 @@ function monthLabel(value: string) {
 
 export default function ReportsPage() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
-  const [paymentState, setPaymentState] = useState<'paid' | 'unpaid' | 'all'>('unpaid');
+  const [paymentState, setPaymentState] = useState<'paid' | 'unpaid' | 'all'>('all');
   const [search, setSearch] = useState('');
   const [classCode, setClassCode] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -54,6 +54,13 @@ export default function ReportsPage() {
     setDebouncedClass(classCode);
   }, [classCode, setDebouncedClass]);
 
+  // Fetch summary for accurate paid/unpaid counts (independent of table filter)
+  const summary = useQuery({
+    queryKey: ['reportSummary', month],
+    queryFn: () =>
+      apiFetch<{ paid_students: number; unpaid_students: number }>(`/reports/summary?month=${encodeURIComponent(toMonthDate(month))}`)
+  });
+
   const students = useQuery({
     queryKey: ['monthlyStudentReport', month, paymentState, debouncedSearch, debouncedClassCode],
     queryFn: () =>
@@ -64,8 +71,8 @@ export default function ReportsPage() {
       )
   });
 
-  const paidCount = students.data?.filter((item) => item.is_paid).length ?? 0;
-  const unpaidCount = students.data?.filter((item) => !item.is_paid).length ?? 0;
+  const paidCount = summary.data?.paid_students ?? 0;
+  const unpaidCount = summary.data?.unpaid_students ?? 0;
   const exportHref = `/api/backend/export/monthly-students.csv?month=${encodeURIComponent(toMonthDate(month))}&payment_state=${encodeURIComponent(
     paymentState
   )}&search=${encodeURIComponent(debouncedSearch)}&class_code=${encodeURIComponent(debouncedClassCode)}`;
@@ -98,9 +105,9 @@ export default function ReportsPage() {
                 value={paymentState}
                 onChange={(e) => setPaymentState(e.target.value as 'paid' | 'unpaid' | 'all')}
               >
-                <option value="unpaid">Not Paid</option>
-                <option value="paid">Paid</option>
                 <option value="all">All</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Not Paid</option>
               </select>
             </div>
             <div className="space-y-1.5">

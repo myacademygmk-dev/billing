@@ -4,26 +4,33 @@ import logging
 import time
 import uuid
 from collections import defaultdict
-from multiprocessing import Manager
 from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from jwt.exceptions import PyJWTError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.models.enums import UserRole
-from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest, SetupPasswordRequest, TokenResponse, UserMeResponse, UserRead
+from app.models.user import ALL_PERMISSIONS, User
+from app.schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    SetupPasswordRequest,
+    TokenResponse,
+    UpdateUserPermissionsRequest,
+    UserMeResponse,
+    UserRead,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # In-memory rate limiter (works per-worker; provides basic protection)
-# For full multi-worker protection, the receipt_sequence lock and DB constraints
-# already prevent actual damage — this just reduces noise.
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 _MAX_ATTEMPTS = 5
@@ -46,6 +53,13 @@ def _check_rate_limit(ip: str) -> None:
         _login_attempts[ip].append(now)
 
 
+def _get_user_permissions(user: User) -> list[str]:
+    """Get effective permissions for a user. Admin gets all permissions."""
+    if user.role == UserRole.admin:
+        return ALL_PERMISSIONS
+    return user.permissions if user.permissions else []
+
+
 def _user_read(user: User) -> UserRead:
     return UserRead(
         id=user.id,
@@ -53,6 +67,7 @@ def _user_read(user: User) -> UserRead:
         email=user.email,
         role=user.role,
         has_password=bool(user.password_hash),
+        permissions=_get_user_permissions(user),
     )
 
 
@@ -64,12 +79,58 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         logger.warning("Failed login attempt for username=%r", payload.username)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     logger.info("User logged in: username=%r id=%s role=%s", user.username, user.id, user.role)
-    return TokenResponse(access_token=create_access_token(subject=str(user.id)))
+    return TokenResponse(
+        access_token=create_access_token(subject=str(user.id)),
+        refresh_token=create_refresh_token(subject=str(user.id)),
+    )
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    """Exchange a valid refresh token for a new access + refresh token pair."""
+    try:
+        token_data = decode_token(payload.refresh_token)
+    except PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    if token_data.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+
+    sub = token_data.get("sub")
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    try:
+        user_id = uuid.UUID(sub)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    logger.info("Token refreshed for user: username=%r id=%s", user.username, user.id)
+    return TokenResponse(
+        access_token=create_access_token(subject=str(user.id)),
+        refresh_token=create_refresh_token(subject=str(user.id)),
+    )
 
 
 @router.get("/me", response_model=UserMeResponse)
 def me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
-    return UserMeResponse(id=current_user.id, username=current_user.username, email=current_user.email, role=current_user.role)
+    return UserMeResponse(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        role=current_user.role,
+        permissions=_get_user_permissions(current_user),
+    )
+
+
+@router.get("/permissions", response_model=list[str])
+def list_available_permissions(_: User = Depends(get_current_user)) -> list[str]:
+    """Return all available permission keys."""
+    return ALL_PERMISSIONS
 
 
 @router.post("/register", response_model=UserRead, status_code=201)
@@ -87,16 +148,51 @@ def register_user(
     if email_exists:
         raise HTTPException(status_code=409, detail="Email already registered")
 
+    # Validate permissions
+    permissions = payload.permissions
+    if permissions is not None:
+        invalid = [p for p in permissions if p not in ALL_PERMISSIONS]
+        if invalid:
+            raise HTTPException(status_code=422, detail=f"Invalid permissions: {invalid}")
+
     user = User(
         username=payload.username,
         email=payload.email,
         password_hash="",  # No password yet — user must set it via /setup-password
         role=payload.role,
+        permissions=permissions,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     logger.info("User created: username=%r role=%s by=%s", user.username, user.role, current_user.username)
+    return _user_read(user)
+
+
+@router.patch("/users/{user_id}/permissions", response_model=UserRead)
+def update_user_permissions(
+    user_id: uuid.UUID,
+    payload: UpdateUserPermissionsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+) -> UserRead:
+    """Admin updates which pages/sections a staff user can access."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role == UserRole.admin:
+        raise HTTPException(status_code=400, detail="Admin users always have full access")
+
+    # Validate permissions
+    invalid = [p for p in payload.permissions if p not in ALL_PERMISSIONS]
+    if invalid:
+        raise HTTPException(status_code=422, detail=f"Invalid permissions: {invalid}")
+
+    user.permissions = payload.permissions
+    db.commit()
+    db.refresh(user)
+    logger.info("Permissions updated for user=%r by=%s: %s", user.username, current_user.username, payload.permissions)
     return _user_read(user)
 
 

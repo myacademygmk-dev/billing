@@ -29,6 +29,7 @@ class PaymentRead(BaseModel):
     student_id: uuid.UUID
     student_name: str | None = None
     student_code: str | None = None
+    student_class: str | None = None
     amount: Decimal
     mode: PaymentMode
     reference_no: str | None = None
@@ -43,6 +44,7 @@ class PaymentRead(BaseModel):
     fee_period_label: str | None = None
     next_due_label: str | None = None
     pending_amount: Decimal | None = None
+    pending_label: str | None = None
 
     @field_validator("bill_no", mode="before")
     @classmethod

@@ -32,6 +32,7 @@ type Payment = {
   fee_period_label?: string | null;
   amount: string;
   paid_at: string;
+  created_by_name?: string | null;
 };
 
 function toMonthDate(value: string) {
@@ -166,6 +167,7 @@ export default function DashboardPage() {
                         <TH>Student</TH>
                         <TH>Receipt</TH>
                         <TH>Fee Period</TH>
+                        <TH>Added By</TH>
                         <TH>Date</TH>
                         <TH></TH>
                       </tr>
@@ -177,6 +179,7 @@ export default function DashboardPage() {
                           <TD className="theme-heading font-semibold">{payment.student_name ?? '-'}</TD>
                           <TD>{payment.receipt_no}</TD>
                           <TD>{payment.fee_period_label ?? '-'}</TD>
+                          <TD className="text-[#91a1bc]">{payment.created_by_name ?? '-'}</TD>
                           <TD>{new Date(payment.paid_at).toLocaleString()}</TD>
                           <TD>
                             <Button

@@ -12,6 +12,7 @@ from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
 from app.models.billing_settings import BillingSettings
 from app.models.enums import PaymentCycle
+from app.models.institution_settings import InstitutionSettings
 from app.models.payment import Payment
 from app.models.receipt_sequence import ReceiptSequence
 from app.models.savings_entry import SavingsEntry
@@ -24,9 +25,11 @@ from app.schemas.settings import (
     BillingSettingsUpdate,
     DatabaseResetRead,
     DatabaseResetRequest,
+    InstitutionSettingsRead,
+    InstitutionSettingsUpdate,
     RandomBillRequest,
 )
-from app.services.bill_pdf import render_custom_bill_pdf
+from app.services.bill_pdf import InstitutionBranding, render_custom_bill_pdf
 from app.services.billing import cycle_months_for, get_billing_settings
 
 
@@ -34,6 +37,27 @@ router = APIRouter()
 
 RESET_CONFIRMATION_TEXT = "DELETE ALL DATA"
 logger = logging.getLogger(__name__)
+
+
+def get_institution_settings(db: Session) -> InstitutionSettings:
+    """Get or create singleton institution settings row."""
+    settings = db.get(InstitutionSettings, 1)
+    if settings is None:
+        settings = InstitutionSettings(id=1)
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+
+def get_institution_branding(db: Session) -> InstitutionBranding:
+    """Load institution branding for PDF generation."""
+    inst = get_institution_settings(db)
+    return InstitutionBranding(
+        name=inst.name,
+        tagline=inst.tagline,
+        registration_no=inst.registration_no,
+    )
 
 
 @router.get("/billing", response_model=BillingSettingsRead)
@@ -67,6 +91,50 @@ def update_billing_settings_route(
         cycle_months=cycle_months_for(settings.cycle_mode),
         updated_at=settings.updated_at,
         updated_by=settings.updated_by,
+    )
+
+
+@router.get("/institution", response_model=InstitutionSettingsRead)
+def get_institution_settings_route(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> InstitutionSettingsRead:
+    inst = get_institution_settings(db)
+    return InstitutionSettingsRead(
+        name=inst.name,
+        tagline=inst.tagline,
+        registration_no=inst.registration_no,
+        address=inst.address,
+        phone=inst.phone,
+        email=inst.email,
+        updated_at=inst.updated_at,
+        updated_by=inst.updated_by,
+    )
+
+
+@router.patch("/institution", response_model=InstitutionSettingsRead)
+def update_institution_settings_route(
+    payload: InstitutionSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+) -> InstitutionSettingsRead:
+    inst = get_institution_settings(db)
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(inst, field, value)
+    inst.updated_at = datetime.now(UTC)
+    inst.updated_by = current_user.id
+    db.commit()
+    db.refresh(inst)
+    return InstitutionSettingsRead(
+        name=inst.name,
+        tagline=inst.tagline,
+        registration_no=inst.registration_no,
+        address=inst.address,
+        phone=inst.phone,
+        email=inst.email,
+        updated_at=inst.updated_at,
+        updated_by=inst.updated_by,
     )
 
 
@@ -126,9 +194,14 @@ def reset_database_route(
 @router.post("/random-bill.pdf")
 def generate_random_bill_pdf(
     payload: RandomBillRequest,
+    db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> Response:
-    pdf = render_custom_bill_pdf(fields=[(field.label.strip(), field.value.strip()) for field in payload.fields])
+    branding = get_institution_branding(db)
+    pdf = render_custom_bill_pdf(
+        fields=[(field.label.strip(), field.value.strip()) for field in payload.fields],
+        branding=branding,
+    )
     filename = (payload.file_name.strip() if payload.file_name else "random-bill") or "random-bill"
     return Response(
         content=pdf,

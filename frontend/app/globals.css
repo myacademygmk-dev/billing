@@ -298,3 +298,10 @@ h6 {
 [data-theme='light'] .bg-\[linear-gradient\(135deg\,rgba\(79\,124\,255\,0\.88\)_0\%\,rgba\(49\,91\,211\,0\.76\)_100\%\)\] {
   box-shadow: 0 12px 22px rgba(47, 111, 237, 0.12) !important;
 }
+
+/* Print styles — hide app chrome when printing */
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+}

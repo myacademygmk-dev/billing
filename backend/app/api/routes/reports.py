@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, extract
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
@@ -197,3 +197,98 @@ def daily(
         .all()
     )
     return [{"mode": mode.value, "total": str(total)} for mode, total in rows]
+
+
+@router.get("/annual", response_model=dict)
+def annual_revenue(
+    year: int = Query(..., description="Calendar year (e.g. 2025)"),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> dict:
+    """Annual revenue summary: monthly breakdown, mode breakdown, and totals for a given year."""
+    year_start = datetime.combine(date(year, 1, 1), time.min, tzinfo=UTC)
+    year_end = datetime.combine(date(year, 12, 31), time.max, tzinfo=UTC)
+
+    # Monthly totals
+    monthly_rows = db.execute(
+        select(
+            extract("month", Payment.paid_at).label("month"),
+            func.coalesce(func.sum(Payment.amount), 0).label("total"),
+            func.count(Payment.id).label("count"),
+        )
+        .where(Payment.paid_at >= year_start)
+        .where(Payment.paid_at <= year_end)
+        .group_by(extract("month", Payment.paid_at))
+        .order_by(extract("month", Payment.paid_at))
+    ).all()
+
+    monthly_breakdown = []
+    monthly_map: dict[int, Decimal] = {}
+    for month_num, total, count in monthly_rows:
+        m = int(month_num)
+        monthly_map[m] = total
+        monthly_breakdown.append({
+            "month": m,
+            "month_name": date(year, m, 1).strftime("%B"),
+            "total": str(total),
+            "payment_count": count,
+        })
+
+    # Fill missing months with zero
+    for m in range(1, 13):
+        if m not in monthly_map:
+            monthly_breakdown.append({
+                "month": m,
+                "month_name": date(year, m, 1).strftime("%B"),
+                "total": "0",
+                "payment_count": 0,
+            })
+    monthly_breakdown.sort(key=lambda x: x["month"])
+
+    # Mode breakdown
+    mode_rows = db.execute(
+        select(
+            Payment.mode,
+            func.coalesce(func.sum(Payment.amount), 0).label("total"),
+            func.count(Payment.id).label("count"),
+        )
+        .where(Payment.paid_at >= year_start)
+        .where(Payment.paid_at <= year_end)
+        .group_by(Payment.mode)
+    ).all()
+
+    mode_breakdown = [
+        {"mode": mode.value, "total": str(total), "payment_count": count}
+        for mode, total, count in mode_rows
+    ]
+
+    # Grand total
+    grand_total = db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0))
+        .where(Payment.paid_at >= year_start)
+        .where(Payment.paid_at <= year_end)
+    ).scalar_one()
+
+    total_payments = db.execute(
+        select(func.count(Payment.id))
+        .where(Payment.paid_at >= year_start)
+        .where(Payment.paid_at <= year_end)
+    ).scalar_one()
+
+    # Previous year comparison
+    prev_year_start = datetime.combine(date(year - 1, 1, 1), time.min, tzinfo=UTC)
+    prev_year_end = datetime.combine(date(year - 1, 12, 31), time.max, tzinfo=UTC)
+    prev_year_total = db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0))
+        .where(Payment.paid_at >= prev_year_start)
+        .where(Payment.paid_at <= prev_year_end)
+    ).scalar_one()
+
+    return {
+        "year": year,
+        "grand_total": str(grand_total),
+        "total_payments": total_payments,
+        "previous_year_total": str(prev_year_total),
+        "monthly_breakdown": monthly_breakdown,
+        "mode_breakdown": mode_breakdown,
+    }
