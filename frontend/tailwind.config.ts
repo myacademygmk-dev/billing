@@ -9,6 +9,20 @@ const config: Config = {
         background: 'hsl(210 40% 98%)',
         foreground: 'hsl(222.2 84% 4.9%)',
         card: 'hsl(0 0% 100%)'
+      },
+      keyframes: {
+        'slide-in-left': {
+          from: { transform: 'translateX(-100%)' },
+          to: { transform: 'translateX(0)' }
+        },
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' }
+        }
+      },
+      animation: {
+        'slide-in-left': 'slide-in-left 200ms ease-out',
+        'fade-in': 'fade-in 150ms ease-out'
       }
     }
   },
@@ -16,4 +30,3 @@ const config: Config = {
 };
 
 export default config;
-

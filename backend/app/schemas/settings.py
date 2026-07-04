@@ -19,6 +19,26 @@ class BillingSettingsUpdate(BaseModel):
     cycle_mode: PaymentCycle
 
 
+class InstitutionSettingsRead(BaseModel):
+    name: str
+    tagline: str
+    registration_no: str
+    address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    updated_at: datetime
+    updated_by: uuid.UUID | None
+
+
+class InstitutionSettingsUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
+    tagline: str | None = Field(default=None, max_length=300)
+    registration_no: str | None = Field(default=None, max_length=100)
+    address: str | None = Field(default=None, max_length=500)
+    phone: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=200)
+
+
 class DatabaseResetRequest(BaseModel):
     confirmation_text: str
 

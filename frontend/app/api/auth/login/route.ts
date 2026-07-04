@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   const token = data.access_token;
+  const refreshToken = data.refresh_token;
   const response = NextResponse.json({ ok: true });
   response.cookies.set('access_token', token, {
     httpOnly: true,
@@ -21,6 +22,13 @@ export async function POST(req: Request) {
     secure: process.env.COOKIE_SECURE === 'true',
     path: '/',
     maxAge: 60 * 60 * 2, // 2 hours, matches JWT expiry
+  });
+  response.cookies.set('refresh_token', refreshToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.COOKIE_SECURE === 'true',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30, // 30 days, matches refresh token expiry
   });
   return response;
 }

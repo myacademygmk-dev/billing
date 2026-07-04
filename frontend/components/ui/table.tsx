@@ -14,7 +14,7 @@ export function TH({ className, ...props }: ComponentPropsWithoutRef<'th'>) {
   return (
     <th
       className={cn(
-        'border-b border-[rgba(148,163,184,0.12)] px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]',
+        'border-b border-[rgba(148,163,184,0.12)] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)] sm:px-5 sm:py-3.5',
         className
       )}
       {...props}
@@ -27,5 +27,5 @@ export function TBody({ className, ...props }: ComponentPropsWithoutRef<'tbody'>
 }
 
 export function TD({ className, ...props }: ComponentPropsWithoutRef<'td'>) {
-  return <td className={cn('border-b border-[rgba(148,163,184,0.08)] px-5 py-3.5 align-top text-[var(--text)]', className)} {...props} />;
+  return <td className={cn('border-b border-[rgba(148,163,184,0.08)] px-3 py-3 align-top text-[var(--text)] sm:px-5 sm:py-3.5', className)} {...props} />;
 }

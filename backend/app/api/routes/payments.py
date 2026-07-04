@@ -16,6 +16,7 @@ from app.models.receipt_sequence import ReceiptSequence
 from app.models.student import Student
 from app.models.user import User
 from app.schemas.payments import PaymentCreate, PaymentRead, PaymentReverseRequest
+from app.api.routes.settings import get_institution_branding
 from app.services.bill_pdf import format_bill_no, render_bill_pdf
 from app.services.billing import (
     add_months,
@@ -29,6 +30,7 @@ from app.services.billing import (
     get_student_monthly_fee,
     payment_period_months,
     pending_amount,
+    pending_details,
     release_payment_periods,
 )
 
@@ -273,16 +275,29 @@ def download_receipt_pdf(
     snapshot = billing_list_snapshot(overview) if overview else None
     selected_months = [period.period_month for period in payment.billing_periods]
     period_label = fee_period_label_for_months(selected_months) or fee_period_label(payment.billing_start_month, payment.billing_cycle_months) or "N/A"
+
+    # Build pending string with month details
+    pending_str = "-"
+    if overview:
+        details = pending_details(overview)
+        if details["months_count"] > 0:
+            pending_str = details['label']
+        else:
+            pending_str = "Nil"
+
     pdf = render_bill_pdf(
         bill_no=payment.bill_no,
         student_name=student.name if student else "Unknown Student",
         student_code=student.student_code if student else "-",
+        student_class=student.class_name or "-" if student else "-",
         fee_period=period_label,
         amount=str(payment.amount),
+        payment_mode=payment.mode.value,
         payment_date=payment.paid_at.strftime("%d-%m-%Y"),
         next_due=snapshot.next_due_label if snapshot and snapshot.next_due_label else "-",
-        pending=str(pending_amount(overview)) if overview else "-",
-        remarks=payment.reference_no or payment.notes or "-",
+        pending=pending_str,
+        remarks=payment.notes or None,
+        branding=get_institution_branding(db),
     )
     headers = {"Content-Disposition": f'attachment; filename="{payment.receipt_no}.pdf"'}
     return Response(content=pdf, media_type="application/pdf", headers=headers)
@@ -293,6 +308,7 @@ def _payment_read(db: Session, payment: Payment, *, include_overview: bool = Fal
     data["bill_no"] = format_bill_no(payment.bill_no)
     data["student_name"] = payment.student.name if payment.student else None
     data["student_code"] = payment.student.student_code if payment.student else None
+    data["student_class"] = payment.student.class_name if payment.student else None
     data["created_by_name"] = payment.creator.username if payment.creator else None
     data["cycle_mode"] = cycle_mode_for_months(payment.billing_cycle_months)
     selected_months = [period.period_month for period in payment.billing_periods]
@@ -302,4 +318,6 @@ def _payment_read(db: Session, payment: Payment, *, include_overview: bool = Fal
         snapshot = billing_list_snapshot(overview)
         data["next_due_label"] = snapshot.next_due_label
         data["pending_amount"] = pending_amount(overview)
+        details = pending_details(overview)
+        data["pending_label"] = details["label"] if details["months_count"] > 0 else None
     return PaymentRead.model_validate(data)
