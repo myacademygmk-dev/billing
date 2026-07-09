@@ -13,7 +13,11 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/reports') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/expenses') ||
-    pathname.startsWith('/savings');
+    pathname.startsWith('/savings') ||
+    pathname.startsWith('/staff') ||
+    pathname.startsWith('/academic') ||
+    pathname.startsWith('/cms') ||
+    pathname.startsWith('/fees');
 
   if (isAppRoute && !token) {
     const url = req.nextUrl.clone();
@@ -42,6 +46,10 @@ export const config = {
     '/reports/:path*',
     '/settings/:path*',
     '/expenses/:path*',
-    '/savings/:path*'
+    '/savings/:path*',
+    '/staff/:path*',
+    '/academic/:path*',
+    '/cms/:path*',
+    '/fees/:path*',
   ]
 };

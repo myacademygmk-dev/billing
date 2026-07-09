@@ -1,223 +1,94 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Download, Filter, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { ShieldX } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
-import { Table, TBody, TD, TH, THead } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
-import { debounce } from '@/lib/debounce';
 
-type MonthlyStudent = {
-  student_id: string;
-  student_code: string;
-  name: string;
-  class_name: string | null;
-  section: string | null;
-  payment_period: string;
-  monthly_fee: string;
-  month: string;
-  month_label: string;
-  is_paid: boolean;
-  receipt_no?: string | null;
-};
-
-function toMonthDate(value: string) {
-  return `${value}-01`;
-}
-
-function monthLabel(value: string) {
-  const [year, month] = value.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
+// Lazy load tab content
+import dynamic from 'next/dynamic';
+const ReportsTab = dynamic(() => import('./tabs/reports-tab'), { ssr: false });
+const TransactionsTab = dynamic(() => import('./tabs/transactions-tab'), { ssr: false });
+const ExpensesTab = dynamic(() => import('./tabs/expenses-tab'), { ssr: false });
 
 export default function ReportsPage() {
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
-  const [paymentState, setPaymentState] = useState<'paid' | 'unpaid' | 'all'>('all');
-  const [search, setSearch] = useState('');
-  const [classCode, setClassCode] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [debouncedClassCode, setDebouncedClassCode] = useState('');
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'reports');
 
-  const setDebounced = useMemo(() => debounce((value: string) => setDebouncedSearch(value), 250), []);
-  const setDebouncedClass = useMemo(() => debounce((value: string) => setDebouncedClassCode(value), 250), []);
+  // Sync tab with URL param when it changes
   useEffect(() => {
-    setDebounced(search);
-  }, [search, setDebounced]);
-  useEffect(() => {
-    setDebouncedClass(classCode);
-  }, [classCode, setDebouncedClass]);
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
-  // Fetch summary for accurate paid/unpaid counts (independent of table filter)
-  const summary = useQuery({
-    queryKey: ['reportSummary', month],
-    queryFn: () =>
-      apiFetch<{ paid_students: number; unpaid_students: number }>(`/reports/summary?month=${encodeURIComponent(toMonthDate(month))}`)
+  const { data: me } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => apiFetch<{ role: string; permissions: string[] }>('/auth/me'),
+    staleTime: Infinity,
   });
 
-  const students = useQuery({
-    queryKey: ['monthlyStudentReport', month, paymentState, debouncedSearch, debouncedClassCode],
-    queryFn: () =>
-      apiFetch<MonthlyStudent[]>(
-        `/reports/monthly-students?month=${encodeURIComponent(toMonthDate(month))}&payment_state=${paymentState}&search=${encodeURIComponent(
-          debouncedSearch
-        )}&class_code=${encodeURIComponent(debouncedClassCode)}`
-      )
-  });
+  const isAdmin = me?.role === 'admin';
+  const permissions = me?.permissions ?? [];
 
-  const paidCount = summary.data?.paid_students ?? 0;
-  const unpaidCount = summary.data?.unpaid_students ?? 0;
-  const exportHref = `/api/backend/export/monthly-students.csv?month=${encodeURIComponent(toMonthDate(month))}&payment_state=${encodeURIComponent(
-    paymentState
-  )}&search=${encodeURIComponent(debouncedSearch)}&class_code=${encodeURIComponent(debouncedClassCode)}`;
+  // All possible tabs
+  const ALL_TABS = [
+    { id: 'reports', label: 'Reports & Analytics', permission: 'reports' },
+    { id: 'transactions', label: 'Transactions', permission: 'transactions' },
+    { id: 'expenses', label: 'Expenses', permission: 'expenses' },
+  ];
+
+  // Tabs visible to this user
+  const visibleTabs = ALL_TABS.filter((tab) => isAdmin || permissions.includes(tab.permission));
+
+  // Check if the requested tab is accessible
+  const hasAccessToTab = isAdmin || permissions.includes(activeTab) || visibleTabs.some((t) => t.id === activeTab);
+  const effectiveTab = visibleTabs.find((t) => t.id === activeTab) ? activeTab : (visibleTabs[0]?.id ?? 'reports');
+
+  // If user navigated to a tab they don't have access to
+  const accessDenied = !hasAccessToTab && tabFromUrl;
 
   return (
-    <AppShell
-      title="Reports & Analytics"
-      subtitle="Track which students paid and which students are still unpaid for a selected month."
-      action={
-        <Button onClick={() => window.location.assign(exportHref)}>
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
-      }
-    >
-      <div className="page-grid">
-        <div className="space-y-3">
-          <div className="grid gap-3 xl:grid-cols-[180px_180px_160px_minmax(0,1fr)_120px_120px]">
-            <div className="space-y-1.5">
-              <div className="theme-heading flex items-center gap-2 text-sm font-medium">
-                <Filter className="h-4 w-4 text-[var(--accent)]" />
-                Month
-              </div>
-              <Input className="h-10 rounded-xl" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <div className="theme-heading text-sm font-medium">Status</div>
-              <select
-                className="theme-select h-10 w-full rounded-xl px-4 text-sm outline-none"
-                value={paymentState}
-                onChange={(e) => setPaymentState(e.target.value as 'paid' | 'unpaid' | 'all')}
-              >
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Not Paid</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <div className="theme-heading text-sm font-medium">Class ID</div>
-              <Input
-                className="h-10 rounded-xl"
-                value={classCode}
-                onChange={(e) => setClassCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                placeholder="05"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="theme-heading text-sm font-medium">Search</div>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7484a1]" />
-                <Input
-                  className="h-10 rounded-xl pl-11"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Student name, roll no, class"
-                />
-              </div>
-            </div>
-            <div className="theme-subtle-surface rounded-[18px] px-3 py-2.5">
-              <div className="text-xs uppercase tracking-[0.12em] text-[#7484a1]">Paid</div>
-              <div className="theme-heading mt-1 text-2xl font-semibold">{paidCount}</div>
-            </div>
-            <div className="theme-subtle-surface rounded-[18px] px-3 py-2.5">
-              <div className="text-xs uppercase tracking-[0.12em] text-[#7484a1]">Not Paid</div>
-              <div className="theme-heading mt-1 text-2xl font-semibold">{unpaidCount}</div>
-            </div>
+    <AppShell title="Reports" subtitle="Analytics, fee payments, and expense tracking in one place.">
+      {accessDenied ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--panel-line)] bg-[var(--chip-danger-bg)]">
+            <ShieldX size={28} className="text-[var(--danger)]" />
           </div>
+          <h2 className="mt-5 text-lg font-semibold text-[var(--heading)]">Access Denied</h2>
+          <p className="mt-2 max-w-sm text-center text-sm text-[var(--muted)]">
+            You don't have permission to view this section. Contact your administrator to get access.
+          </p>
         </div>
+      ) : (
+        <>
+          {/* Tab Navigation */}
+          <div className="mb-6 flex gap-1 rounded-full border border-[var(--field-border)] bg-[var(--surface-subtle)] p-1">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  effectiveTab === tab.id
+                    ? 'bg-[var(--accent)] text-white shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--heading)] hover:bg-[var(--surface-muted)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        <Card className="shadow-none">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Student Month Status</CardTitle>
-              <div className="mt-1 text-sm text-[#91a1bc]">
-                Showing {paymentState === 'all' ? 'all students' : paymentState === 'paid' ? 'paid students' : 'students not paid'} for {monthLabel(month)}
-              </div>
-            </div>
-            <Badge className="theme-chip-neutral">{monthLabel(month)}</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-auto">
-              <Table>
-                <THead>
-                  <tr>
-                    <TH>Student ID</TH>
-                    <TH>Name</TH>
-                    <TH>Class</TH>
-                    <TH>Period</TH>
-                    <TH>Monthly Fee</TH>
-                    <TH>Month</TH>
-                    <TH>Status</TH>
-                    <TH>Receipt</TH>
-                  </tr>
-                </THead>
-                <TBody>
-                  {students.isLoading ? (
-                    <tr className="bg-[var(--panel)]">
-                      <TD colSpan={8}>
-                        <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
-                          <Spinner /> Loading
-                        </div>
-                      </TD>
-                    </tr>
-                  ) : students.isError ? (
-                    <tr className="bg-[var(--panel)]">
-                      <TD colSpan={8} className="text-sm text-rose-300">
-                        Failed to load monthly report
-                      </TD>
-                    </tr>
-                  ) : students.data?.length ? (
-                    students.data.map((student) => (
-                      <tr key={student.student_id} className="bg-[var(--panel)]">
-                        <TD>{student.student_code}</TD>
-                        <TD className="theme-heading font-semibold">{student.name}</TD>
-                        <TD>{student.class_name ?? '-'}{student.section ? ` ${student.section}` : ''}</TD>
-                        <TD>{student.payment_period}</TD>
-                        <TD>{student.monthly_fee}</TD>
-                        <TD>{student.month_label}</TD>
-                        <TD>
-                          <Badge
-                            className={
-                              student.is_paid
-                                ? 'theme-chip-success'
-                                : 'theme-chip-warn'
-                            }
-                          >
-                            {student.is_paid ? 'Paid' : 'Not Paid'}
-                          </Badge>
-                        </TD>
-                        <TD>{student.receipt_no ?? '-'}</TD>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="bg-[var(--panel)]">
-                      <TD colSpan={8} className="text-sm text-[#91a1bc]">
-                        No students found for the selected filters
-                      </TD>
-                    </tr>
-                  )}
-                </TBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Tab Content */}
+          {effectiveTab === 'reports' && <ReportsTab />}
+          {effectiveTab === 'transactions' && <TransactionsTab />}
+          {effectiveTab === 'expenses' && <ExpensesTab />}
+        </>
+      )}
     </AppShell>
   );
 }

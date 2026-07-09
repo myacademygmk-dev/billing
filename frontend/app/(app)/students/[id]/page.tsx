@@ -26,7 +26,29 @@ type Student = {
   name: string;
   class_name: string | null;
   section: string | null;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'passed_out' | 'withdrawn' | 'transferred';
+  date_of_birth?: string | null;
+  gender?: string | null;
+  blood_group?: string | null;
+  photo_url?: string | null;
+  admission_no?: string | null;
+  father_name?: string | null;
+  mother_name?: string | null;
+  guardian_name?: string | null;
+  parent_phone?: string | null;
+  parent_phone_2?: string | null;
+  parent_email?: string | null;
+  parent_occupation?: string | null;
+  whatsapp_no?: string | null;
+  address?: string | null;
+  city?: string | null;
+  pincode?: string | null;
+  previous_school?: string | null;
+  emergency_contact?: string | null;
+  emergency_phone?: string | null;
+  joined_date?: string | null;
+  batch?: string | null;
+  notes?: string | null;
 };
 
 type Fee = {
@@ -157,7 +179,7 @@ export default function StudentDetailPage() {
         <div className="text-sm text-rose-300">Student not found</div>
       ) : (
         <div className="space-y-4">
-          <Card>
+          <Card square>
             <CardHeader>
               <CardTitle>
                 {student.data?.name} <span className="text-[#7f8da9]">({student.data?.student_code})</span>
@@ -173,26 +195,56 @@ export default function StudentDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Profile Details */}
+          <Card square>
+            <CardHeader><CardTitle>Profile Details</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                {student.data?.date_of_birth && <div><span className="text-[var(--muted)]">Date of Birth:</span> <span className="font-medium">{student.data.date_of_birth}</span></div>}
+                {student.data?.gender && <div><span className="text-[var(--muted)]">Gender:</span> <span className="font-medium capitalize">{student.data.gender}</span></div>}
+                {student.data?.blood_group && <div><span className="text-[var(--muted)]">Blood Group:</span> <span className="font-medium">{student.data.blood_group}</span></div>}
+                {student.data?.admission_no && <div><span className="text-[var(--muted)]">Admission No:</span> <span className="font-medium">{student.data.admission_no}</span></div>}
+                {student.data?.joined_date && <div><span className="text-[var(--muted)]">Joined:</span> <span className="font-medium">{student.data.joined_date}</span></div>}
+                {student.data?.batch && <div><span className="text-[var(--muted)]">Batch:</span> <span className="font-medium">{student.data.batch}</span></div>}
+                {student.data?.father_name && <div><span className="text-[var(--muted)]">Father:</span> <span className="font-medium">{student.data.father_name}</span></div>}
+                {student.data?.mother_name && <div><span className="text-[var(--muted)]">Mother:</span> <span className="font-medium">{student.data.mother_name}</span></div>}
+                {student.data?.guardian_name && <div><span className="text-[var(--muted)]">Guardian:</span> <span className="font-medium">{student.data.guardian_name}</span></div>}
+                {student.data?.parent_phone && <div><span className="text-[var(--muted)]">Parent Phone:</span> <span className="font-medium">{student.data.parent_phone}</span></div>}
+                {student.data?.parent_phone_2 && <div><span className="text-[var(--muted)]">Phone 2:</span> <span className="font-medium">{student.data.parent_phone_2}</span></div>}
+                {student.data?.whatsapp_no && <div><span className="text-[var(--muted)]">WhatsApp:</span> <span className="font-medium">{student.data.whatsapp_no}</span></div>}
+                {student.data?.parent_email && <div><span className="text-[var(--muted)]">Email:</span> <span className="font-medium">{student.data.parent_email}</span></div>}
+                {student.data?.parent_occupation && <div><span className="text-[var(--muted)]">Occupation:</span> <span className="font-medium">{student.data.parent_occupation}</span></div>}
+                {student.data?.address && <div className="sm:col-span-2"><span className="text-[var(--muted)]">Address:</span> <span className="font-medium">{student.data.address}{student.data.city ? `, ${student.data.city}` : ''}{student.data.pincode ? ` - ${student.data.pincode}` : ''}</span></div>}
+                {student.data?.previous_school && <div className="sm:col-span-2"><span className="text-[var(--muted)]">Previous School:</span> <span className="font-medium">{student.data.previous_school}</span></div>}
+                {student.data?.emergency_contact && <div><span className="text-[var(--muted)]">Emergency:</span> <span className="font-medium">{student.data.emergency_contact} {student.data.emergency_phone ? `(${student.data.emergency_phone})` : ''}</span></div>}
+                {student.data?.notes && <div className="sm:col-span-3"><span className="text-[var(--muted)]">Notes:</span> <span className="font-medium">{student.data.notes}</span></div>}
+              </div>
+              {!student.data?.father_name && !student.data?.date_of_birth && !student.data?.parent_phone && (
+                <p className="mt-2 text-sm text-[var(--muted)]">No additional profile details available. Update student to add parent info, DOB, address, etc.</p>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <Card>
+            <Card square>
               <CardHeader>
                 <CardTitle>Monthly Fee</CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-semibold">{fee.data?.expected_fee_amount ?? '0'}</CardContent>
             </Card>
-            <Card>
+            <Card square>
               <CardHeader>
                 <CardTitle>Cycle Amount</CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-semibold">{overview.data?.payable_amount ?? '0'}</CardContent>
             </Card>
-            <Card>
+            <Card square>
               <CardHeader>
                 <CardTitle>Paid Total</CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-semibold">{balance.data?.paid_total ?? '0'}</CardContent>
             </Card>
-            <Card>
+            <Card square>
               <CardHeader>
                 <CardTitle>Next Unpaid</CardTitle>
               </CardHeader>
@@ -200,7 +252,7 @@ export default function StudentDetailPage() {
             </Card>
           </div>
 
-          <Card>
+          <Card square>
             <CardHeader>
               <CardTitle>Billing Status</CardTitle>
             </CardHeader>
@@ -255,7 +307,7 @@ export default function StudentDetailPage() {
             </Button>
           </div>
 
-          <Card>
+          <Card square>
             <CardHeader>
               <CardTitle>Payment History</CardTitle>
             </CardHeader>

@@ -11,6 +11,7 @@ import { AppShell } from '@/components/app/shell';
 import { RetractSavingsDialog, type SavingsRow } from '@/components/app/retract-savings-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, EmptyStateIcon } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Table, TBody, TD, TH, THead } from '@/components/ui/table';
@@ -141,7 +142,7 @@ export default function SavingsPage() {
     >
       <div className="page-grid">
         <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <Card>
+          <Card square>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PiggyBank className="h-5 w-5 text-[var(--accent)]" />
@@ -215,7 +216,7 @@ export default function SavingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card square>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
                 <CardTitle>Student Savings Balances</CardTitle>
@@ -286,7 +287,7 @@ export default function SavingsPage() {
           </Card>
         </div>
 
-        <Card>
+        <Card square>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
               <CardTitle>Savings Entries</CardTitle>
@@ -305,6 +306,17 @@ export default function SavingsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {entries.isLoading ? (
+              <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
+            ) : entries.isError ? (
+              <div className="py-8 text-center text-sm text-rose-300">Failed to load savings entries</div>
+            ) : !entries.data?.items.length ? (
+              <EmptyState
+                icon={<EmptyStateIcon type="payments" />}
+                title="No savings entries yet"
+                description="Savings deposits and retractions will appear here"
+              />
+            ) : (
             <div className="max-h-[460px] overflow-auto">
               <Table>
                 <THead>
@@ -320,20 +332,7 @@ export default function SavingsPage() {
                   </tr>
                 </THead>
                 <TBody>
-                  {entries.isLoading ? (
-                    <tr className="bg-[var(--panel)]">
-                      <TD colSpan={8}>
-                        <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
-                          <Spinner /> Loading
-                        </div>
-                      </TD>
-                    </tr>
-                  ) : entries.isError ? (
-                    <tr className="bg-[var(--panel)]">
-                      <TD colSpan={8} className="text-sm text-rose-300">Failed to load savings entries</TD>
-                    </tr>
-                  ) : (
-                    entries.data?.items.map((item) => (
+                  {entries.data?.items.map((item) => (
                       <tr key={item.id} className="bg-[var(--panel)]">
                         <TD>{new Date(item.recorded_at).toLocaleString()}</TD>
                         <TD>{item.student_code ?? '-'}</TD>
@@ -366,11 +365,11 @@ export default function SavingsPage() {
                           </Button>
                         </TD>
                       </tr>
-                    ))
-                  )}
+                    ))}
                 </TBody>
               </Table>
             </div>
+            )}
           </CardContent>
         </Card>
       </div>
