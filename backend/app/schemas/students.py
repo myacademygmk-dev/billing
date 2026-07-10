@@ -21,6 +21,27 @@ class StudentCreate(BaseModel):
     batch_start_month: int | None = Field(default=None, ge=1, le=12)
     billing_start_month: int | None = Field(default=None, ge=1, le=12)
     billing_end_month: int | None = Field(default=None, ge=1, le=12)
+    # Extended profile
+    date_of_birth: date | None = None
+    gender: str | None = None
+    blood_group: str | None = Field(default=None, max_length=10)
+    photo_url: str | None = None
+    admission_no: str | None = Field(default=None, max_length=50)
+    father_name: str | None = Field(default=None, max_length=200)
+    mother_name: str | None = Field(default=None, max_length=200)
+    guardian_name: str | None = Field(default=None, max_length=200)
+    parent_phone: str | None = Field(default=None, max_length=20)
+    parent_phone_2: str | None = Field(default=None, max_length=20)
+    parent_email: str | None = Field(default=None, max_length=200)
+    parent_occupation: str | None = Field(default=None, max_length=200)
+    whatsapp_no: str | None = Field(default=None, max_length=20)
+    address: str | None = None
+    city: str | None = Field(default=None, max_length=100)
+    pincode: str | None = Field(default=None, max_length=10)
+    previous_school: str | None = Field(default=None, max_length=300)
+    emergency_contact: str | None = Field(default=None, max_length=200)
+    emergency_phone: str | None = Field(default=None, max_length=20)
+    notes: str | None = None
 
 
 class StudentUpdate(BaseModel):
@@ -36,6 +57,27 @@ class StudentUpdate(BaseModel):
     billing_start_month: int | None = Field(default=None, ge=1, le=12)
     billing_end_month: int | None = Field(default=None, ge=1, le=12)
     status: StudentStatus | None = None
+    # Extended profile
+    date_of_birth: date | None = None
+    gender: str | None = None
+    blood_group: str | None = Field(default=None, max_length=10)
+    photo_url: str | None = None
+    admission_no: str | None = Field(default=None, max_length=50)
+    father_name: str | None = Field(default=None, max_length=200)
+    mother_name: str | None = Field(default=None, max_length=200)
+    guardian_name: str | None = Field(default=None, max_length=200)
+    parent_phone: str | None = Field(default=None, max_length=20)
+    parent_phone_2: str | None = Field(default=None, max_length=20)
+    parent_email: str | None = Field(default=None, max_length=200)
+    parent_occupation: str | None = Field(default=None, max_length=200)
+    whatsapp_no: str | None = Field(default=None, max_length=20)
+    address: str | None = None
+    city: str | None = Field(default=None, max_length=100)
+    pincode: str | None = Field(default=None, max_length=10)
+    previous_school: str | None = Field(default=None, max_length=300)
+    emergency_contact: str | None = Field(default=None, max_length=200)
+    emergency_phone: str | None = Field(default=None, max_length=20)
+    notes: str | None = None
 
 
 class StudentRead(BaseModel):
@@ -52,6 +94,27 @@ class StudentRead(BaseModel):
     billing_start_month: int | None = None
     billing_end_month: int | None = None
     status: StudentStatus
+    # Extended profile
+    date_of_birth: date | None = None
+    gender: str | None = None
+    blood_group: str | None = None
+    photo_url: str | None = None
+    admission_no: str | None = None
+    father_name: str | None = None
+    mother_name: str | None = None
+    guardian_name: str | None = None
+    parent_phone: str | None = None
+    parent_phone_2: str | None = None
+    parent_email: str | None = None
+    parent_occupation: str | None = None
+    whatsapp_no: str | None = None
+    address: str | None = None
+    city: str | None = None
+    pincode: str | None = None
+    previous_school: str | None = None
+    emergency_contact: str | None = None
+    emergency_phone: str | None = None
+    notes: str | None = None
     created_at: datetime
     updated_at: datetime
 

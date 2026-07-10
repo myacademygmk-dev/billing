@@ -9,6 +9,15 @@ from app.models.student_balance_view import StudentBalanceView
 from app.models.student_billing_period import StudentBillingPeriod
 from app.models.student_fee import StudentFee
 from app.models.user import User
+from app.models.staff import Staff, SalaryRecord
+from app.models.academic import AcademicYear, ClassSection, Subject
+from app.models.exam import Exam, Mark
+from app.models.cms import WebContent, GalleryPhoto
+from app.models.fee_structure import FeeStructure, FeeDiscount, StudentDiscount
+from app.models.expense_entry import ExpenseEntry
+from app.models.attendance import StudentAttendance, StaffAttendance
+from app.models.enquiry import Enquiry
+from app.models.file_upload import FileUpload
 
 __all__ = [
     "Base",
@@ -22,4 +31,21 @@ __all__ = [
     "Payment",
     "SavingsEntry",
     "StudentBalanceView",
+    "Staff",
+    "SalaryRecord",
+    "AcademicYear",
+    "ClassSection",
+    "Subject",
+    "Exam",
+    "Mark",
+    "WebContent",
+    "GalleryPhoto",
+    "FeeStructure",
+    "FeeDiscount",
+    "StudentDiscount",
+    "ExpenseEntry",
+    "StudentAttendance",
+    "StaffAttendance",
+    "Enquiry",
+    "FileUpload",
 ]

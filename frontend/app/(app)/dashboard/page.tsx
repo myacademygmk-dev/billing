@@ -92,20 +92,19 @@ export default function DashboardPage() {
   return (
     <AppShell
       title="Dashboard"
-      subtitle="Monitor payments, pending dues, and activity across your institution."
-      action={
-        <div className="flex flex-wrap gap-3">
-          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[180px]" />
+      subtitle="Monitor fee payments, pending dues, and activity across your institution."
+    >
+      <div className="page-grid">
+        {/* Filters */}
+        <div className="flex items-center justify-end gap-2">
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-8 w-[150px] text-xs" />
           <Link href="/api/backend/export/pending.csv" target="_blank">
-            <Button variant="outline">
-              <Download className="h-4 w-4" />
-              Export Report
+            <Button variant="outline" size="sm">
+              <Download className="h-3.5 w-3.5" />
+              Export
             </Button>
           </Link>
         </div>
-      }
-    >
-      <div className="page-grid">
         {/* Stat Cards */}
         {summary.isLoading ? (
           <SkeletonMetricCards count={3} className="lg:grid-cols-3" />
@@ -141,11 +140,11 @@ export default function DashboardPage() {
         )}
 
         {/* Recent Fee Payments */}
-        <Card square>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card square transparent>
+          <CardHeader className="flex flex-row items-center justify-between px-0 sm:px-0 border-b-0">
             <div>
               <CardTitle>Recent Fee Payments</CardTitle>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Latest payment activity</p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Latest payment activity</p>
             </div>
             <Link href="/reports?tab=transactions">
               <Button variant="outline" size="sm">
@@ -153,7 +152,7 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="px-0 sm:px-0">
+          <CardContent className="px-0 sm:px-0 py-0">
             {recentPayments.isLoading ? (
               <SkeletonTable rows={4} cols={5} />
             ) : recentPayments.isError ? (

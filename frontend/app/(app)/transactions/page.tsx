@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Download, Filter, Search } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
@@ -91,47 +91,32 @@ export default function TransactionsPage() {
         </Link>
       }
     >
-      <div className="space-y-5">
-        {/* Filters */}
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted)]">
-              <Filter size={12} />
-              From
-            </label>
-            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9 w-[150px]" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">To</label>
-            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9 w-[150px]" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">Mode</label>
-            <Select
-              value={mode}
-              onChange={(e) => { setMode(e.target.value); setPage(1); }}
-              className="h-9 w-[130px]"
-            >
-              <option value="">All Modes</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="bank">Bank</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">Bill No</label>
-            <Input
-              value={billNo}
-              onChange={(e) => {
-                setBillNo(e.target.value);
-                setBillNoDebounced(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search..."
-              prefix={<Search size={14} />}
-              className="h-9 w-[160px]"
-            />
-          </div>
+      <div className="space-y-4">
+        {/* Filters - single inline row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-8 w-[130px] text-xs" placeholder="From" />
+          <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-8 w-[130px] text-xs" placeholder="To" />
+          <Select
+            value={mode}
+            onChange={(e) => { setMode(e.target.value); setPage(1); }}
+            className="h-8 w-[110px] text-xs"
+          >
+            <option value="">All Modes</option>
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="bank">Bank</option>
+          </Select>
+          <Input
+            value={billNo}
+            onChange={(e) => {
+              setBillNo(e.target.value);
+              setBillNoDebounced(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Bill #"
+            prefix={<Search size={12} />}
+            className="h-8 w-[120px] text-xs"
+          />
           {(from || to || mode || billNo) && (
             <Button
               variant="ghost"
@@ -145,7 +130,7 @@ export default function TransactionsPage() {
                 setPage(1);
               }}
             >
-              Clear Filters
+              Clear
             </Button>
           )}
         </div>

@@ -4,10 +4,20 @@ import { cn } from '@/components/ui/cn';
 
 type CardProps = HTMLAttributes<HTMLDivElement> & {
   square?: boolean;
+  transparent?: boolean;
 };
 
-export function Card({ className, square, ...props }: CardProps) {
-  return <div className={cn('glass-panel', square ? 'rounded-none' : 'rounded-xl', className)} {...props} />;
+export function Card({ className, square, transparent, ...props }: CardProps) {
+  return (
+    <div
+      className={cn(
+        transparent ? '' : 'glass-panel',
+        square ? 'rounded-none' : 'rounded-xl',
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

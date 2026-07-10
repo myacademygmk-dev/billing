@@ -13,7 +13,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({ className, error, 
         ref={ref}
         aria-invalid={error ? 'true' : undefined}
         className={cn(
-          'theme-select w-full appearance-none pr-10 transition-colors duration-150',
+          'theme-select w-full cursor-pointer appearance-none pr-10 transition-colors duration-150',
           'focus:border-[var(--field-focus-border)] focus:ring-2 focus:ring-[var(--field-focus-ring)]',
           error && 'theme-field-error',
           className

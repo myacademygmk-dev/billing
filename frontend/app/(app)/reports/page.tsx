@@ -52,8 +52,26 @@ export default function ReportsPage() {
   // If user navigated to a tab they don't have access to
   const accessDenied = !hasAccessToTab && tabFromUrl;
 
+  const tabNav = (
+    <div className="flex items-end">
+      {visibleTabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+            effectiveTab === tab.id
+              ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+              : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <AppShell title="Reports" subtitle="Analytics, fee payments, and expense tracking in one place.">
+    <AppShell title="Reports" subtitle="Analytics, fee payments, and expense tracking." action={!accessDenied ? tabNav : undefined}>
       {accessDenied ? (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--panel-line)] bg-[var(--chip-danger-bg)]">
@@ -65,29 +83,11 @@ export default function ReportsPage() {
           </p>
         </div>
       ) : (
-        <>
-          {/* Tab Navigation */}
-          <div className="mb-6 flex gap-1 rounded-full border border-[var(--field-border)] bg-[var(--surface-subtle)] p-1">
-            {visibleTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  effectiveTab === tab.id
-                    ? 'bg-[var(--accent)] text-white shadow-sm'
-                    : 'text-[var(--muted)] hover:text-[var(--heading)] hover:bg-[var(--surface-muted)]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Content */}
+        <div className="border border-[var(--panel-line)] bg-white p-3 sm:p-4">
           {effectiveTab === 'reports' && <ReportsTab />}
           {effectiveTab === 'transactions' && <TransactionsTab />}
           {effectiveTab === 'expenses' && <ExpensesTab />}
-        </>
+        </div>
       )}
     </AppShell>
   );

@@ -26,35 +26,39 @@ type MarkItem = { id: string; student_name?: string | null; subject_name?: strin
 export default function AcademicPage() {
   const [activeTab, setActiveTab] = useState<'academic' | 'exams'>('academic');
 
-  return (
-    <AppShell title="Academics" subtitle="Manage academic structure, classes, subjects, and exams.">
-      <div className="mb-6 inline-flex gap-0.5 rounded-full border border-[var(--field-border)] bg-[var(--surface-subtle)] p-0.5">
-        <button
-          onClick={() => setActiveTab('academic')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-            activeTab === 'academic'
-              ? 'bg-[var(--accent)] text-white shadow-sm'
-              : 'text-[var(--muted)] hover:text-[var(--heading)]'
-          }`}
-        >
-          <GraduationCap className="h-3.5 w-3.5" />
-          Years & Classes
-        </button>
-        <button
-          onClick={() => setActiveTab('exams')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-            activeTab === 'exams'
-              ? 'bg-[var(--accent)] text-white shadow-sm'
-              : 'text-[var(--muted)] hover:text-[var(--heading)]'
-          }`}
-        >
-          <BookOpen className="h-3.5 w-3.5" />
-          Exams & Marks
-        </button>
-      </div>
+  const tabNav = (
+    <div className="flex items-end">
+      <button
+        onClick={() => setActiveTab('academic')}
+        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+          activeTab === 'academic'
+            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+        }`}
+      >
+        <GraduationCap className="h-3.5 w-3.5" />
+        Years & Classes
+      </button>
+      <button
+        onClick={() => setActiveTab('exams')}
+        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+          activeTab === 'exams'
+            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+        }`}
+      >
+        <BookOpen className="h-3.5 w-3.5" />
+        Exams & Marks
+      </button>
+    </div>
+  );
 
-      {activeTab === 'academic' && <AcademicTab />}
-      {activeTab === 'exams' && <ExamsTab />}
+  return (
+    <AppShell title="Academics" subtitle="Manage academic structure, classes, subjects, and exams." action={tabNav}>
+      <div className="border border-[var(--panel-line)] bg-white p-3 sm:p-4">
+        {activeTab === 'academic' && <AcademicTab />}
+        {activeTab === 'exams' && <ExamsTab />}
+      </div>
     </AppShell>
   );
 }
@@ -99,7 +103,7 @@ function AcademicTab() {
   return (
     <>
       <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-        <Card square>
+        <Card square transparent>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle as="h4">Academic Years</CardTitle>
@@ -129,7 +133,7 @@ function AcademicTab() {
           </CardContent>
         </Card>
 
-        <Card square>
+        <Card square transparent>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle as="h4">Classes & Subjects</CardTitle>
@@ -261,7 +265,7 @@ function ExamsTab() {
   return (
     <>
       <div className="page-grid">
-        <Card square>
+        <Card square transparent>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle as="h4">Exams {currentYear ? `(${currentYear.name})` : ''}</CardTitle>
@@ -290,7 +294,7 @@ function ExamsTab() {
         </Card>
 
         {selectedExam && (
-          <Card square>
+          <Card square transparent>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle as="h4">Marks</CardTitle>

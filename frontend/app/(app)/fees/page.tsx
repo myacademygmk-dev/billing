@@ -102,7 +102,7 @@ export default function FeesPage() {
     <AppShell title="Fee Structure & Discounts" subtitle="Define fee types and concessions for students.">
       <div className="page-grid">
         {/* Fee Structures */}
-        <Card square>
+        <Card square transparent>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Fee Structures</CardTitle>
@@ -174,7 +174,7 @@ export default function FeesPage() {
         </Card>
 
         {/* Discounts */}
-        <Card square>
+        <Card square transparent>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Discounts & Concessions</CardTitle>

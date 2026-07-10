@@ -31,35 +31,41 @@ export default function StudentsPage() {
   // Compute effective tab — if active tab is not visible, fall back to first
   const effectiveTab = TABS.find((t) => t.id === activeTab) ? activeTab : (TABS[0]?.id ?? 'students');
 
+  const tabNav = (
+    <div className="flex items-end">
+      {TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = effectiveTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+              isActive
+                ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+                : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <AppShell
       title="Student Management"
       subtitle="Manage student records, track payments, and mark daily attendance."
+      action={tabNav}
     >
-      {/* Tab Navigation */}
-      <div className="mb-5 inline-flex gap-0.5 rounded-full border border-[var(--field-border)] bg-[var(--surface-subtle)] p-0.5">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-                effectiveTab === tab.id
-                  ? 'bg-[var(--accent)] text-white shadow-sm'
-                  : 'text-[var(--muted)] hover:text-[var(--heading)]'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-col flex-1 min-h-0 border border-[var(--panel-line)] bg-white overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-4">
+          {effectiveTab === 'students' && <StudentsTab />}
+          {effectiveTab === 'attendance' && <AttendanceTab />}
+        </div>
       </div>
-
-      {/* Tab Content */}
-      {effectiveTab === 'students' && <StudentsTab />}
-      {effectiveTab === 'attendance' && <AttendanceTab />}
     </AppShell>
   );
 }

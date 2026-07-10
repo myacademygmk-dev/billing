@@ -35,7 +35,7 @@ export function TR({ className, ...props }: ComponentPropsWithoutRef<'tr'>) {
   return (
     <tr
       className={cn(
-        'transition-colors duration-100 hover:bg-[var(--table-row-hover)]',
+        'transition-colors duration-150 hover:bg-[var(--table-row-hover)]',
         className
       )}
       {...props}

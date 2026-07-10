@@ -16,17 +16,17 @@ export const Button = forwardRef<HTMLButtonElement, Props>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50',
+          'inline-flex items-center justify-center gap-2 font-semibold cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50',
           // Border radius
           'rounded-full',
           // Sizes
-          size === 'sm' && 'h-7 px-3 text-xs',
-          size === 'md' && 'h-[34px] px-3.5 text-sm',
+          size === 'sm' && 'h-7 min-h-[44px] sm:min-h-0 px-3 text-xs',
+          size === 'md' && 'h-[34px] min-h-[44px] sm:min-h-0 px-3.5 text-sm',
           size === 'lg' && 'h-10 px-5 text-sm',
-          size === 'icon' && 'h-8 w-8 text-sm',
+          size === 'icon' && 'h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-sm',
           // Variants
           variant === 'default' &&
-            'border border-transparent bg-[var(--accent)] text-white shadow-[0_4px_12px_rgba(79,140,255,0.2)] hover:bg-[var(--accent-hover)] hover:shadow-[0_6px_16px_rgba(79,140,255,0.25)] active:scale-[0.98]',
+            'border border-transparent bg-[var(--accent)] text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)] hover:bg-[var(--accent-hover)] hover:shadow-[0_6px_16px_rgba(37,99,235,0.25)] active:scale-[0.98]',
           variant === 'secondary' &&
             'border border-[var(--accent-soft)] bg-[var(--accent-soft)] text-[var(--heading)] hover:bg-[rgba(47,111,237,0.18)] active:scale-[0.98]',
           variant === 'outline' &&

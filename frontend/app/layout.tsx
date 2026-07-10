@@ -17,7 +17,7 @@ const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-display' 
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light">
       <body className={`${inter.variable} ${publicSans.variable}`}>
         <Providers>
           <Toaster>{children}</Toaster>

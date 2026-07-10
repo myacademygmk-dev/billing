@@ -89,69 +89,69 @@ export default function StudentsTab() {
   const totalPages = query.data ? Math.max(1, Math.ceil(query.data.total / 25)) : 1;
 
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search students..."
-              className="h-9 rounded-lg pl-9 text-sm"
-            />
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px] max-w-[240px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted)]" />
           <Input
-            value={classCode}
-            onChange={(e) => {
-              const next = e.target.value.replace(/\D/g, '').slice(0, 2);
-              setClassCode(next);
-              setPage(1);
-            }}
-            placeholder="Class"
-            className="h-9 w-20 rounded-lg text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search..."
+            className="h-8 pl-8 text-xs"
           />
-          <select
-            className="theme-select h-9 rounded-lg px-3 text-sm"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as 'all' | 'active' | 'inactive');
-              setPage(1);
-            }}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="all">All</option>
-          </select>
         </div>
-        <div className="flex items-center gap-2">
+        <Input
+          value={classCode}
+          onChange={(e) => {
+            const next = e.target.value.replace(/\D/g, '').slice(0, 2);
+            setClassCode(next);
+            setPage(1);
+          }}
+          placeholder="Class"
+          className="h-8 w-16 text-xs"
+        />
+        <select
+          className="theme-select h-8 px-2.5 text-xs"
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value as 'all' | 'active' | 'inactive');
+            setPage(1);
+          }}
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">All</option>
+        </select>
+        <div className="ml-auto flex items-center gap-1.5">
           <Button size="sm" variant="outline" onClick={() => window.location.assign('/api/backend/export/students.csv')}>
-            <Download className="mr-1.5 h-3.5 w-3.5" />CSV
+            <Download className="h-3 w-3" />CSV
           </Button>
           <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Add Student
+            <Plus className="h-3 w-3" />Add
           </Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="mt-4 overflow-x-auto border-t border-[var(--panel-line)]">
-        <table className="w-full text-sm text-[var(--text)]">
+      <div className="mt-3 -mx-3 sm:-mx-4 flex-1 min-h-0 overflow-auto">
+        <table className="w-full text-[13px] text-[var(--text)]">
               <thead className="sticky top-0 z-10 bg-[var(--table-head-bg)] backdrop-blur">
                 <tr>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Student</th>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Fee</th>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Last Paid</th>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Next Due</th>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Pending</th>
-                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] w-[60px]"></th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Roll No</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Name</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Class</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Fee</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Last Paid</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Next Due</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Pending</th>
+                  <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] w-[40px]"></th>
                 </tr>
               </thead>
               <tbody>
                 {query.isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center">
+                    <td colSpan={8} className="px-3 py-6 text-center">
                       <div className="inline-flex items-center gap-2 text-sm text-[var(--muted)]">
                         <Spinner /> Loading students...
                       </div>
@@ -159,56 +159,50 @@ export default function StudentsTab() {
                   </tr>
                 ) : query.isError ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-rose-400">
+                    <td colSpan={8} className="px-3 py-6 text-center text-sm text-rose-400">
                       Failed to load students
                     </td>
                   </tr>
                 ) : query.data?.items.length ? (
                   query.data.items.map((s) => (
-                    <tr key={s.id} className="group transition-colors hover:bg-[var(--surface-subtle)]">
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-[var(--heading)] truncate">{s.name}</span>
-                              <Badge className={`shrink-0 text-[10px] ${s.status === 'active' ? 'theme-chip-success' : 'theme-chip-neutral'}`}>
-                                {s.status}
-                              </Badge>
-                            </div>
-                            <div className="mt-0.5 text-xs text-[var(--muted)]">
-                              {s.student_code} • {s.class_name ?? '—'}{s.section ? ` / ${s.section}` : ''}
-                            </div>
-                          </div>
-                        </div>
+                    <tr key={s.id} className="group transition-colors duration-100 hover:bg-[var(--table-row-hover)]">
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap font-mono text-[11px] text-[var(--muted)]">
+                        {s.student_code}
                       </td>
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3 whitespace-nowrap">
-                        <span className="text-[var(--heading)] font-medium">₹{s.expected_fee}</span>
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap">
+                        <span className="font-medium text-[var(--heading)]">{s.name}</span>
                       </td>
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3 whitespace-nowrap">
-                        <span className="text-[var(--text)]">{s.last_paid_label ?? '—'}</span>
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap text-[var(--muted)]">
+                        {s.class_name ?? '—'}{s.section ? `/${s.section}` : ''}
                       </td>
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3 whitespace-nowrap">
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap">
+                        <span className="font-medium text-[var(--heading)]">₹{s.expected_fee}</span>
+                      </td>
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap text-[var(--text)]">
+                        {s.last_paid_label ?? '—'}
+                      </td>
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap">
                         {s.next_due_label ? (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
                             s.next_due_state === 'pending' ? 'theme-chip-warn' : 'theme-chip-neutral'
                           }`}>
                             {s.next_due_label}
                           </span>
                         ) : (
-                          <span className="text-xs text-green-400 font-medium">✓ Fully Paid</span>
+                          <span className="text-[10px] text-[var(--chip-success-text)] font-medium">✓ Paid</span>
                         )}
                       </td>
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3 whitespace-nowrap text-right">
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 whitespace-nowrap text-right">
                         {Number(s.pending) > 0 ? (
                           <span className="font-semibold text-[var(--heading)]">₹{s.pending}</span>
                         ) : (
                           <span className="text-[var(--muted)]">—</span>
                         )}
                       </td>
-                      <td className="border-b border-[rgba(148,163,184,0.06)] px-4 py-3 text-center">
+                      <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-1.5 text-center">
                         <Link
                           href={`/students/${s.id}`}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--accent)]/10 hover:text-[var(--accent)]"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded text-[var(--muted)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
                           title="View profile"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -277,6 +271,6 @@ export default function StudentsTab() {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

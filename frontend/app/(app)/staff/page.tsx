@@ -66,48 +66,51 @@ const PERMISSION_LABELS: Record<string, string> = {
 export default function StaffPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'users' | 'attendance'>('staff');
 
-  return (
-    <AppShell title="Staff" subtitle="Manage staff records, user accounts, and attendance.">
-      {/* Tab Navigation */}
-      <div className="mb-6 inline-flex gap-0.5 rounded-full border border-[var(--field-border)] bg-[var(--surface-subtle)] p-0.5">
-        <button
-          onClick={() => setActiveTab('staff')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-            activeTab === 'staff'
-              ? 'bg-[var(--accent)] text-white shadow-sm'
-              : 'text-[var(--muted)] hover:text-[var(--heading)]'
-          }`}
-        >
-          <UserCog className="h-3.5 w-3.5" />
-          Staff
-        </button>
-        <button
-          onClick={() => setActiveTab('attendance')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-            activeTab === 'attendance'
-              ? 'bg-[var(--accent)] text-white shadow-sm'
-              : 'text-[var(--muted)] hover:text-[var(--heading)]'
-          }`}
-        >
-          <CalendarCheck className="h-3.5 w-3.5" />
-          Attendance
-        </button>
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 ${
-            activeTab === 'users'
-              ? 'bg-[var(--accent)] text-white shadow-sm'
-              : 'text-[var(--muted)] hover:text-[var(--heading)]'
-          }`}
-        >
-          <Users className="h-3.5 w-3.5" />
-          User Accounts
-        </button>
-      </div>
+  const tabNav = (
+    <div className="flex items-end">
+      <button
+        onClick={() => setActiveTab('staff')}
+        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+          activeTab === 'staff'
+            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+        }`}
+      >
+        <UserCog className="h-3.5 w-3.5" />
+        Staff
+      </button>
+      <button
+        onClick={() => setActiveTab('attendance')}
+        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+          activeTab === 'attendance'
+            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+        }`}
+      >
+        <CalendarCheck className="h-3.5 w-3.5" />
+        Attendance
+      </button>
+      <button
+        onClick={() => setActiveTab('users')}
+        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
+          activeTab === 'users'
+            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
+            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
+        }`}
+      >
+        <Users className="h-3.5 w-3.5" />
+        User Accounts
+      </button>
+    </div>
+  );
 
-      {activeTab === 'staff' && <StaffTab />}
-      {activeTab === 'attendance' && <StaffAttendanceTab />}
-      {activeTab === 'users' && <UsersTab />}
+  return (
+    <AppShell title="Staff" subtitle="Manage staff records, user accounts, and attendance." action={tabNav}>
+      <div className="border border-[var(--panel-line)] bg-white p-3 sm:p-4">
+        {activeTab === 'staff' && <StaffTab />}
+        {activeTab === 'attendance' && <StaffAttendanceTab />}
+        {activeTab === 'users' && <UsersTab />}
+      </div>
     </AppShell>
   );
 }
@@ -161,7 +164,7 @@ function StaffTab() {
 
   return (
     <>
-      <Card square>
+      <Card square transparent>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Staff Members ({data?.total ?? 0})</CardTitle>
@@ -379,7 +382,7 @@ function UsersTab() {
 
   return (
     <>
-      <Card square>
+      <Card square transparent>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>User Accounts ({users.length})</CardTitle>
@@ -684,7 +687,7 @@ function StaffAttendanceTab() {
   const changedCount = Object.values(localStatus).filter(Boolean).length;
 
   return (
-    <Card square>
+    <Card square transparent>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

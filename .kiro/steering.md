@@ -79,3 +79,15 @@
 - Don't add external UI libraries (shadcn, MUI, Chakra, etc.) — use the custom component library.
 - Don't use the word "collection" — use "fee payment" or "payment" instead.
 - Don't show payment amount KPI cards (collected today, monthly total, pending amount) on the dashboard.
+
+## Pre-Delivery Checklist (from UI UX Pro Max)
+
+- [ ] No emojis as icons — use SVG (Lucide icons only)
+- [ ] `cursor-pointer` on ALL clickable elements (buttons, links, selects, checkboxes)
+- [ ] Hover states with smooth transitions (150-200ms)
+- [ ] Light mode: text contrast 4.5:1 minimum (WCAG AA)
+- [ ] Focus states visible for keyboard navigation (focus-visible ring)
+- [ ] `prefers-reduced-motion` respected (animations disabled)
+- [ ] Responsive: 375px, 768px, 1024px, 1440px breakpoints
+- [ ] No excessive decoration, complex shadows, or 3D effects
+- [ ] Professional color palette: navy sidebar, soft blue accent, white content

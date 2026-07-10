@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, Integer, String
+from sqlalchemy import Date, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from app.models.enums import StudentStatus
+from app.models.enums import Gender, StudentStatus
 
 
 class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -26,6 +26,39 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[StudentStatus] = mapped_column(
         Enum(StudentStatus, name="student_status"), nullable=False, default=StudentStatus.active
     )
+
+    # Extended profile fields
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gender: Mapped[Gender | None] = mapped_column(Enum(Gender, name="gender_type"), nullable=True)
+    blood_group: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    admission_no: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # Parent/Guardian details
+    father_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    mother_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    guardian_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    parent_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    parent_phone_2: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    parent_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    parent_occupation: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    whatsapp_no: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Address
+    address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    pincode: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+    # Academic
+    previous_school: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    subjects: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON or comma-separated
+
+    # Emergency
+    emergency_contact: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    emergency_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Notes
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -146,6 +146,7 @@ export function AppShell({
   title,
   subtitle,
   action,
+  headerAction,
   backHref,
   breadcrumbs,
 }: {
@@ -153,6 +154,7 @@ export function AppShell({
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  headerAction?: ReactNode;
   backHref?: string;
   breadcrumbs?: ReactNode;
 }) {
@@ -269,39 +271,36 @@ export function AppShell({
       </aside>
 
       {/* Main content area */}
-      <main id="main-content" className="px-4 py-4 sm:px-5 lg:h-screen lg:overflow-y-auto lg:px-6 lg:py-5">
-        <div className="mx-auto max-w-7xl">
+      <main id="main-content" className="flex flex-col px-4 py-3 sm:px-5 lg:h-screen lg:overflow-hidden lg:px-6 lg:py-4">
+        <div className="mx-auto max-w-7xl w-full flex flex-col flex-1 min-h-0">
           {/* Page header */}
-          <div className="mb-5">
-            {breadcrumbs && <div className="mb-1.5">{breadcrumbs}</div>}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 flex items-start gap-3">
-                {backHref && (
-                  <button
-                    type="button"
-                    onClick={() => router.push(backHref)}
-                    className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--panel-line)] bg-[var(--surface-subtle)] text-[var(--muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
-                    aria-label="Go back"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                )}
-                <div className="min-w-0">
-                  <h1 className="theme-heading text-xl font-semibold tracking-[-0.02em] sm:text-2xl">
-                    {title}
-                  </h1>
-                  {subtitle && (
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
+          <div className={action ? 'mb-0' : 'mb-5'}>
+            {breadcrumbs && <div className="mb-1">{breadcrumbs}</div>}
+            <div className="flex items-center gap-3">
+              {backHref && (
+                <button
+                  type="button"
+                  onClick={() => router.push(backHref)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--panel-line)] bg-[var(--surface-subtle)] text-[var(--muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text)]"
+                  aria-label="Go back"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+              )}
+              <div className="min-w-0 flex-1">
+                <h1 className="theme-heading text-2xl font-semibold tracking-[-0.02em]">{title}</h1>
+                {subtitle && <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">{subtitle}</p>}
               </div>
-              {action && <div className="shrink-0">{action}</div>}
+              {headerAction && <div className="shrink-0">{headerAction}</div>}
             </div>
+            {action && (
+              <div className="mt-3">
+                {action}
+              </div>
+            )}
           </div>
 
-          <div>{children}</div>
+          <div className="flex-1 flex flex-col min-h-0">{children}</div>
         </div>
       </main>
     </div>
