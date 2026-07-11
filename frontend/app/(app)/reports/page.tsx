@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ShieldX } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +15,14 @@ const TransactionsTab = dynamic(() => import('./tabs/transactions-tab'), { ssr: 
 const ExpensesTab = dynamic(() => import('./tabs/expenses-tab'), { ssr: false });
 
 export default function ReportsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReportsPageInner />
+    </Suspense>
+  );
+}
+
+function ReportsPageInner() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'reports');
