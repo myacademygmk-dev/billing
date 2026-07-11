@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -77,6 +78,14 @@ function formatCurrency(amount: number | string) {
 }
 
 export default function CollectPage() {
+  return (
+    <Suspense fallback={null}>
+      <CollectPageInner />
+    </Suspense>
+  );
+}
+
+function CollectPageInner() {
   const params = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
