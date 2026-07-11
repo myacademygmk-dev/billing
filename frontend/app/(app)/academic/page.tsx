@@ -55,9 +55,11 @@ export default function AcademicPage() {
 
   return (
     <AppShell title="Academics" subtitle="Manage academic structure, classes, subjects, and exams." action={tabNav}>
-      <div className="border border-[var(--panel-line)] bg-white p-3 sm:p-4">
-        {activeTab === 'academic' && <AcademicTab />}
-        {activeTab === 'exams' && <ExamsTab />}
+      <div className="flex-1 min-h-0 border border-[var(--panel-line)] bg-white overflow-auto">
+        <div className="p-3 sm:p-4">
+          {activeTab === 'academic' && <AcademicTab />}
+          {activeTab === 'exams' && <ExamsTab />}
+        </div>
       </div>
     </AppShell>
   );
