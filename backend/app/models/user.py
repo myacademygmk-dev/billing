@@ -13,9 +13,15 @@ ALL_PERMISSIONS = [
     "students",
     "collect",
     "savings",
-    "expenses",
-    "transactions",
+    "staff",
+    "academic",
+    "exams",
+    "cms",
+    "fees",
+    "attendance",
     "reports",
+    "transactions",
+    "expenses",
     "settings",
 ]
 

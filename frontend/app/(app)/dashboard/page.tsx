@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Download, UserX2, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
@@ -9,8 +10,10 @@ import { PaymentReceiptDialog } from '@/components/app/payment-receipt-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
-import { Table, TBody, TD, TH, THead } from '@/components/ui/table';
+import { SkeletonMetricCards, SkeletonTable } from '@/components/ui/skeleton';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { EmptyState, EmptyStateIcon } from '@/components/ui/empty-state';
+import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 
 type Summary = {
@@ -52,159 +55,188 @@ export default function DashboardPage() {
 
   const summary = useQuery({
     queryKey: ['summary', month],
-    queryFn: () => apiFetch<Summary>(`/reports/summary?month=${encodeURIComponent(toMonthDate(month))}`)
+    queryFn: () => apiFetch<Summary>(`/reports/summary?month=${encodeURIComponent(toMonthDate(month))}`),
   });
   const recentPayments = useQuery({
     queryKey: ['recentPayments'],
-    queryFn: () => apiFetch<{ items: Payment[]; total: number }>('/payments?page=1&page_size=5')
+    queryFn: () => apiFetch<{ items: Payment[]; total: number }>('/payments?page=1&page_size=5'),
   });
 
   const statCards = [
     {
       label: 'Total Students',
       value: summary.data?.active_students?.toString() ?? '-',
-      caption: 'Active students in selected month window',
+      caption: 'Active students enrolled',
       icon: Users,
-      tone: 'text-[#dbe6ff]'
-    }
+      bg: 'bg-[var(--accent-soft)]',
+      iconColor: 'text-[var(--accent)]',
+    },
+    {
+      label: 'Students Paid',
+      value: summary.data?.paid_students?.toString() ?? '-',
+      caption: `Paid for ${monthLabel(month)}`,
+      icon: CheckCircle2,
+      bg: 'bg-[var(--chip-success-bg)]',
+      iconColor: 'text-[var(--success)]',
+    },
+    {
+      label: 'Students Not Paid',
+      value: summary.data?.unpaid_students?.toString() ?? '-',
+      caption: `Pending for ${monthLabel(month)}`,
+      icon: UserX2,
+      bg: 'bg-[var(--chip-warn-bg)]',
+      iconColor: 'text-[var(--warn)]',
+    },
   ];
 
   return (
     <AppShell
       title="Dashboard"
-      subtitle="Monitor collections, pending dues, and the latest payment activity across your institution."
-      action={
-        <div className="flex flex-wrap gap-3">
-          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[180px]" />
-          <Button onClick={() => window.location.assign('/api/backend/export/pending.csv')}>
-            <Download className="h-4 w-4" />
-            Export Report
-          </Button>
-        </div>
-      }
+      subtitle="Monitor fee payments, pending dues, and activity across your institution."
     >
-      {summary.isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
-          <Spinner /> Loading
+      <div className="page-grid">
+        {/* Filters */}
+        <div className="flex items-center justify-end gap-2">
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-8 w-[150px] text-xs" />
+          <Link href="/api/backend/export/pending.csv" target="_blank">
+            <Button variant="outline" size="sm">
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
+          </Link>
         </div>
-      ) : summary.isError ? (
-        <div className="text-sm text-rose-300">Failed to load summary</div>
-      ) : (
-        <div className="page-grid">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* Stat Cards */}
+        {summary.isLoading ? (
+          <SkeletonMetricCards count={3} className="lg:grid-cols-3" />
+        ) : summary.isError ? (
+          <div className="glass-panel rounded-2xl p-6 text-center">
+            <p className="text-sm text-[var(--danger)]">Failed to load summary. Please try refreshing.</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => summary.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {statCards.map((item) => {
               const Icon = item.icon;
               return (
                 <Card key={item.label} className="metric-card">
-                  <CardContent className="space-y-5">
+                  <CardContent className="space-y-4 py-5">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-sm font-medium text-[#9aa8c2]">{item.label}</div>
-                        <div className="theme-heading mt-3 text-3xl font-semibold">{item.value ?? '-'}</div>
+                        <div className="text-sm font-medium text-[var(--text-secondary)]">{item.label}</div>
+                        <div className="theme-heading mt-2 text-2xl font-bold sm:text-3xl">{item.value}</div>
                       </div>
-                      <div className="theme-subtle-surface rounded-xl p-3">
-                        <Icon className={`h-6 w-6 ${item.tone}`} />
+                      <div className={`rounded-xl p-3 ${item.bg}`}>
+                        <Icon className={`h-5 w-5 ${item.iconColor}`} />
                       </div>
                     </div>
-                    <div className="text-sm text-[#8ea0bf]">{item.caption}</div>
+                    <div className="text-xs text-[var(--muted)]">{item.caption}</div>
                   </CardContent>
                 </Card>
               );
             })}
-            <Card className="metric-card">
-              <CardContent className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-medium text-[#9aa8c2]">Students Paid</div>
-                    <div className="theme-heading mt-3 text-3xl font-semibold">{summary.data?.paid_students ?? '-'}</div>
-                  </div>
-                  <div className="rounded-xl border border-[rgba(31,157,103,0.16)] bg-[rgba(31,157,103,0.1)] p-3">
-                    <CheckCircle2 className="h-6 w-6 text-[#8ee0b8]" />
-                  </div>
-                </div>
-                <div className="text-sm text-[#8ea0bf]">Students paid for {monthLabel(month)}</div>
-              </CardContent>
-            </Card>
-            <Card className="metric-card">
-              <CardContent className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-medium text-[#9aa8c2]">Students Not Paid</div>
-                    <div className="theme-heading mt-3 text-3xl font-semibold">{summary.data?.unpaid_students ?? '-'}</div>
-                  </div>
-                  <div className="rounded-xl border border-[rgba(183,121,31,0.16)] bg-[rgba(183,121,31,0.1)] p-3">
-                    <UserX2 className="h-6 w-6 text-[#e7c07a]" />
-                  </div>
-                </div>
-                <div className="text-sm text-[#8ea0bf]">Students pending for {monthLabel(month)}</div>
-              </CardContent>
-            </Card>
           </div>
+        )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Transactions</CardTitle>
-                <div className="mt-1 text-sm text-[#91a1bc]">Latest student payments and receipt actions</div>
-              </div>
-              <Button variant="outline" onClick={() => window.location.assign('/transactions')}>
+        {/* Recent Fee Payments */}
+        <Card square transparent>
+          <CardHeader className="flex flex-row items-center justify-between px-0 sm:px-0 border-b-0">
+            <div>
+              <CardTitle>Recent Fee Payments</CardTitle>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Latest payment activity</p>
+            </div>
+            <Link href="/reports?tab=transactions">
+              <Button variant="outline" size="sm">
                 View All
               </Button>
-            </CardHeader>
-            <CardContent>
-              {recentPayments.isLoading ? (
-                <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
-                  <Spinner /> Loading
-                </div>
-              ) : recentPayments.isError ? (
-                <div className="text-sm text-rose-300">Failed to load recent payments</div>
-              ) : (
-                <div className="theme-table-wrap overflow-auto rounded-xl">
-                  <Table>
-                    <THead>
-                      <tr>
-                        <TH>Student ID</TH>
-                        <TH>Student</TH>
-                        <TH>Receipt</TH>
-                        <TH>Fee Period</TH>
-                        <TH>Added By</TH>
-                        <TH>Date</TH>
-                        <TH></TH>
-                      </tr>
-                    </THead>
-                    <TBody>
-                      {recentPayments.data?.items.map((payment) => (
-                        <tr key={payment.id}>
-                          <TD>{payment.student_code ?? '-'}</TD>
-                          <TD className="theme-heading font-semibold">{payment.student_name ?? '-'}</TD>
-                          <TD>{payment.receipt_no}</TD>
-                          <TD>{payment.fee_period_label ?? '-'}</TD>
-                          <TD className="text-[#91a1bc]">{payment.created_by_name ?? '-'}</TD>
-                          <TD>{new Date(payment.paid_at).toLocaleString()}</TD>
+            </Link>
+          </CardHeader>
+          <CardContent className="px-0 sm:px-0 py-0">
+            {recentPayments.isLoading ? (
+              <SkeletonTable rows={4} cols={5} />
+            ) : recentPayments.isError ? (
+              <div className="px-6 py-6 text-center">
+                <p className="text-sm text-[var(--danger)]">Failed to load recent payments</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => recentPayments.refetch()}>
+                  Retry
+                </Button>
+              </div>
+            ) : !recentPayments.data?.items.length ? (
+              <EmptyState
+                icon={<EmptyStateIcon type="payments" />}
+                title="No payments yet"
+                description="Recent fee payments will appear here once recorded."
+                compact
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH>Student</TH>
+                      <TH>Receipt</TH>
+                      <TH>Amount</TH>
+                      <TH>Period</TH>
+                      <TH>Date</TH>
+                      <TH className="text-right">Action</TH>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {recentPayments.data.items.map((payment) => {
+                      const isNegative = parseFloat(payment.amount) < 0;
+                      return (
+                        <TR key={payment.id}>
                           <TD>
+                            <div className="font-medium text-[var(--heading)]">{payment.student_name ?? '-'}</div>
+                            <div className="text-xs text-[var(--muted)]">{payment.student_code ?? ''}</div>
+                          </TD>
+                          <TD>
+                            <span className="font-mono text-xs">{payment.receipt_no}</span>
+                          </TD>
+                          <TD>
+                            <span className={isNegative ? 'text-[var(--danger)]' : 'text-[var(--success)]'}>
+                              {isNegative ? '-' : '+'}₹{Math.abs(parseFloat(payment.amount)).toLocaleString('en-IN')}
+                            </span>
+                          </TD>
+                          <TD>
+                            {payment.fee_period_label ? (
+                              <Badge variant="default">{payment.fee_period_label}</Badge>
+                            ) : (
+                              '-'
+                            )}
+                          </TD>
+                          <TD className="text-[var(--muted)]">
+                            {new Date(payment.paid_at).toLocaleDateString(undefined, {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </TD>
+                          <TD className="text-right">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => {
                                 setReceiptPaymentId(payment.id);
                                 setReceiptOpen(true);
                               }}
                             >
-                              Print Receipt
+                              Receipt
                             </Button>
                           </TD>
-                        </tr>
-                      ))}
-                    </TBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </TR>
+                      );
+                    })}
+                  </TBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} paymentId={receiptPaymentId} />
-        </div>
-      )}
+        <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} paymentId={receiptPaymentId} />
+      </div>
     </AppShell>
   );
 }

@@ -1,16 +1,20 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Download, Filter } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
 import { PaymentReceiptDialog } from '@/components/app/payment-receipt-dialog';
 import { ReversePaymentDialog, type PaymentRow } from '@/components/app/reverse-payment-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
-import { Table, TBody, TD, TH, THead } from '@/components/ui/table';
+import { Select } from '@/components/ui/select';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { EmptyState, EmptyStateIcon } from '@/components/ui/empty-state';
 import { apiFetch } from '@/lib/api';
 import { debounce } from '@/lib/debounce';
 
@@ -28,6 +32,13 @@ type Payment = {
   fee_period_label?: string | null;
   created_by_name?: string | null;
 };
+
+function formatCurrency(value: string) {
+  const num = parseFloat(value);
+  if (isNaN(num)) return '₹0';
+  const prefix = num < 0 ? '-' : '+';
+  return `${prefix}₹${Math.abs(num).toLocaleString('en-IN')}`;
+}
 
 export default function TransactionsPage() {
   const [from, setFrom] = useState('');
@@ -56,7 +67,7 @@ export default function TransactionsPage() {
       if (mode) params.set('mode', mode);
       if (debouncedBillNo) params.set('bill_no', debouncedBillNo);
       return apiFetch<{ items: Payment[]; total: number }>(`/payments?${params.toString()}`);
-    }
+    },
   });
 
   const totalPages = q.data ? Math.max(1, Math.ceil(q.data.total / pageSize)) : 1;
@@ -64,154 +75,189 @@ export default function TransactionsPage() {
   return (
     <AppShell
       title="Transactions"
-      subtitle="Filter bill numbers, inspect payment cycles, and reverse incorrect transactions with a full audit trail."
+      subtitle="View, filter, and manage all payment transactions."
       action={
-        <Button
-          onClick={() => {
-            const params = new URLSearchParams();
-            if (from) params.set('from', new Date(from).toISOString());
-            if (to) params.set('to', new Date(to).toISOString());
-            window.location.assign(`/api/backend/export/payments.csv?${params.toString()}`);
-          }}
+        <Link
+          href={`/api/backend/export/payments.csv?${new URLSearchParams({
+            ...(from && { from: new Date(from).toISOString() }),
+            ...(to && { to: new Date(to).toISOString() }),
+          }).toString()}`}
+          target="_blank"
         >
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
+          <Button>
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </Link>
       }
     >
-      <div className="page-grid">
-        <div className="grid gap-3 xl:grid-cols-[160px_160px_160px_220px] xl:justify-start">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm font-medium text-[var(--heading)]">
-              <Filter className="h-4 w-4 text-[var(--accent)]" />
-              From
-            </div>
-            <Input className="h-10 rounded-xl" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <div className="text-sm font-medium text-[var(--heading)]">To</div>
-            <Input className="h-10 rounded-xl" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <div className="text-sm font-medium text-[var(--heading)]">Mode</div>
-            <select
-              className="theme-select h-10 w-full rounded-xl px-4 text-sm outline-none"
-              value={mode}
-              onChange={(e) => {
-                setMode(e.target.value);
+      <div className="space-y-4">
+        {/* Filters - single inline row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-8 w-[130px] text-xs" placeholder="From" />
+          <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-8 w-[130px] text-xs" placeholder="To" />
+          <Select
+            value={mode}
+            onChange={(e) => { setMode(e.target.value); setPage(1); }}
+            className="h-8 w-[110px] text-xs"
+          >
+            <option value="">All Modes</option>
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="bank">Bank</option>
+          </Select>
+          <Input
+            value={billNo}
+            onChange={(e) => {
+              setBillNo(e.target.value);
+              setBillNoDebounced(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Bill #"
+            prefix={<Search size={12} />}
+            className="h-8 w-[120px] text-xs"
+          />
+          {(from || to || mode || billNo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFrom('');
+                setTo('');
+                setMode('');
+                setBillNo('');
+                setDebouncedBillNo('');
                 setPage(1);
               }}
             >
-              <option value="">All</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="bank">Bank</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <div className="text-sm font-medium text-[var(--heading)]">Bill No</div>
-            <Input
-              className="h-10 rounded-xl"
-              value={billNo}
-              onChange={(e) => {
-                setBillNo(e.target.value);
-                setBillNoDebounced(e.target.value);
-                setPage(1);
-              }}
-              placeholder="0001"
-            />
-          </div>
+              Clear
+            </Button>
+          )}
         </div>
 
-        <div>
-          <div className="max-h-[68vh] overflow-auto">
-            <Table>
-              <THead>
-                <tr>
-                  <TH>Bill No</TH>
-                  <TH>Receipt</TH>
-                  <TH>Date</TH>
-                  <TH>Student</TH>
-                  <TH>Fee Period</TH>
-                  <TH>Mode</TH>
-                  <TH>Amount</TH>
-                  <TH>Added By</TH>
-                  <TH>Notes</TH>
-                  <TH></TH>
-                </tr>
-              </THead>
-              <TBody>
-                {q.isLoading ? (
-                  <tr className="bg-[var(--panel)]">
-                    <TD colSpan={10}>
-                      <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
-                        <Spinner /> Loading
-                      </div>
-                    </TD>
-                  </tr>
-                ) : q.isError ? (
-                  <tr className="bg-[var(--panel)]">
-                    <TD colSpan={10} className="text-sm text-rose-300">Failed to load</TD>
-                  </tr>
-                ) : (
-                  q.data?.items.map((p) => (
-                    <tr key={p.id} className="bg-[var(--panel)]">
-                      <TD className="theme-heading font-semibold">{p.bill_no}</TD>
-                      <TD className="theme-heading font-semibold">{p.receipt_no}</TD>
-                      <TD>{new Date(p.paid_at).toLocaleString()}</TD>
-                      <TD>{p.student_name ?? '-'}</TD>
-                      <TD>{p.fee_period_label ?? '-'}</TD>
-                      <TD className="capitalize">{p.mode}</TD>
-                      <TD className={Number(p.amount) < 0 ? 'font-semibold text-rose-300' : 'theme-heading font-semibold'}>{p.amount}</TD>
-                      <TD className="text-[#91a1bc]">{p.created_by_name ?? '-'}</TD>
-                      <TD className="max-w-[320px] truncate text-[#91a1bc]" title={p.notes ?? ''}>
-                        {p.notes ?? '-'}
-                      </TD>
-                      <TD>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setReceiptPaymentId(p.id);
-                              setReceiptOpen(true);
-                            }}
-                          >
-                            Receipt
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setReversePayment({ id: p.id, receipt_no: p.receipt_no, amount: p.amount, mode: p.mode });
-                              setReverseOpen(true);
-                            }}
-                          >
-                            Reverse
-                          </Button>
-                        </div>
-                      </TD>
-                    </tr>
-                  ))
-                )}
-              </TBody>
-            </Table>
-          </div>
-
-          <div className="mt-5 flex items-center justify-between">
-            <div className="text-sm text-[#91a1bc]">
-              Page {page} of {totalPages}
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Prev
+        {/* Pagination info + controls (top) */}
+        {q.data && q.data.total > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-[var(--muted)]">
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, q.data.total)} of {q.data.total} transactions
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                Previous
               </Button>
-              <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <span className="text-sm text-[var(--muted)]">{page} / {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                 Next
               </Button>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Table */}
+        {q.isLoading ? (
+          <SkeletonTable rows={8} cols={6} />
+        ) : q.isError ? (
+          <div className="flex flex-col items-center py-12">
+            <p className="text-sm text-[var(--danger)]">Failed to load transactions</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => q.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : !q.data?.items.length ? (
+          <EmptyState
+            icon={<EmptyStateIcon type="payments" />}
+            title="No transactions found"
+            description={from || to || mode || billNo ? 'Try adjusting your filters' : 'Fee payments will appear here once collected'}
+          />
+        ) : (
+          <div className="theme-table-wrap overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <THead>
+                  <tr>
+                    <TH>Bill #</TH>
+                    <TH>Receipt</TH>
+                    <TH>Student</TH>
+                    <TH>Period</TH>
+                    <TH>Amount</TH>
+                    <TH>Mode</TH>
+                    <TH>Date</TH>
+                    <TH>By</TH>
+                    <TH className="text-right">Actions</TH>
+                  </tr>
+                </THead>
+                <TBody>
+                  {q.data.items.map((p) => {
+                    const isNegative = parseFloat(p.amount) < 0;
+                    return (
+                      <TR key={p.id}>
+                        <TD className="font-mono text-xs font-semibold text-[var(--heading)]">{p.bill_no}</TD>
+                        <TD className="font-mono text-xs">{p.receipt_no}</TD>
+                        <TD>
+                          <div className="font-medium text-[var(--heading)]">{p.student_name ?? '-'}</div>
+                        </TD>
+                        <TD>
+                          {p.fee_period_label ? (
+                            <Badge variant="default">{p.fee_period_label}</Badge>
+                          ) : (
+                            <span className="text-[var(--muted)]">-</span>
+                          )}
+                        </TD>
+                        <TD>
+                          <span className={isNegative ? 'font-semibold text-[var(--danger)]' : 'font-semibold text-[var(--heading)]'}>
+                            {formatCurrency(p.amount)}
+                          </span>
+                        </TD>
+                        <TD>
+                          <Badge variant={p.mode === 'cash' ? 'default' : p.mode === 'upi' ? 'accent' : 'success'}>
+                            {p.mode}
+                          </Badge>
+                        </TD>
+                        <TD className="whitespace-nowrap text-[var(--muted)]">
+                          {new Date(p.paid_at).toLocaleDateString(undefined, {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </TD>
+                        <TD className="text-[var(--muted)]">{p.created_by_name ?? '-'}</TD>
+                        <TD className="text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setReceiptPaymentId(p.id);
+                                setReceiptOpen(true);
+                              }}
+                              aria-label={`View receipt for ${p.receipt_no}`}
+                            >
+                              Receipt
+                            </Button>
+                            {!isNegative && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[var(--danger)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                                onClick={() => {
+                                  setReversePayment({ id: p.id, receipt_no: p.receipt_no, amount: p.amount, mode: p.mode });
+                                  setReverseOpen(true);
+                                }}
+                                aria-label={`Reverse payment ${p.receipt_no}`}
+                              >
+                                Reverse
+                              </Button>
+                            )}
+                          </div>
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
 
       <ReversePaymentDialog open={reverseOpen} onOpenChange={setReverseOpen} payment={reversePayment} onSuccess={() => q.refetch()} />

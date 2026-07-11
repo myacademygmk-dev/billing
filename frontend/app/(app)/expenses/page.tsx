@@ -151,7 +151,7 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        <Card className="mt-2 shadow-none">
+        <Card square className="mt-2 shadow-none">
           <CardContent className="space-y-3 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

@@ -19,5 +19,6 @@ class ExpenseEntry(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     expense_month: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(150), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(50), nullable=True)  # rent, salary, electricity, stationery, maintenance, other
     notes: Mapped[str | None] = mapped_column(String(300), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)

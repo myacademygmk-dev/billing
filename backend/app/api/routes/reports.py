@@ -137,6 +137,7 @@ def monthly_students(
     payment_state: str = Query("unpaid", pattern="^(paid|unpaid|all)$"),
     search: str | None = None,
     class_code: str | None = None,
+    class_name: str | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[dict]:
@@ -149,6 +150,8 @@ def monthly_students(
         )
     if class_code:
         stmt = stmt.where(Student.student_code.like(f"{class_code.strip()}%"))
+    if class_name:
+        stmt = stmt.where(Student.class_name == class_name)
     students = db.execute(stmt.options(*_BILLING_OPTS)).scalars().all()
     items: list[dict] = []
     for student in students:
@@ -202,48 +205,85 @@ def daily(
 @router.get("/annual", response_model=dict)
 def annual_revenue(
     year: int = Query(..., description="Calendar year (e.g. 2025)"),
+    from_month: date | None = Query(default=None, alias="from", description="Start month (YYYY-MM-DD)"),
+    to_month: date | None = Query(default=None, alias="to", description="End month (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> dict:
-    """Annual revenue summary: monthly breakdown, mode breakdown, and totals for a given year."""
-    year_start = datetime.combine(date(year, 1, 1), time.min, tzinfo=UTC)
-    year_end = datetime.combine(date(year, 12, 31), time.max, tzinfo=UTC)
+    """Annual revenue summary: monthly breakdown, mode breakdown, and totals.
+    
+    Optionally filter by from/to month range. If not provided, defaults to full year.
+    """
+    # Determine date range
+    if from_month and to_month:
+        range_start = datetime.combine(normalize_month(from_month), time.min, tzinfo=UTC)
+        # End of the 'to' month
+        to_normalized = normalize_month(to_month)
+        if to_normalized.month == 12:
+            range_end_date = date(to_normalized.year + 1, 1, 1)
+        else:
+            range_end_date = date(to_normalized.year, to_normalized.month + 1, 1)
+        range_end = datetime.combine(range_end_date, time.min, tzinfo=UTC)
+    else:
+        range_start = datetime.combine(date(year, 1, 1), time.min, tzinfo=UTC)
+        range_end = datetime.combine(date(year + 1, 1, 1), time.min, tzinfo=UTC)
 
     # Monthly totals
     monthly_rows = db.execute(
         select(
+            extract("year", Payment.paid_at).label("yr"),
             extract("month", Payment.paid_at).label("month"),
             func.coalesce(func.sum(Payment.amount), 0).label("total"),
             func.count(Payment.id).label("count"),
         )
-        .where(Payment.paid_at >= year_start)
-        .where(Payment.paid_at <= year_end)
-        .group_by(extract("month", Payment.paid_at))
-        .order_by(extract("month", Payment.paid_at))
+        .where(Payment.paid_at >= range_start)
+        .where(Payment.paid_at < range_end)
+        .group_by(extract("year", Payment.paid_at), extract("month", Payment.paid_at))
+        .order_by(extract("year", Payment.paid_at), extract("month", Payment.paid_at))
     ).all()
 
     monthly_breakdown = []
-    monthly_map: dict[int, Decimal] = {}
-    for month_num, total, count in monthly_rows:
+    seen_keys: set[tuple[int, int]] = set()
+    for yr, month_num, total, count in monthly_rows:
+        y = int(yr)
         m = int(month_num)
-        monthly_map[m] = total
+        seen_keys.add((y, m))
         monthly_breakdown.append({
+            "year": y,
             "month": m,
-            "month_name": date(year, m, 1).strftime("%B"),
+            "month_name": date(y, m, 1).strftime("%B"),
             "total": str(total),
             "payment_count": count,
         })
 
-    # Fill missing months with zero
-    for m in range(1, 13):
-        if m not in monthly_map:
-            monthly_breakdown.append({
-                "month": m,
-                "month_name": date(year, m, 1).strftime("%B"),
-                "total": "0",
-                "payment_count": 0,
-            })
-    monthly_breakdown.sort(key=lambda x: x["month"])
+    # Fill missing months in the range with zero
+    if from_month and to_month:
+        cursor = normalize_month(from_month)
+        end_cursor = normalize_month(to_month)
+        while cursor <= end_cursor:
+            if (cursor.year, cursor.month) not in seen_keys:
+                monthly_breakdown.append({
+                    "year": cursor.year,
+                    "month": cursor.month,
+                    "month_name": cursor.strftime("%B"),
+                    "total": "0",
+                    "payment_count": 0,
+                })
+            if cursor.month == 12:
+                cursor = date(cursor.year + 1, 1, 1)
+            else:
+                cursor = date(cursor.year, cursor.month + 1, 1)
+    else:
+        for m in range(1, 13):
+            if (year, m) not in seen_keys:
+                monthly_breakdown.append({
+                    "year": year,
+                    "month": m,
+                    "month_name": date(year, m, 1).strftime("%B"),
+                    "total": "0",
+                    "payment_count": 0,
+                })
+    monthly_breakdown.sort(key=lambda x: (x["year"], x["month"]))
 
     # Mode breakdown
     mode_rows = db.execute(
@@ -252,8 +292,8 @@ def annual_revenue(
             func.coalesce(func.sum(Payment.amount), 0).label("total"),
             func.count(Payment.id).label("count"),
         )
-        .where(Payment.paid_at >= year_start)
-        .where(Payment.paid_at <= year_end)
+        .where(Payment.paid_at >= range_start)
+        .where(Payment.paid_at < range_end)
         .group_by(Payment.mode)
     ).all()
 
@@ -265,23 +305,23 @@ def annual_revenue(
     # Grand total
     grand_total = db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0))
-        .where(Payment.paid_at >= year_start)
-        .where(Payment.paid_at <= year_end)
+        .where(Payment.paid_at >= range_start)
+        .where(Payment.paid_at < range_end)
     ).scalar_one()
 
     total_payments = db.execute(
         select(func.count(Payment.id))
-        .where(Payment.paid_at >= year_start)
-        .where(Payment.paid_at <= year_end)
+        .where(Payment.paid_at >= range_start)
+        .where(Payment.paid_at < range_end)
     ).scalar_one()
 
     # Previous year comparison
     prev_year_start = datetime.combine(date(year - 1, 1, 1), time.min, tzinfo=UTC)
-    prev_year_end = datetime.combine(date(year - 1, 12, 31), time.max, tzinfo=UTC)
+    prev_year_end = datetime.combine(date(year, 1, 1), time.min, tzinfo=UTC)
     prev_year_total = db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0))
         .where(Payment.paid_at >= prev_year_start)
-        .where(Payment.paid_at <= prev_year_end)
+        .where(Payment.paid_at < prev_year_end)
     ).scalar_one()
 
     return {

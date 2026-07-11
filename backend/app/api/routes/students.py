@@ -483,6 +483,21 @@ async def import_students_from_excel(
     )
 
 
+@router.get("/classes", response_model=list[str])
+def list_student_classes(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[str]:
+    """Return distinct class names from students table."""
+    rows = db.execute(
+        select(Student.class_name)
+        .where(Student.class_name.is_not(None))
+        .where(Student.class_name != "")
+        .distinct()
+    ).scalars().all()
+    return sorted(rows, key=lambda x: (x or "").zfill(10))
+
+
 @router.get("", response_model=dict)
 def list_students(
     db: Session = Depends(get_db),

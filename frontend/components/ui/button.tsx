@@ -1,29 +1,55 @@
-import { ButtonHTMLAttributes } from 'react';
+import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 import { cn } from '@/components/ui/cn';
+import { Spinner } from '@/components/ui/spinner';
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'default' | 'secondary' | 'outline' | 'destructive';
-  size?: 'sm' | 'md';
+  variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  size?: 'sm' | 'md' | 'lg' | 'icon';
+  loading?: boolean;
 };
 
-export function Button({ className, variant = 'default', size = 'md', ...props }: Props) {
-  return (
-    <button
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[rgba(47,111,237,0.28)] disabled:pointer-events-none disabled:opacity-65',
-        size === 'sm' ? 'h-9 px-3.5' : 'h-11 px-4',
-        variant === 'default' &&
-          'border-transparent bg-[#2f6fed] text-white shadow-[0_8px_18px_rgba(15,23,42,0.18)] hover:bg-[#255ed1]',
-        variant === 'secondary' &&
-          'border-[rgba(47,111,237,0.14)] bg-[rgba(47,111,237,0.1)] text-[var(--heading)] hover:bg-[rgba(47,111,237,0.16)]',
-        variant === 'outline' &&
-          'border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--text)] hover:border-[var(--panel-line)] hover:bg-[var(--surface-subtle)]',
-        variant === 'destructive' &&
-          'border-transparent bg-[#c24157] text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)] hover:bg-[#a93449]',
-        className
-      )}
-      {...props}
-    />
-  );
-}
+export const Button = forwardRef<HTMLButtonElement, Props>(
+  ({ className, variant = 'default', size = 'md', loading, children, disabled, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        disabled={disabled || loading}
+        className={cn(
+          'inline-flex items-center justify-center gap-2 font-semibold cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50',
+          // Border radius
+          'rounded-full',
+          // Sizes
+          size === 'sm' && 'h-7 min-h-[44px] sm:min-h-0 px-3 text-xs',
+          size === 'md' && 'h-[34px] min-h-[44px] sm:min-h-0 px-3.5 text-sm',
+          size === 'lg' && 'h-10 px-5 text-sm',
+          size === 'icon' && 'h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-sm',
+          // Variants
+          variant === 'default' &&
+            'border border-transparent bg-[var(--accent)] text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)] hover:bg-[var(--accent-hover)] hover:shadow-[0_6px_16px_rgba(37,99,235,0.25)] active:scale-[0.98]',
+          variant === 'secondary' &&
+            'border border-[var(--accent-soft)] bg-[var(--accent-soft)] text-[var(--heading)] hover:bg-[rgba(47,111,237,0.18)] active:scale-[0.98]',
+          variant === 'outline' &&
+            'border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--text)] hover:border-[var(--panel-line)] hover:bg-[var(--surface-subtle)] active:scale-[0.98]',
+          variant === 'ghost' &&
+            'border border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text)]',
+          variant === 'destructive' &&
+            'border border-transparent bg-[var(--danger)] text-white shadow-[0_4px_12px_rgba(194,65,87,0.2)] hover:bg-[var(--danger-hover)] hover:shadow-[0_6px_16px_rgba(194,65,87,0.25)] active:scale-[0.98]',
+          className
+        )}
+        {...props}
+      >
+        {loading ? (
+          <>
+            <Spinner className="h-4 w-4" />
+            <span>{children}</span>
+          </>
+        ) : (
+          children
+        )}
+      </button>
+    );
+  }
+);
+
+Button.displayName = 'Button';

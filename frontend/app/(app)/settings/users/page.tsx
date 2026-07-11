@@ -24,11 +24,17 @@ type UserItem = {
 const PERMISSION_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
   students: 'Students',
-  collect: 'Collect Fees',
+  collect: 'Payments',
   savings: 'Savings',
-  expenses: 'Expenses',
+  staff: 'Staff',
+  academic: 'Academics',
+  exams: 'Exams & Marks',
+  cms: 'Website CMS',
+  fees: 'Fee Structure',
+  attendance: 'Attendance',
+  reports: 'Reports & Analytics',
   transactions: 'Transactions',
-  reports: 'Reports',
+  expenses: 'Expenses',
   settings: 'Settings',
 };
 
