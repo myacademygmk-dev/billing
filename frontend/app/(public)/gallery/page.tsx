@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic';
 
+import GalleryClient from './gallery-client';
+
 async function getData() {
   const base = process.env.BACKEND_API_BASE_URL ?? 'http://localhost:8000/api';
   try {
@@ -13,43 +15,35 @@ export default async function GalleryPage() {
 
   return (
     <div>
-      <section className="bg-gray-900 py-14 text-white sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-purple-400">Memories</div>
-          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">Gallery</h1>
-          <p className="mt-3 text-sm text-gray-400 sm:text-base">Moments from our events and activities</p>
+      {/* Hero */}
+      <section className="relative bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-16 sm:py-20">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex items-center gap-2 text-sm text-indigo-200">
+            <span>Home</span>
+            <span>/</span>
+            <span className="text-white font-medium">Gallery</span>
+          </div>
+          <h1 className="mt-4 text-4xl font-bold text-white sm:text-5xl">Gallery</h1>
+          <p className="mt-3 text-lg text-indigo-100">Moments from our events and activities</p>
         </div>
       </section>
 
-      <section className="py-14 sm:py-16">
+      {/* Gallery Content */}
+      <section className="bg-[#f5f3ff] py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {albums.length === 0 ? (
-            <div className="reveal rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm sm:p-12">
-              <div className="text-4xl">📷</div>
-              <p className="mt-3 text-sm font-medium text-gray-700">No photos yet</p>
-              <p className="mt-1 text-xs text-gray-500">Photos will appear here once added from the admin panel (Website CMS → Gallery → Add Photos)</p>
+            <div className="rounded-2xl bg-white p-12 text-center shadow-md border border-indigo-100">
+              <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                </svg>
+              </div>
+              <p className="mt-4 text-lg font-semibold text-gray-900">No photos yet</p>
+              <p className="mt-2 text-sm text-gray-500">Photos will appear here once added from the admin panel (Website CMS → Gallery → Add Photos)</p>
             </div>
           ) : (
-            <div className="space-y-10 sm:space-y-14">
-              {albums.map((album: any, albumIdx: number) => (
-                <div key={album.id} className="reveal">
-                  <h2 className="text-lg font-bold text-gray-900 sm:text-xl">{album.title}</h2>
-                  {album.description && <p className="mt-1 text-xs text-gray-500 sm:text-sm">{album.description}</p>}
-                  <div className="mt-4 grid gap-2 grid-cols-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
-                    {album.photos.map((photo: any, i: number) => (
-                      <div key={i} className={`reveal reveal-delay-${(i % 4) + 1} group relative aspect-square overflow-hidden rounded-xl border border-gray-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-[1.02] sm:rounded-2xl`}>
-                        <img src={photo.url} alt={photo.caption ?? ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                        {photo.caption && (
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 sm:p-3">
-                            <p className="text-[10px] text-white sm:text-xs">{photo.caption}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <GalleryClient albums={albums} />
           )}
         </div>
       </section>

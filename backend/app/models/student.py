@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, Integer, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -23,6 +24,9 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     batch_start_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     billing_start_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     billing_end_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    academic_year_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("academic_years.id"), nullable=True
+    )
     status: Mapped[StudentStatus] = mapped_column(
         Enum(StudentStatus, name="student_status"), nullable=False, default=StudentStatus.active
     )
@@ -75,5 +79,12 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         back_populates="student", cascade="all, delete-orphan"
     )
     savings_entries: Mapped[list["SavingsEntry"]] = relationship(
+        back_populates="student", cascade="all, delete-orphan"
+    )
+    academic_year: Mapped["AcademicYear | None"] = relationship(foreign_keys=[academic_year_id])
+    promotion_history: Mapped[list["PromotionHistory"]] = relationship(
+        back_populates="student", cascade="all, delete-orphan"
+    )
+    arrears: Mapped[list["StudentArrears"]] = relationship(
         back_populates="student", cascade="all, delete-orphan"
     )

@@ -14,6 +14,7 @@ class StudentStatus(str, enum.Enum):
     passed_out = "passed_out"
     withdrawn = "withdrawn"
     transferred = "transferred"
+    completed = "completed"
 
 
 class Gender(str, enum.Enum):

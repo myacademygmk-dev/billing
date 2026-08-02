@@ -7,6 +7,7 @@ import {
   CreditCard,
   Globe,
   GraduationCap,
+  Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -43,6 +44,7 @@ const nav: NavItem[] = [
   { href: '/fees', label: 'Fee Structure', icon: CreditCard, adminOnly: false, permission: 'fees', group: 'finance' },
   { href: '/reports', label: 'Reports', icon: BarChart3, adminOnly: false, permission: 'reports', group: 'finance' },
   { href: '/staff', label: 'Staff', icon: UserCog, adminOnly: false, permission: 'staff', group: 'management' },
+  { href: '/enquiries', label: 'Enquiries', icon: Inbox, adminOnly: false, permission: 'students', group: 'management' },
   { href: '/cms', label: 'Website', icon: Globe, adminOnly: false, permission: 'cms', group: 'management' },
   { href: '/settings', label: 'Settings', icon: Settings, adminOnly: true, permission: 'settings', group: 'management' },
 ];

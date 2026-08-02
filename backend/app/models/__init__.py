@@ -15,9 +15,10 @@ from app.models.exam import Exam, Mark
 from app.models.cms import WebContent, GalleryPhoto
 from app.models.fee_structure import FeeStructure, FeeDiscount, StudentDiscount
 from app.models.expense_entry import ExpenseEntry
-from app.models.attendance import StudentAttendance, StaffAttendance
+from app.models.attendance import StudentAttendance, StaffAttendance, StaffClockRecord
 from app.models.enquiry import Enquiry
 from app.models.file_upload import FileUpload
+from app.models.promotion import PromotionHistory, StudentArrears
 
 __all__ = [
     "Base",
@@ -46,6 +47,9 @@ __all__ = [
     "ExpenseEntry",
     "StudentAttendance",
     "StaffAttendance",
+    "StaffClockRecord",
     "Enquiry",
     "FileUpload",
+    "PromotionHistory",
+    "StudentArrears",
 ]

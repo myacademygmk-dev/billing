@@ -106,10 +106,12 @@ export default function FeesPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Fee Structures</CardTitle>
-              <Button size="sm" onClick={() => setShowAddFee(true)}>
-                <Plus className="mr-1 h-3.5 w-3.5" />
-                Add Fee Type
-              </Button>
+              {fees.data?.length ? (
+                <Button size="sm" onClick={() => setShowAddFee(true)}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add Fee Type
+                </Button>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="px-0 sm:px-0">
@@ -178,10 +180,12 @@ export default function FeesPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Discounts & Concessions</CardTitle>
-              <Button size="sm" onClick={() => setShowAddDiscount(true)}>
-                <Plus className="mr-1 h-3.5 w-3.5" />
-                Add Discount
-              </Button>
+              {discounts.data?.length ? (
+                <Button size="sm" onClick={() => setShowAddDiscount(true)}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add Discount
+                </Button>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="px-0 sm:px-0">

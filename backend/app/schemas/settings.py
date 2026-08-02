@@ -26,6 +26,18 @@ class InstitutionSettingsRead(BaseModel):
     address: str | None = None
     phone: str | None = None
     email: str | None = None
+    marquee_text: str | None = None
+    stats_students: str | None = None
+    stats_staff: str | None = None
+    stats_years: str | None = None
+    stats_standards: str | None = None
+    hero_title: str | None = None
+    hero_subtitle: str | None = None
+    hero_description: str | None = None
+    admission_text: str | None = None
+    alumni_data: str | None = None
+    faculty_data: str | None = None
+    facilities_data: str | None = None
     updated_at: datetime
     updated_by: uuid.UUID | None
 
@@ -37,6 +49,18 @@ class InstitutionSettingsUpdate(BaseModel):
     address: str | None = Field(default=None, max_length=500)
     phone: str | None = Field(default=None, max_length=50)
     email: str | None = Field(default=None, max_length=200)
+    marquee_text: str | None = Field(default=None)
+    stats_students: str | None = Field(default=None, max_length=20)
+    stats_staff: str | None = Field(default=None, max_length=20)
+    stats_years: str | None = Field(default=None, max_length=20)
+    stats_standards: str | None = Field(default=None, max_length=20)
+    hero_title: str | None = Field(default=None, max_length=200)
+    hero_subtitle: str | None = Field(default=None, max_length=300)
+    hero_description: str | None = Field(default=None)
+    admission_text: str | None = Field(default=None, max_length=200)
+    alumni_data: str | None = Field(default=None)
+    faculty_data: str | None = Field(default=None)
+    facilities_data: str | None = Field(default=None)
 
 
 class DatabaseResetRequest(BaseModel):

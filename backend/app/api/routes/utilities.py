@@ -1,25 +1,62 @@
-"""Utility routes: backup, student promotion, fee reminders, TC generation."""
+"""Utility routes: backup, student promotion, academic rollover, fee reminders, TC generation."""
 from __future__ import annotations
 
 import io
+import re
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
 from app.models.enums import StudentStatus
 from app.models.student import Student
 from app.models.student_fee import StudentFee
+from app.models.student_billing_period import StudentBillingPeriod
 from app.models.payment import Payment
 from app.models.user import User
+from app.models.academic import AcademicYear
+from app.models.fee_structure import FeeStructure
+from app.models.promotion import PromotionHistory, StudentArrears
+from app.schemas.promotion import PromotionConfig, PromotionDetail, PromotionResult
 from app.services.bill_pdf import InstitutionBranding
 
 router = APIRouter()
+
+
+# --- Roman numeral / class number helpers ---
+
+ROMANS = {
+    "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
+    "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10,
+    "XI": 11, "XII": 12,
+}
+
+
+def class_to_number(cls: str) -> int:
+    """Extract a numeric class number from a class name string.
+
+    Supports:
+      - Roman numerals: 'VI' → 6, 'XII' → 12
+      - Numeric strings: '10' → 10, '6th' → 6
+      - Mixed: 'Class-VIII' → 8
+    """
+    upper = cls.strip().upper()
+    # Direct roman match
+    if upper in ROMANS:
+        return ROMANS[upper]
+    # Check if any roman is a substring (e.g. "CLASS-VIII")
+    for roman, val in sorted(ROMANS.items(), key=lambda x: -len(x[0])):
+        if roman in upper:
+            return val
+    # Fallback: extract first number
+    nums = re.findall(r"\d+", cls)
+    return int(nums[0]) if nums else 0
 
 
 # --- Database Backup ---
@@ -90,15 +127,15 @@ def download_backup(
     )
 
 
-# --- Student Promotion ---
+# --- Student Promotion (Simple) ---
 
 @router.post("/promote-students")
-def promote_students(
+def promote_students_simple(
     payload: dict,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> dict:
-    """Promote students from one class to next. Updates class_name and batch."""
+    """Simple promotion: updates class_name and batch only. Use /academic-rollover for full year-end processing."""
     from_class = payload.get("from_class", "").strip()
     to_class = payload.get("to_class", "").strip()
     new_batch = payload.get("new_batch", "").strip()
@@ -122,6 +159,261 @@ def promote_students(
 
     db.commit()
     return {"message": f"Promoted {count} students from {from_class} to {to_class}", "count": count}
+
+
+# --- Academic Rollover (Comprehensive) ---
+
+@router.post("/academic-rollover", response_model=PromotionResult)
+def academic_rollover(
+    payload: PromotionConfig,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+) -> PromotionResult:
+    """Comprehensive year-end academic rollover.
+
+    Promotes students class-to-class, generates new student codes, optionally updates fees,
+    marks final-year students as completed, and carries forward pending arrears.
+    """
+    errors: list[str] = []
+    details: list[PromotionDetail] = []
+    promoted_count = 0
+    completed_count = 0
+    arrears_created = 0
+
+    # Validate academic years exist
+    from_ay = db.get(AcademicYear, payload.from_academic_year_id)
+    to_ay = db.get(AcademicYear, payload.to_academic_year_id)
+    if not from_ay:
+        raise HTTPException(status_code=404, detail="Source academic year not found")
+    if not to_ay:
+        raise HTTPException(status_code=404, detail="Target academic year not found")
+
+    # Optionally load fee structure
+    new_fee_amount: Decimal | None = None
+    if payload.update_fees and payload.fee_structure_id:
+        fee_struct = db.get(FeeStructure, payload.fee_structure_id)
+        if not fee_struct:
+            raise HTTPException(status_code=404, detail="Fee structure not found")
+        new_fee_amount = fee_struct.amount
+
+    # Track serial counters per target class for code generation
+    serial_counters: dict[str, int] = {}
+
+    def _get_next_serial(to_class: str) -> int:
+        """Get next serial number for a target class, checking existing codes."""
+        if to_class not in serial_counters:
+            # Find the max serial currently in the target class for the new batch
+            class_num = class_to_number(to_class)
+            prefix = f"{class_num:02d}"
+            # Check existing students in this class with codes matching the pattern
+            existing = db.execute(
+                select(Student.student_code).where(
+                    Student.class_name == to_class,
+                    Student.student_code.like(f"{prefix}%"),
+                )
+            ).scalars().all()
+            max_serial = 0
+            for code in existing:
+                try:
+                    serial_part = int(code[len(prefix):])
+                    max_serial = max(max_serial, serial_part)
+                except (ValueError, IndexError):
+                    pass
+            serial_counters[to_class] = max_serial
+        serial_counters[to_class] += 1
+        return serial_counters[to_class]
+
+    def _calculate_arrears(student: Student) -> Decimal:
+        """Calculate unpaid billing periods amount for the current year."""
+        unpaid_periods = [bp for bp in student.billing_periods if bp.payment_id is None]
+        if not unpaid_periods or not student.fee:
+            return Decimal("0")
+        monthly_fee = student.fee.expected_fee_amount
+        return monthly_fee * len(unpaid_periods)
+
+    def _generate_code(to_class: str, serial: int, pattern: str) -> str:
+        """Generate a student code from the pattern."""
+        class_num = class_to_number(to_class)
+        return pattern.format(class_num=class_num, serial=serial)
+
+    # --- Process class mappings (promotions) ---
+    for mapping in payload.class_mappings:
+        from_class = mapping.from_class.strip()
+        to_class = mapping.to_class.strip()
+
+        students = db.execute(
+            select(Student)
+            .where(Student.class_name == from_class, Student.status == StudentStatus.active)
+            .options(selectinload(Student.fee), selectinload(Student.billing_periods))
+            .order_by(Student.serial_no, Student.name)
+        ).scalars().all()
+
+        if not students:
+            errors.append(f"No active students found in class '{from_class}'")
+            continue
+
+        for student in students:
+            try:
+                old_code = student.student_code
+                old_fee = student.fee.expected_fee_amount if student.fee else None
+                old_batch = student.batch
+
+                # Calculate arrears before promotion
+                arrears_amount = _calculate_arrears(student)
+
+                # Generate new code
+                serial = _get_next_serial(to_class)
+                new_code = _generate_code(to_class, serial, payload.code_pattern)
+
+                # Ensure code uniqueness
+                existing_code = db.execute(
+                    select(Student.id).where(Student.student_code == new_code)
+                ).scalar_one_or_none()
+                if existing_code:
+                    # Try incrementing serial until unique
+                    for _ in range(100):
+                        serial = _get_next_serial(to_class)
+                        new_code = _generate_code(to_class, serial, payload.code_pattern)
+                        existing_code = db.execute(
+                            select(Student.id).where(Student.student_code == new_code)
+                        ).scalar_one_or_none()
+                        if not existing_code:
+                            break
+                    else:
+                        errors.append(f"Could not generate unique code for {student.name} ({old_code})")
+                        continue
+
+                # Update student record
+                student.class_name = to_class
+                student.batch = payload.new_batch
+                student.student_code = new_code
+                student.serial_no = serial
+                student.academic_year_id = payload.to_academic_year_id
+                student.billing_start_month = payload.new_billing_start_month
+                student.billing_end_month = payload.new_billing_end_month
+
+                # Update fee if requested
+                actual_new_fee = new_fee_amount
+                if payload.update_fees and new_fee_amount is not None and student.fee:
+                    student.fee.expected_fee_amount = new_fee_amount
+                    student.fee.last_fee_updated_at = datetime.now(UTC)
+                    student.fee.last_fee_updated_by = current_user.id
+
+                # Create promotion history
+                history = PromotionHistory(
+                    student_id=student.id,
+                    from_class=from_class,
+                    to_class=to_class,
+                    from_batch=old_batch,
+                    to_batch=payload.new_batch,
+                    from_student_code=old_code,
+                    to_student_code=new_code,
+                    from_academic_year_id=payload.from_academic_year_id,
+                    to_academic_year_id=payload.to_academic_year_id,
+                    old_fee_amount=old_fee,
+                    new_fee_amount=actual_new_fee,
+                    promoted_at=datetime.now(UTC),
+                    promoted_by=current_user.id,
+                )
+                db.add(history)
+
+                # Create arrears record if pending
+                if arrears_amount > 0 and payload.carry_forward_arrears:
+                    arrear = StudentArrears(
+                        student_id=student.id,
+                        from_academic_year_id=payload.from_academic_year_id,
+                        amount=arrears_amount,
+                        description=f"Pending fee from {from_ay.name} ({from_class}): {arrears_amount}",
+                    )
+                    db.add(arrear)
+                    arrears_created += 1
+
+                promoted_count += 1
+                details.append(PromotionDetail(
+                    student_id=student.id,
+                    student_name=student.name,
+                    from_class=from_class,
+                    to_class=to_class,
+                    old_code=old_code,
+                    new_code=new_code,
+                    arrears_amount=arrears_amount,
+                ))
+
+            except Exception as e:
+                errors.append(f"Error promoting {student.name} ({student.student_code}): {str(e)}")
+                continue
+
+    # --- Process final year students (graduation / completion) ---
+    for final_class in payload.final_year_classes:
+        final_class = final_class.strip()
+        students = db.execute(
+            select(Student)
+            .where(Student.class_name == final_class, Student.status == StudentStatus.active)
+            .options(selectinload(Student.fee), selectinload(Student.billing_periods))
+        ).scalars().all()
+
+        for student in students:
+            try:
+                old_code = student.student_code
+                old_fee = student.fee.expected_fee_amount if student.fee else None
+                arrears_amount = _calculate_arrears(student)
+
+                # Mark as completed
+                student.status = StudentStatus.completed
+
+                # Create promotion history
+                history = PromotionHistory(
+                    student_id=student.id,
+                    from_class=final_class,
+                    to_class="COMPLETED",
+                    from_batch=student.batch,
+                    to_batch=None,
+                    from_student_code=old_code,
+                    to_student_code=old_code,
+                    from_academic_year_id=payload.from_academic_year_id,
+                    to_academic_year_id=None,
+                    old_fee_amount=old_fee,
+                    new_fee_amount=None,
+                    promoted_at=datetime.now(UTC),
+                    promoted_by=current_user.id,
+                )
+                db.add(history)
+
+                # Create arrears if pending
+                if arrears_amount > 0 and payload.carry_forward_arrears:
+                    arrear = StudentArrears(
+                        student_id=student.id,
+                        from_academic_year_id=payload.from_academic_year_id,
+                        amount=arrears_amount,
+                        description=f"Final year pending from {from_ay.name} ({final_class}): {arrears_amount}",
+                    )
+                    db.add(arrear)
+                    arrears_created += 1
+
+                completed_count += 1
+                details.append(PromotionDetail(
+                    student_id=student.id,
+                    student_name=student.name,
+                    from_class=final_class,
+                    to_class="COMPLETED",
+                    old_code=old_code,
+                    new_code=old_code,
+                    arrears_amount=arrears_amount,
+                ))
+
+            except Exception as e:
+                errors.append(f"Error completing {student.name} ({student.student_code}): {str(e)}")
+                continue
+
+    db.commit()
+
+    return PromotionResult(
+        promoted_count=promoted_count,
+        completed_count=completed_count,
+        arrears_created=arrears_created,
+        errors=errors,
+        details=details,
+    )
 
 
 # --- Fee Reminder ---
