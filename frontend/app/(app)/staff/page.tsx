@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Plus, Shield, Trash2, UserPlus, Users, UserCog, CalendarCheck } from 'lucide-react';
+import { Plus, Pencil, Shield, Trash2, UserPlus, Users, UserCog, CalendarCheck } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
@@ -122,6 +122,7 @@ function StaffTab() {
   const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [form, setForm] = useState({
     staff_code: '',
     name: '',
@@ -130,6 +131,15 @@ function StaffTab() {
     email: '',
     qualification: '',
     monthly_salary: '',
+  });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    role: '',
+    phone: '',
+    email: '',
+    qualification: '',
+    monthly_salary: '',
+    joining_date: '',
   });
 
   const { data, isLoading } = useQuery<{ items: StaffMember[]; total: number }>({
@@ -161,6 +171,51 @@ function StaffTab() {
       setDeleteTarget(null);
     },
   });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      apiFetch(`/staff/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['staff'] });
+      toast({ title: 'Staff member updated', variant: 'success' });
+      setEditTarget(null);
+    },
+    onError: (e) => {
+      toast({ title: 'Update failed', description: String(e.message || e), variant: 'error' });
+    },
+  });
+
+  function openEdit(s: StaffMember) {
+    setEditForm({
+      name: s.name ?? '',
+      role: s.role ?? 'teacher',
+      phone: s.phone ?? '',
+      email: s.email ?? '',
+      qualification: s.qualification ?? '',
+      monthly_salary: s.monthly_salary ?? '',
+      joining_date: s.joining_date ?? '',
+    });
+    setEditTarget(s);
+  }
+
+  function handleEditSubmit() {
+    if (!editTarget) return;
+    const changed: Record<string, unknown> = {};
+    if (editForm.name !== editTarget.name) changed.name = editForm.name;
+    if (editForm.role !== editTarget.role) changed.role = editForm.role;
+    if (editForm.phone !== (editTarget.phone ?? '')) changed.phone = editForm.phone || null;
+    if (editForm.email !== (editTarget.email ?? '')) changed.email = editForm.email || null;
+    if (editForm.qualification !== (editTarget.qualification ?? '')) changed.qualification = editForm.qualification || null;
+    if (editForm.monthly_salary !== (editTarget.monthly_salary ?? '')) changed.monthly_salary = editForm.monthly_salary ? Number(editForm.monthly_salary) : null;
+    if (editForm.joining_date !== (editTarget.joining_date ?? '')) changed.joining_date = editForm.joining_date || null;
+
+    if (Object.keys(changed).length === 0) {
+      toast({ title: 'No changes to save' });
+      setEditTarget(null);
+      return;
+    }
+    editMutation.mutate({ id: editTarget.id, data: changed });
+  }
 
   return (
     <>
@@ -215,15 +270,25 @@ function StaffTab() {
                       <TD className="text-[var(--muted)]">{s.qualification ?? '-'}</TD>
                       <TD>{s.monthly_salary ? `₹${parseFloat(s.monthly_salary).toLocaleString('en-IN')}` : '-'}</TD>
                       <TD className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-[var(--danger)] hover:bg-[var(--danger-soft)]"
-                          onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
-                          aria-label={`Delete ${s.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openEdit(s)}
+                            aria-label={`Edit ${s.name}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                            onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
+                            aria-label={`Delete ${s.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TD>
                     </TR>
                   ))}
@@ -289,6 +354,66 @@ function StaffTab() {
               loading={createMutation.isPending}
             >
               Add Staff
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Staff Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Staff Member</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="grid gap-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Full Name *</label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Role</label>
+                <Select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}>
+                  <option value="teacher">Teacher</option>
+                  <option value="admin_staff">Admin Staff</option>
+                  <option value="non_teaching">Non-Teaching</option>
+                  <option value="part_time">Part Time</option>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Phone</label>
+                  <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Email</label>
+                  <Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Qualification</label>
+                  <Input value={editForm.qualification} onChange={(e) => setEditForm({ ...editForm, qualification: e.target.value })} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Monthly Salary</label>
+                  <Input type="number" value={editForm.monthly_salary} onChange={(e) => setEditForm({ ...editForm, monthly_salary: e.target.value })} prefix={<span className="text-sm">₹</span>} />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Date of Joining</label>
+                <Input type="date" value={editForm.joining_date} onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })} />
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={!editForm.name}
+              loading={editMutation.isPending}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -616,158 +741,305 @@ function UsersTab() {
   );
 }
 
-// ─── Staff Attendance Tab ────────────────────────────────
+// ─── Staff Attendance Tab (Clock In/Out) ─────────────────
 
-type StaffAttendanceItem = {
+type ClockRecord = {
+  id: string;
   staff_id: string;
-  staff_code: string;
   staff_name: string;
-  role: string;
-  date: string;
-  status: string;
+  staff_code: string;
+  clock_in: string | null;
+  clock_out: string | null;
+  note_in: string | null;
+  note_out: string | null;
+  status: 'on_time' | 'late' | 'not_clocked_in';
+  total_hours: number | null;
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  present: 'bg-[var(--chip-success-bg)] text-[var(--chip-success-text)] border-[var(--chip-success-bg)]',
-  absent: 'bg-[var(--chip-danger-bg)] text-[var(--chip-danger-text)] border-[var(--chip-danger-bg)]',
-  late: 'bg-[var(--chip-warn-bg)] text-[var(--chip-warn-text)] border-[var(--chip-warn-bg)]',
-  leave: 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]',
+type ClockAnalytics = {
+  staff_id: string;
+  staff_name: string;
+  days_present: number;
+  avg_clock_in: string;
+  avg_hours_per_day: number;
+  late_count: number;
+  on_time_count: number;
+  total_hours: number;
 };
 
 function StaffAttendanceTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
-
-  const staffAttendance = useQuery<{ items: StaffAttendanceItem[]; total: number; marked: number }>({
-    queryKey: ['staffAttendance', selectedDate],
-    queryFn: () => apiFetch(`/attendance/staff?date=${selectedDate}`),
+  const today = new Date().toISOString().slice(0, 10);
+  const [noteDialog, setNoteDialog] = useState<{ staffId: string; action: 'in' | 'out'; staffName: string } | null>(null);
+  const [note, setNote] = useState('');
+  const [analyticsMonth, setAnalyticsMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const markStaff = useMutation({
-    mutationFn: (entries: { staff_id: string; status: string }[]) =>
-      apiFetch('/attendance/staff', { method: 'POST', body: JSON.stringify({ date: selectedDate, entries }) }),
+  // Fetch today's clock records
+  const { data: clockRecords, isLoading: loadingRecords } = useQuery<ClockRecord[]>({
+    queryKey: ['clockRecords', today],
+    queryFn: () => apiFetch(`/attendance/staff/clock-records?date=${today}`),
+  });
+
+  // Fetch monthly analytics
+  const { data: analytics, isLoading: loadingAnalytics } = useQuery<ClockAnalytics[]>({
+    queryKey: ['clockAnalytics', analyticsMonth],
+    queryFn: () => apiFetch(`/attendance/staff/clock-analytics?month=${analyticsMonth}-01`),
+  });
+
+  // Clock In mutation
+  const clockInMutation = useMutation({
+    mutationFn: (data: { staff_id: string; note?: string }) =>
+      apiFetch('/attendance/staff/clock-in', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['staffAttendance'] });
-      setLocalStatus({});
-      toast({ title: 'Attendance saved', variant: 'success' });
+      qc.invalidateQueries({ queryKey: ['clockRecords'] });
+      qc.invalidateQueries({ queryKey: ['clockAnalytics'] });
+      setNoteDialog(null);
+      setNote('');
+      toast({ title: 'Clocked in successfully', variant: 'success' });
     },
-    onError: (e) => toast({ title: 'Failed to save', description: String(e.message || e), variant: 'error' }),
+    onError: (e) => toast({ title: 'Clock in failed', description: String(e.message || e), variant: 'error' }),
   });
 
-  function getStatus(id: string, serverStatus: string) {
-    return localStatus[id] ?? (serverStatus === 'not_marked' ? '' : serverStatus);
-  }
+  // Clock Out mutation
+  const clockOutMutation = useMutation({
+    mutationFn: (data: { staff_id: string; note?: string }) =>
+      apiFetch(`/attendance/staff/${data.staff_id}/clock-out`, { method: 'POST', body: JSON.stringify({ note: data.note }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clockRecords'] });
+      qc.invalidateQueries({ queryKey: ['clockAnalytics'] });
+      setNoteDialog(null);
+      setNote('');
+      toast({ title: 'Clocked out successfully', variant: 'success' });
+    },
+    onError: (e) => toast({ title: 'Clock out failed', description: String(e.message || e), variant: 'error' }),
+  });
 
-  function setStatus(id: string, status: string) {
-    setLocalStatus((prev) => ({ ...prev, [id]: status }));
-  }
-
-  function markAllPresent() {
-    if (!staffAttendance.data) return;
-    const newStatus: Record<string, string> = {};
-    staffAttendance.data.items.forEach((item) => {
-      newStatus[item.staff_id] = 'present';
-    });
-    setLocalStatus(newStatus);
-  }
-
-  function saveAttendance() {
-    const entries = Object.entries(localStatus)
-      .filter(([, status]) => status)
-      .map(([staff_id, status]) => ({ staff_id, status }));
-    if (entries.length === 0) {
-      toast({ title: 'No changes to save', variant: 'warning' });
-      return;
+  function handleClockAction() {
+    if (!noteDialog) return;
+    const { staffId, action } = noteDialog;
+    if (action === 'in') {
+      clockInMutation.mutate({ staff_id: staffId, note: note || undefined });
+    } else {
+      clockOutMutation.mutate({ staff_id: staffId, note: note || undefined });
     }
-    markStaff.mutate(entries);
   }
 
-  const changedCount = Object.values(localStatus).filter(Boolean).length;
+  function formatTime(iso: string | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+
+  function formatHours(hours: number | null): string {
+    if (hours === null || hours === undefined) return '—';
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m}m`;
+  }
+
+  const clockedInCount = clockRecords?.filter((r) => r.clock_in).length ?? 0;
+  const clockedOutCount = clockRecords?.filter((r) => r.clock_out).length ?? 0;
 
   return (
-    <Card square transparent>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>
-              Staff Attendance — {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-            </CardTitle>
-            {staffAttendance.data && (
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {staffAttendance.data.marked} of {staffAttendance.data.total} marked
-              </p>
-            )}
+    <div className="space-y-6">
+      {/* ─── Clock In/Out Panel ─── */}
+      <Card square transparent>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>
+                Today — {new Date(today).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+              </CardTitle>
+              {clockRecords && (
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {clockedInCount} clocked in · {clockedOutCount} clocked out · {(clockRecords.length - clockedInCount)} not yet
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={selectedDate}
-              onChange={(e) => { setSelectedDate(e.target.value); setLocalStatus({}); }}
+        </CardHeader>
+        <CardContent>
+          {loadingRecords ? (
+            <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
+          ) : !clockRecords?.length ? (
+            <EmptyState
+              icon={<EmptyStateIcon type="staff" />}
+              title="No staff found"
+              description="Add staff members first to track attendance."
+              compact
             />
-            <Button variant="outline" size="sm" onClick={markAllPresent}>
-              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-              All Present
-            </Button>
-            <Button
-              onClick={saveAttendance}
-              disabled={markStaff.isPending || changedCount === 0}
-              loading={markStaff.isPending}
-            >
-              Save {changedCount > 0 ? `(${changedCount})` : ''}
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {staffAttendance.isLoading ? (
-          <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
-        ) : !staffAttendance.data?.items.length ? (
-          <EmptyState
-            icon={<EmptyStateIcon type="staff" />}
-            title="No staff to mark"
-            description="Add staff members first to mark their attendance."
-            compact
-          />
-        ) : (
-          <div className="space-y-1.5">
-            {staffAttendance.data.items.map((item) => {
-              const current = getStatus(item.staff_id, item.status);
-              return (
+          ) : (
+            <div className="space-y-2">
+              {clockRecords.map((record) => (
                 <div
-                  key={item.staff_id}
-                  className="flex items-center justify-between rounded-lg border border-[var(--panel-line)] px-4 py-2.5"
+                  key={record.staff_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--panel-line)] px-4 py-3"
                 >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-[var(--heading)]">{item.staff_name}</div>
-                    <div className="text-xs text-[var(--muted)]">
-                      {item.staff_code} · {item.role.replace('_', ' ')}
-                    </div>
+                  {/* Staff Info */}
+                  <div className="min-w-[140px]">
+                    <div className="text-sm font-medium text-[var(--heading)]">{record.staff_name}</div>
+                    <div className="text-xs text-[var(--muted)]">{record.staff_code}</div>
                   </div>
-                  <div className="flex gap-1">
-                    {(['present', 'absent', 'late', 'leave'] as const).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => setStatus(item.staff_id, status)}
-                        aria-pressed={current === status}
-                        className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase transition-all ${
-                          current === status
-                            ? STATUS_COLORS[status]
-                            : 'border-transparent text-[var(--muted)] opacity-50 hover:opacity-80'
-                        }`}
+
+                  {/* Times */}
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="text-center">
+                      <div className="text-[10px] uppercase text-[var(--muted)]">In</div>
+                      <div className={record.clock_in ? 'font-medium text-emerald-600' : 'text-[var(--muted)]'}>
+                        {formatTime(record.clock_in)}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[10px] uppercase text-[var(--muted)]">Out</div>
+                      <div className={record.clock_out ? 'font-medium text-blue-600' : 'text-[var(--muted)]'}>
+                        {formatTime(record.clock_out)}
+                      </div>
+                    </div>
+                    {record.total_hours !== null && (
+                      <div className="text-center">
+                        <div className="text-[10px] uppercase text-[var(--muted)]">Hours</div>
+                        <div className="font-medium text-[var(--heading)]">{formatHours(record.total_hours)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status + Actions */}
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        record.status === 'on_time' ? 'success' :
+                        record.status === 'late' ? 'warning' : 'default'
+                      }
+                    >
+                      {record.status === 'on_time' ? 'On Time' :
+                       record.status === 'late' ? 'Late' : 'Not Clocked In'}
+                    </Badge>
+
+                    {!record.clock_in && (
+                      <Button
+                        size="sm"
+                        onClick={() => setNoteDialog({ staffId: record.staff_id, action: 'in', staffName: record.staff_name })}
                       >
-                        {status === 'present' ? 'P' : status === 'absent' ? 'A' : status === 'late' ? 'L' : 'LV'}
-                      </button>
-                    ))}
+                        Clock In
+                      </Button>
+                    )}
+                    {record.clock_in && !record.clock_out && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setNoteDialog({ staffId: record.staff_id, action: 'out', staffName: record.staff_name })}
+                      >
+                        Clock Out
+                      </Button>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Analytics Section ─── */}
+      <Card square transparent>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Monthly Analytics</CardTitle>
+            <Input
+              type="month"
+              className="w-[180px]"
+              value={analyticsMonth}
+              onChange={(e) => setAnalyticsMonth(e.target.value)}
+            />
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="px-0 sm:px-0">
+          {loadingAnalytics ? (
+            <div className="flex items-center gap-2 px-4 py-8 text-[var(--muted)]"><Spinner /> Loading analytics</div>
+          ) : !analytics?.length ? (
+            <EmptyState
+              icon={<EmptyStateIcon type="staff" />}
+              title="No data for this month"
+              description="Attendance records will appear here once staff start clocking in."
+              compact
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <THead>
+                  <tr>
+                    <TH>Staff Name</TH>
+                    <TH className="text-center">Days Present</TH>
+                    <TH className="text-center">Avg Clock-In</TH>
+                    <TH className="text-center">Avg Hours/Day</TH>
+                    <TH className="text-center">Late</TH>
+                    <TH className="text-center">On Time</TH>
+                    <TH className="text-right">Total Hours</TH>
+                  </tr>
+                </THead>
+                <TBody>
+                  {analytics.map((row) => (
+                    <TR key={row.staff_id}>
+                      <TD className="font-medium text-[var(--heading)]">{row.staff_name}</TD>
+                      <TD className="text-center">{row.days_present}</TD>
+                      <TD className="text-center text-[var(--muted)]">{row.avg_clock_in || '—'}</TD>
+                      <TD className="text-center">{row.avg_hours_per_day ? `${row.avg_hours_per_day.toFixed(1)}h` : '—'}</TD>
+                      <TD className="text-center">
+                        {row.late_count > 0 ? (
+                          <Badge variant="warning">{row.late_count}</Badge>
+                        ) : (
+                          <span className="text-[var(--muted)]">0</span>
+                        )}
+                      </TD>
+                      <TD className="text-center">
+                        {row.on_time_count > 0 ? (
+                          <Badge variant="success">{row.on_time_count}</Badge>
+                        ) : (
+                          <span className="text-[var(--muted)]">0</span>
+                        )}
+                      </TD>
+                      <TD className="text-right font-medium">{row.total_hours ? formatHours(row.total_hours) : '—'}</TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Note Dialog (Clock In / Clock Out) ─── */}
+      <Dialog open={!!noteDialog} onOpenChange={(v) => { if (!v) { setNoteDialog(null); setNote(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {noteDialog?.action === 'in' ? 'Clock In' : 'Clock Out'} — {noteDialog?.staffName}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Note (optional)</label>
+              <Input
+                placeholder={noteDialog?.action === 'in' ? 'e.g. Arrived early for meeting' : 'e.g. Left for personal errand'}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNoteDialog(null); setNote(''); }}>Cancel</Button>
+            <Button
+              onClick={handleClockAction}
+              loading={clockInMutation.isPending || clockOutMutation.isPending}
+            >
+              {noteDialog?.action === 'in' ? 'Clock In' : 'Clock Out'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

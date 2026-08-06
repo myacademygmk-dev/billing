@@ -1,6 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { Card } from '@/components/ui/public-card';
+import { GlowOrb } from '@/components/ui/glow-orb';
+
+const INFO_ACCENTS = [
+  { chip: 'bg-indigo-50', icon: 'text-indigo-600' },
+  { chip: 'bg-teal-50', icon: 'text-teal-600' },
+  { chip: 'bg-amber-50', icon: 'text-amber-600' },
+  { chip: 'bg-violet-50', icon: 'text-violet-600' },
+];
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -30,82 +39,119 @@ export default function ContactPage() {
     } catch {}
     setLoading(false);
   }
+
   return (
     <div>
-      <section className="bg-gray-900 py-14 text-white sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-green-400">Get In Touch</div>
-          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">Contact Us</h1>
-          <p className="mt-3 text-sm text-gray-400 sm:text-base">We&apos;d love to hear from you</p>
+      {/* Hero */}
+      <section className="relative bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-8 sm:py-10">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex items-center gap-2 text-sm text-indigo-200">
+            <span>Home</span>
+            <span>/</span>
+            <span className="text-white font-medium">Contact Us</span>
+          </div>
+          <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">Contact Us</h1>
+          <p className="mt-3 text-lg text-indigo-100">We&apos;d love to hear from you</p>
         </div>
       </section>
 
-      <section className="py-14 sm:py-16">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="grid gap-6 lg:grid-cols-5 lg:gap-8">
-            {/* Info */}
-            <div className="space-y-3 lg:col-span-2 sm:space-y-4">
-              {[
-                { label: 'Address', value: '20/4, Kalingarayan Street, 1st Lane,\nOld Washermenpet, Chennai-21.', icon: '📍' },
-                { label: 'Phone', value: '044-4356 8296', icon: '📞' },
-                { label: 'Email', value: 'myacademy2009@gmail.com', icon: '✉️' },
-                { label: 'Hours', value: 'Mon - Sat: 9:00 AM - 8:00 PM', icon: '🕐' },
-              ].map((item, i) => (
-                <div key={item.label} className={`reveal reveal-delay-${i + 1} rounded-2xl bg-white border border-gray-100 p-4 shadow-sm transition-all duration-200 hover:shadow-md sm:p-6`}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg">{item.icon}</span>
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 sm:text-[11px]">{item.label}</div>
-                      <p className="mt-1.5 text-xs text-gray-700 whitespace-pre-line sm:text-sm">{item.value}</p>
+      {/* Content */}
+      <section className="relative overflow-hidden bg-slate-50 py-12 sm:py-14">
+        <GlowOrb color="bg-indigo-200/40" className="-left-20 -top-20 h-72 w-72" />
+        <GlowOrb color="bg-teal-200/30" className="-bottom-16 -right-16 h-64 w-64" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid gap-8 lg:grid-cols-5 lg:gap-10">
+            {/* Form */}
+            <div className="reveal-left lg:col-span-3">
+              <Card interactive={false}>
+                <div className="p-8 sm:p-10">
+                  <h3 className="text-xl font-semibold text-slate-900 sm:text-2xl">Admission Enquiry</h3>
+                  <p className="mt-2 text-sm text-slate-500">Fill in your details and we&apos;ll get back to you</p>
+                  {submitted ? (
+                    <div className="mt-8 rounded-lg bg-emerald-50 border border-emerald-100 p-8 text-center">
+                      <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-emerald-600 animate-[pulse_1.5s_ease-in-out_1]">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                        </svg>
+                      </div>
+                      <p className="mt-4 text-lg font-semibold text-slate-900">Enquiry Submitted!</p>
+                      <p className="mt-2 text-sm text-slate-500">We will contact you soon.</p>
                     </div>
-                  </div>
+                  ) : (
+                    <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <input name="student_name" type="text" placeholder="Student Name *" required className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition" />
+                        <input name="parent_name" type="text" placeholder="Parent Name" className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition" />
+                      </div>
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <input name="phone" type="tel" placeholder="Phone Number *" required className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition" />
+                        <select name="standard" className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition">
+                          <option value="">Select Standard</option>
+                          <option>LKG - UKG</option>
+                          <option>1st - 5th</option>
+                          <option>6th - 8th</option>
+                          <option>9th - 10th</option>
+                          <option>11th - 12th</option>
+                        </select>
+                      </div>
+                      <select name="board" className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition">
+                        <option value="">Select Board</option>
+                        <option>SAMACHEER</option>
+                        <option>State Board</option>
+                        <option>CBSE</option>
+                      </select>
+                      <textarea name="message" placeholder="Message (optional)" rows={4} className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition resize-none" />
+                      <button type="submit" disabled={loading} className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/25 active:scale-[0.99] disabled:opacity-50">
+                        {loading ? 'Submitting...' : 'Submit Enquiry'}
+                      </button>
+                    </form>
+                  )}
                 </div>
-              ))}
+              </Card>
             </div>
 
-            {/* Form */}
-            <div className="reveal lg:col-span-3">
-              <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm sm:p-8">
-                <h3 className="text-base font-bold text-gray-900 sm:text-lg">Admission Enquiry</h3>
-                <p className="mt-1 text-xs text-gray-500 sm:text-sm">Fill in your details and we&apos;ll get back to you</p>
-                {submitted ? (
-                  <div className="mt-6 rounded-xl bg-green-50 border border-green-200 p-6 text-center">
-                    <div className="text-3xl">✅</div>
-                    <p className="mt-2 text-sm font-semibold text-green-800">Enquiry Submitted!</p>
-                    <p className="mt-1 text-xs text-green-600">We will contact you soon.</p>
-                  </div>
-                ) : (
-                <form className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={handleSubmit}>
-                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                    <input name="student_name" type="text" placeholder="Student Name *" required className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition sm:px-4 sm:py-3" />
-                    <input name="parent_name" type="text" placeholder="Parent Name" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition sm:px-4 sm:py-3" />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                    <input name="phone" type="tel" placeholder="Phone Number *" required className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition sm:px-4 sm:py-3" />
-                    <select name="standard" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500 focus:border-blue-400 focus:bg-white focus:outline-none transition sm:px-4 sm:py-3">
-                      <option value="">Select Standard</option>
-                      <option>LKG - UKG</option>
-                      <option>1st - 5th</option>
-                      <option>6th - 8th</option>
-                      <option>9th - 10th</option>
-                      <option>11th - 12th</option>
-                    </select>
-                  </div>
-                  <select name="board" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500 focus:border-blue-400 focus:bg-white focus:outline-none transition sm:px-4 sm:py-3">
-                    <option value="">Select Board</option>
-                    <option>SAMACHEER</option>
-                    <option>State Board</option>
-                    <option>CBSE</option>
-                  </select>
-                  <textarea name="message" placeholder="Message (optional)" rows={3} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition resize-none sm:px-4 sm:py-3" />
-                  <button type="submit" disabled={loading} className="w-full rounded-xl bg-gray-900 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-gray-800 disabled:opacity-50 sm:py-3.5">
-                    {loading ? 'Submitting...' : 'Submit Enquiry'}
-                  </button>
-                </form>
-                )}
-              </div>
+            {/* Info Cards */}
+            <div className="reveal-right space-y-4 lg:col-span-2">
+              {[
+                { label: 'Address', value: '20/4, Kalingarayan Street, 1st Lane,\nOld Washermenpet, Chennai-21.', icon: 'M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z' },
+                { label: 'Phone', value: '044-4356 8296', icon: 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z' },
+                { label: 'Email', value: 'myacademy2009@gmail.com', icon: 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75' },
+                { label: 'Hours', value: 'Mon - Sat: 9:00 AM - 8:00 PM', icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+              ].map((item, i) => {
+                const accent = INFO_ACCENTS[i % INFO_ACCENTS.length];
+                return (
+                  <Card key={item.label}>
+                    <div className="flex items-start gap-4 p-6">
+                      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${accent.chip}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${accent.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{item.label}</p>
+                        <p className="mt-1.5 text-sm text-slate-700 whitespace-pre-line">{item.value}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
+
+          {/* Map Placeholder */}
+          <Card interactive={false} className="reveal mt-8">
+            <div className="p-4">
+              <div className="rounded-lg bg-slate-100 h-64 flex items-center justify-center">
+                <div className="text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                  </svg>
+                  <p className="mt-3 text-sm font-medium text-slate-400">Map • Old Washermenpet, Chennai-21</p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </section>
     </div>

@@ -16,6 +16,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/savings') ||
     pathname.startsWith('/staff') ||
     pathname.startsWith('/academic') ||
+    pathname.startsWith('/enquiries') ||
     pathname.startsWith('/cms') ||
     pathname.startsWith('/fees');
 
@@ -49,6 +50,7 @@ export const config = {
     '/savings/:path*',
     '/staff/:path*',
     '/academic/:path*',
+    '/enquiries/:path*',
     '/cms/:path*',
     '/fees/:path*',
   ]

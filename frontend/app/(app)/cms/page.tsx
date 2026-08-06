@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Globe, Image, Megaphone, Newspaper, Plus, Star, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -30,6 +30,7 @@ type ContentItem = {
 };
 
 const SECTIONS = [
+  { type: 'website', label: 'Website Settings', icon: Globe, description: 'Marquee text, hero, stats & website config', color: 'text-indigo-500' },
   { type: 'achievement', label: 'Achievements', icon: Star, description: 'Student toppers, rank holders, centum scorers', color: 'text-yellow-500' },
   { type: 'news', label: 'News', icon: Newspaper, description: 'Institute announcements and updates', color: 'text-blue-500' },
   { type: 'event', label: 'Events', icon: Megaphone, description: 'Annual day, exam dates, admission dates', color: 'text-purple-500' },
@@ -107,6 +108,9 @@ export default function CmsPage() {
         </div>
 
         {/* Content Area */}
+        {activeSection === 'website' ? (
+          <WebsiteSettingsPanel />
+        ) : (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -180,6 +184,7 @@ export default function CmsPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Add Content Dialog */}
@@ -290,5 +295,246 @@ export default function CmsPage() {
         </DialogContent>
       </Dialog>
     </AppShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   WEBSITE SETTINGS PANEL
+   ═══════════════════════════════════════════════ */
+function WebsiteSettingsPanel() {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [marquee, setMarquee] = useState('');
+  const [statsStudents, setStatsStudents] = useState('');
+  const [statsStaff, setStatsStaff] = useState('');
+  const [statsYears, setStatsYears] = useState('');
+  const [statsStandards, setStatsStandards] = useState('');
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [admissionText, setAdmissionText] = useState('');
+  const [popupBannerUrl, setPopupBannerUrl] = useState('');
+  const [heroSlides, setHeroSlides] = useState<string[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  const settings = useQuery<Record<string, any>>({
+    queryKey: ['institutionSettings'],
+    queryFn: () => apiFetch('/settings/institution'),
+  });
+
+  useEffect(() => {
+    if (settings.data) {
+      setMarquee(settings.data.marquee_text || '');
+      setStatsStudents(settings.data.stats_students || '');
+      setStatsStaff(settings.data.stats_staff || '');
+      setStatsYears(settings.data.stats_years || '');
+      setStatsStandards(settings.data.stats_standards || '');
+      setHeroTitle(settings.data.hero_title || '');
+      setHeroSubtitle(settings.data.hero_subtitle || '');
+      setAdmissionText(settings.data.admission_text || '');
+      setPopupBannerUrl(settings.data.popup_banner_url || '');
+      const slides = settings.data.hero_slides
+        ? settings.data.hero_slides.split('|').map((s: string) => s.trim()).filter(Boolean)
+        : [];
+      setHeroSlides(slides);
+    }
+  }, [settings.data]);
+
+  async function uploadFile(file: File, target: 'popup' | 'slide'): Promise<string | null> {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/backend/uploads', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      // Backend returns url like "/api/uploads/files/xyz.jpg"
+      // Frontend needs "/api/backend/uploads/files/xyz.jpg" to go through proxy
+      const rawUrl: string = data.url || data.file_url || '';
+      const url = rawUrl.startsWith('/api/uploads')
+        ? rawUrl.replace('/api/uploads', '/api/backend/uploads')
+        : rawUrl;
+      return url;
+    } catch (e: any) {
+      toast({ title: 'Upload failed', description: e.message });
+      return null;
+    }
+  }
+
+  async function handleSlideUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading('slide');
+    const url = await uploadFile(file, 'slide');
+    if (url) setHeroSlides((prev) => [...prev, url]);
+    setUploading(null);
+    e.target.value = '';
+  }
+
+  async function handlePopupUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading('popup');
+    const url = await uploadFile(file, 'popup');
+    if (url) setPopupBannerUrl(url);
+    setUploading(null);
+    e.target.value = '';
+  }
+
+  function removeSlide(index: number) {
+    setHeroSlides((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await apiFetch('/settings/institution', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          marquee_text: marquee,
+          stats_students: statsStudents,
+          stats_staff: statsStaff,
+          stats_years: statsYears,
+          stats_standards: statsStandards,
+          hero_title: heroTitle,
+          hero_subtitle: heroSubtitle,
+          admission_text: admissionText,
+          popup_banner_url: popupBannerUrl || null,
+          hero_slides: heroSlides.length > 0 ? heroSlides.join('|') : null,
+        }),
+      });
+      toast({ title: 'Website settings saved' });
+    } catch (e: any) {
+      toast({ title: 'Failed to save', description: String(e.message || e) });
+    }
+    setSaving(false);
+  }
+
+  if (settings.isLoading) return <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading settings...</div>;
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-180px)]">
+      {/* Header */}
+      <div className="flex-shrink-0 border-b border-[var(--panel-line)] bg-[var(--panel-bg)] px-5 py-4 rounded-t-xl">
+        <h3 className="text-base font-semibold text-[var(--heading)]">Website Settings</h3>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">Edit your public website content. Changes reflect immediately.</p>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+        {/* Marquee */}
+        <div>
+          <label className="text-sm font-semibold text-[var(--heading)]">Marquee / News Ticker</label>
+          <p className="text-[11px] text-[var(--muted)] mt-0.5">Separate each announcement with a pipe ( | ) character</p>
+          <textarea
+            className="mt-2 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2.5 text-sm text-[var(--heading)] focus:border-[var(--accent)] focus:outline-none"
+            rows={3}
+            placeholder="Admissions Open 2025-2026|New Classes Starting|Board Results Announced"
+            value={marquee}
+            onChange={(e) => setMarquee(e.target.value)}
+          />
+        </div>
+
+        {/* Stats */}
+        <div>
+          <label className="text-sm font-semibold text-[var(--heading)]">Homepage Stats</label>
+          <p className="text-[11px] text-[var(--muted)] mt-0.5">Numbers shown on the KPI cards on the homepage</p>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <label className="text-[11px] text-[var(--muted)]">Years</label>
+              <Input className="mt-1" value={statsYears} onChange={(e) => setStatsYears(e.target.value)} placeholder="15+" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--muted)]">Students</label>
+              <Input className="mt-1" value={statsStudents} onChange={(e) => setStatsStudents(e.target.value)} placeholder="200+" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--muted)]">Staff</label>
+              <Input className="mt-1" value={statsStaff} onChange={(e) => setStatsStaff(e.target.value)} placeholder="22" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[var(--muted)]">Standards</label>
+              <Input className="mt-1" value={statsStandards} onChange={(e) => setStatsStandards(e.target.value)} placeholder="LKG-12" />
+            </div>
+          </div>
+        </div>
+
+        {/* Admission Text */}
+        <div>
+          <label className="text-sm font-semibold text-[var(--heading)]">Admission Banner Text</label>
+          <Input className="mt-2" value={admissionText} onChange={(e) => setAdmissionText(e.target.value)} placeholder="Admissions Open for 2025-2026" />
+        </div>
+
+        {/* Hero Slides - Upload */}
+        <div>
+          <label className="text-sm font-semibold text-[var(--heading)]">Hero Slideshow Images</label>
+          <p className="text-[11px] text-[var(--muted)] mt-0.5">Upload images for the homepage banner slideshow</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {heroSlides.map((url, i) => (
+              <div key={i} className="relative group rounded-lg border border-[var(--field-border)] overflow-hidden">
+                <img src={url} alt={`Slide ${i + 1}`} className="w-full h-24 object-cover" />
+                <button
+                  onClick={() => removeSlide(i)}
+                  className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {/* Upload button */}
+            <label className="flex h-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-[var(--field-border)] hover:border-[var(--accent)] hover:bg-[var(--surface-subtle)] transition-colors">
+              <input type="file" accept="image/*" className="hidden" onChange={handleSlideUpload} disabled={uploading === 'slide'} />
+              {uploading === 'slide' ? (
+                <Spinner className="h-5 w-5" />
+              ) : (
+                <div className="text-center">
+                  <Plus className="mx-auto h-5 w-5 text-[var(--muted)]" />
+                  <span className="mt-1 block text-[11px] text-[var(--muted)]">Add Image</span>
+                </div>
+              )}
+            </label>
+          </div>
+        </div>
+
+        {/* Popup Banner - Upload */}
+        <div>
+          <label className="text-sm font-semibold text-[var(--heading)]">Popup Banner Image</label>
+          <p className="text-[11px] text-[var(--muted)] mt-0.5">Shows as a popup when visitors open the website. Remove to disable.</p>
+          {popupBannerUrl ? (
+            <div className="mt-3 relative group rounded-lg border border-[var(--field-border)] overflow-hidden inline-block">
+              <img src={popupBannerUrl} alt="Popup banner" className="max-h-40 object-contain rounded" />
+              <button
+                onClick={() => setPopupBannerUrl('')}
+                className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <label className="mt-3 flex h-24 w-48 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-[var(--field-border)] hover:border-[var(--accent)] hover:bg-[var(--surface-subtle)] transition-colors">
+              <input type="file" accept="image/*" className="hidden" onChange={handlePopupUpload} disabled={uploading === 'popup'} />
+              {uploading === 'popup' ? (
+                <Spinner className="h-5 w-5" />
+              ) : (
+                <div className="text-center">
+                  <Plus className="mx-auto h-5 w-5 text-[var(--muted)]" />
+                  <span className="mt-1 block text-[11px] text-[var(--muted)]">Upload Banner</span>
+                </div>
+              )}
+            </label>
+          )}
+        </div>
+
+      </div>
+
+      {/* Fixed Save footer */}
+      <div className="flex-shrink-0 border-t border-[var(--panel-line)] bg-[var(--panel-bg)] px-5 py-3 rounded-b-xl">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <><Spinner className="mr-1.5 h-3.5 w-3.5" /> Saving...</> : 'Save Website Settings'}
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -56,6 +56,10 @@ const config: Config = {
         '2xl': '1.5rem',
       },
       keyframes: {
+        marquee: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
         'slide-in-left': {
           from: { transform: 'translateX(-100%)' },
           to: { transform: 'translateX(0)' },
@@ -90,6 +94,7 @@ const config: Config = {
         },
       },
       animation: {
+        marquee: 'marquee 30s linear infinite',
         'slide-in-left': 'slide-in-left 200ms ease-out',
         'fade-in': 'fade-in 150ms ease-out',
         'fade-in-up': 'fade-in-up 200ms ease-out',

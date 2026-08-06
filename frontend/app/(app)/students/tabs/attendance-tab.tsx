@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Save, Search } from 'lucide-react';
+import { CheckCircle2, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
@@ -34,9 +34,15 @@ export default function AttendanceTab() {
   const [classFilter, setClassFilter] = useState('');
   const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
 
+  const classesQuery = useQuery<string[]>({
+    queryKey: ['studentClasses'],
+    queryFn: () => apiFetch<string[]>('/students/classes'),
+  });
+
   const studentAttendance = useQuery<{ items: AttendanceItem[]; total: number; marked: number }>({
     queryKey: ['studentAttendance', selectedDate, classFilter],
-    queryFn: () => apiFetch(`/attendance/students?date=${selectedDate}${classFilter ? `&class_name=${classFilter}` : ''}`),
+    queryFn: () => apiFetch(`/attendance/students?date=${selectedDate}&class_name=${classFilter}`),
+    enabled: !!classFilter,
   });
 
   const markStudents = useMutation({
@@ -96,12 +102,16 @@ export default function AttendanceTab() {
             value={selectedDate}
             onChange={(e) => { setSelectedDate(e.target.value); setLocalStatus({}); }}
           />
-          <Input
-            placeholder="Class"
-            className="h-9 w-[90px] rounded-lg text-sm"
+          <select
+            className="h-9 w-[130px] rounded-lg border border-[var(--panel-line)] bg-[var(--surface)] px-2 text-sm text-[var(--heading)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-          />
+            onChange={(e) => { setClassFilter(e.target.value); setLocalStatus({}); }}
+          >
+            <option value="">Select Class</option>
+            {classesQuery.data?.map((cls) => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={markAllPresent}>
@@ -125,7 +135,11 @@ export default function AttendanceTab() {
 
       {/* Attendance List */}
       <div className="mt-4">
-        {studentAttendance.isLoading ? (
+        {!classFilter ? (
+          <div className="rounded-xl border border-[var(--panel-line)] px-6 py-12 text-center text-sm text-[var(--muted)]">
+            Select a class to view attendance.
+          </div>
+        ) : studentAttendance.isLoading ? (
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--muted)]">
             <Spinner /> Loading students...
           </div>

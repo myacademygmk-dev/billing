@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -12,11 +14,28 @@ from app.models.institution_settings import InstitutionSettings
 router = APIRouter()
 
 
+def _parse_json_field(value: str | None) -> list | None:
+    """Safely parse a JSON string field into a list."""
+    if not value:
+        return None
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else None
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
 @router.get("/institution")
 def public_institution(db: Session = Depends(get_db)) -> dict:
     inst = db.get(InstitutionSettings, 1)
     if not inst:
         return {"name": "MY Academy", "tagline": "Educational Institutions", "registration_no": "Regd.No - 469/2016"}
+
+    # Parse marquee_text (pipe-separated) into announcements list
+    announcements: list[str] = []
+    if inst.marquee_text:
+        announcements = [a.strip() for a in inst.marquee_text.split("|") if a.strip()]
+
     return {
         "name": inst.name,
         "tagline": inst.tagline,
@@ -24,6 +43,70 @@ def public_institution(db: Session = Depends(get_db)) -> dict:
         "address": inst.address,
         "phone": inst.phone,
         "email": inst.email,
+        "announcements": announcements,
+        "stats": {
+            "students": inst.stats_students or "200+",
+            "staff": inst.stats_staff or "22",
+            "years": inst.stats_years or "15+",
+            "standards": inst.stats_standards or "LKG-12",
+        },
+        "hero": {
+            "title": inst.hero_title or "MY ACADEMY",
+            "subtitle": inst.hero_subtitle or "Gain More Knowledge",
+            "description": inst.hero_description,
+        },
+        "admission_text": inst.admission_text or "Admissions Open for 2025-2026",
+    }
+
+
+@router.get("/website-config")
+def public_website_config(db: Session = Depends(get_db)) -> dict:
+    """Returns all website configuration for the public site."""
+    inst = db.get(InstitutionSettings, 1)
+    if not inst:
+        return {
+            "institution": {"name": "MY Academy", "tagline": "Educational Institutions", "registration_no": "Regd.No - 469/2016"},
+            "announcements": [],
+            "stats": {"students": "200+", "staff": "22", "years": "15+", "standards": "LKG-12"},
+            "hero": {"title": "MY ACADEMY", "subtitle": "Gain More Knowledge", "description": None},
+            "admission_text": "Admissions Open for 2025-2026",
+            "alumni": None,
+            "faculty": None,
+            "facilities": None,
+        }
+
+    # Parse marquee_text (pipe-separated) into announcements list
+    announcements: list[str] = []
+    if inst.marquee_text:
+        announcements = [a.strip() for a in inst.marquee_text.split("|") if a.strip()]
+
+    return {
+        "institution": {
+            "name": inst.name,
+            "tagline": inst.tagline,
+            "registration_no": inst.registration_no,
+            "address": inst.address,
+            "phone": inst.phone,
+            "email": inst.email,
+        },
+        "announcements": announcements,
+        "stats": {
+            "students": inst.stats_students or "200+",
+            "staff": inst.stats_staff or "22",
+            "years": inst.stats_years or "15+",
+            "standards": inst.stats_standards or "LKG-12",
+        },
+        "hero": {
+            "title": inst.hero_title or "MY ACADEMY",
+            "subtitle": inst.hero_subtitle or "Gain More Knowledge",
+            "description": inst.hero_description,
+        },
+        "admission_text": inst.admission_text or "Admissions Open for 2025-2026",
+        "alumni": _parse_json_field(inst.alumni_data),
+        "faculty": _parse_json_field(inst.faculty_data),
+        "facilities": _parse_json_field(inst.facilities_data),
+        "popup_banner_url": inst.popup_banner_url,
+        "hero_slides": [s.strip() for s in inst.hero_slides.split("|") if s.strip()] if inst.hero_slides else [],
     }
 
 

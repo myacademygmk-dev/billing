@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -62,3 +63,43 @@ class AttendanceSummary(BaseModel):
     late: int
     leave: int
     percentage: float
+
+
+# --- Staff Clock In/Out Schemas ---
+
+
+class StaffClockInRequest(BaseModel):
+    staff_id: uuid.UUID
+    note: str | None = Field(default=None, max_length=200)
+
+
+class StaffClockOutRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=200)
+
+
+class StaffClockRecordRead(BaseModel):
+    id: uuid.UUID
+    staff_id: uuid.UUID
+    staff_name: str | None = None
+    date: date
+    clock_in: datetime
+    clock_out: datetime | None = None
+    clock_in_note: str | None = None
+    clock_out_note: str | None = None
+    status: str
+    total_hours: Decimal | None = None
+    recorded_by: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StaffClockAnalytics(BaseModel):
+    staff_id: uuid.UUID
+    staff_name: str
+    total_days: int
+    avg_hours: float
+    late_count: int
+    on_time_count: int
+    total_hours_month: float

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from sqlalchemy import func, select, and_
+from sqlalchemy import func, select, and_, extract
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.attendance import StaffAttendance, StudentAttendance
+from app.models.attendance import StaffAttendance, StaffClockRecord, StudentAttendance
 from app.models.staff import Staff
 from app.models.student import Student
 from app.models.enums import StudentStatus
@@ -20,6 +21,10 @@ from app.schemas.attendance import (
     BulkStaffAttendanceCreate,
     BulkStudentAttendanceCreate,
     StaffAttendanceRead,
+    StaffClockAnalytics,
+    StaffClockInRequest,
+    StaffClockOutRequest,
+    StaffClockRecordRead,
     StudentAttendanceRead,
 )
 
@@ -247,3 +252,203 @@ def _staff_attendance_read(db: Session, record: StaffAttendance) -> StaffAttenda
     data = StaffAttendanceRead.model_validate(record).model_dump()
     data["staff_name"] = staff.name if staff else None
     return StaffAttendanceRead.model_validate(data)
+
+
+# --- Staff Clock In/Out ---
+
+# Configurable expected start time (9:00 AM) and grace period (15 min)
+EXPECTED_START_HOUR = 9
+EXPECTED_START_MINUTE = 0
+GRACE_PERIOD_MINUTES = 15
+
+
+def _determine_clock_status(clock_in_time: datetime) -> str:
+    """Determine status based on clock-in time. Late if after 9:15 AM."""
+    local_time = clock_in_time.time()
+    cutoff = time(EXPECTED_START_HOUR, EXPECTED_START_MINUTE + GRACE_PERIOD_MINUTES)
+    if local_time > cutoff:
+        return "late"
+    return "present"
+
+
+@router.post("/staff/clock-in", response_model=StaffClockRecordRead, status_code=201)
+def staff_clock_in(
+    payload: StaffClockInRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StaffClockRecordRead:
+    """Record staff clock-in with timestamp."""
+    from app.models.enums import StaffStatus
+
+    # Validate staff exists and is active
+    staff = db.get(Staff, payload.staff_id)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    if staff.status != StaffStatus.active:
+        raise HTTPException(status_code=400, detail="Staff is not active")
+
+    now = datetime.now(UTC)
+    today = now.date()
+
+    # Check if already clocked in today
+    existing = db.execute(
+        select(StaffClockRecord).where(
+            and_(StaffClockRecord.staff_id == payload.staff_id, StaffClockRecord.date == today)
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Staff already clocked in today")
+
+    status = _determine_clock_status(now)
+
+    record = StaffClockRecord(
+        staff_id=payload.staff_id,
+        date=today,
+        clock_in=now,
+        clock_in_note=payload.note,
+        recorded_by=current_user.id,
+        status=status,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    return _clock_record_read(db, record)
+
+
+@router.post("/staff/{staff_id}/clock-out", response_model=StaffClockRecordRead)
+def staff_clock_out(
+    staff_id: uuid.UUID,
+    payload: StaffClockOutRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StaffClockRecordRead:
+    """Record staff clock-out with timestamp. Calculates total hours."""
+    today = datetime.now(UTC).date()
+
+    # Find today's clock-in record
+    record = db.execute(
+        select(StaffClockRecord).where(
+            and_(StaffClockRecord.staff_id == staff_id, StaffClockRecord.date == today)
+        )
+    ).scalar_one_or_none()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="No clock-in record found for today")
+
+    if record.clock_out is not None:
+        raise HTTPException(status_code=400, detail="Staff already clocked out today")
+
+    now = datetime.now(UTC)
+    record.clock_out = now
+    record.clock_out_note = payload.note
+
+    # Calculate total hours
+    delta: timedelta = now - record.clock_in
+    total_seconds = delta.total_seconds()
+    record.total_hours = Decimal(str(round(total_seconds / 3600, 2)))
+
+    # Mark as half_day if less than 4 hours
+    if record.total_hours < Decimal("4.0"):
+        record.status = "half_day"
+
+    db.commit()
+    db.refresh(record)
+
+    return _clock_record_read(db, record)
+
+
+@router.get("/staff/clock-records", response_model=list[StaffClockRecordRead])
+def list_clock_records(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    staff_id: uuid.UUID | None = Query(default=None),
+) -> list[StaffClockRecordRead]:
+    """List clock records for a date range with optional staff filter."""
+    stmt = select(StaffClockRecord)
+
+    if staff_id:
+        stmt = stmt.where(StaffClockRecord.staff_id == staff_id)
+    if from_date:
+        stmt = stmt.where(StaffClockRecord.date >= from_date)
+    if to_date:
+        stmt = stmt.where(StaffClockRecord.date <= to_date)
+
+    stmt = stmt.order_by(StaffClockRecord.date.desc(), StaffClockRecord.clock_in.desc())
+    records = db.execute(stmt).scalars().all()
+
+    return [_clock_record_read(db, r) for r in records]
+
+
+@router.get("/staff/clock-analytics", response_model=list[StaffClockAnalytics])
+def staff_clock_analytics(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+    month: int = Query(ge=1, le=12),
+    year: int = Query(ge=2020),
+    staff_id: uuid.UUID | None = Query(default=None),
+) -> list[StaffClockAnalytics]:
+    """Get analytics: avg hours, late count, on-time count per staff for a given month."""
+    from app.models.enums import StaffStatus
+
+    stmt = select(StaffClockRecord).where(
+        and_(
+            extract("month", StaffClockRecord.date) == month,
+            extract("year", StaffClockRecord.date) == year,
+        )
+    )
+    if staff_id:
+        stmt = stmt.where(StaffClockRecord.staff_id == staff_id)
+
+    records = db.execute(stmt).scalars().all()
+
+    # Group by staff_id
+    staff_records: dict[uuid.UUID, list[StaffClockRecord]] = {}
+    for r in records:
+        staff_records.setdefault(r.staff_id, []).append(r)
+
+    # If no specific staff_id filter, get all active staff for complete picture
+    if not staff_id:
+        active_staff = db.execute(
+            select(Staff).where(Staff.status == StaffStatus.active)
+        ).scalars().all()
+        for s in active_staff:
+            staff_records.setdefault(s.id, [])
+
+    analytics = []
+    for sid, recs in staff_records.items():
+        staff = db.get(Staff, sid)
+        if not staff:
+            continue
+
+        total_days = len(recs)
+        late_count = sum(1 for r in recs if r.status == "late")
+        on_time_count = sum(1 for r in recs if r.status == "present")
+
+        hours_list = [float(r.total_hours) for r in recs if r.total_hours is not None]
+        total_hours_month = sum(hours_list)
+        avg_hours = round(total_hours_month / len(hours_list), 2) if hours_list else 0.0
+
+        analytics.append(
+            StaffClockAnalytics(
+                staff_id=sid,
+                staff_name=staff.name,
+                total_days=total_days,
+                avg_hours=avg_hours,
+                late_count=late_count,
+                on_time_count=on_time_count,
+                total_hours_month=round(total_hours_month, 2),
+            )
+        )
+
+    return analytics
+
+
+def _clock_record_read(db: Session, record: StaffClockRecord) -> StaffClockRecordRead:
+    staff = db.get(Staff, record.staff_id)
+    data = StaffClockRecordRead.model_validate(record).model_dump()
+    data["staff_name"] = staff.name if staff else None
+    return StaffClockRecordRead.model_validate(data)

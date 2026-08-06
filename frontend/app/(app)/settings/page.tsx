@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toaster';
 import { apiFetch } from '@/lib/api';
+import { AcademicRollover } from './academic-rollover';
 
 type ImportFieldKey =
   | 'serial_no'
@@ -274,6 +275,8 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <AcademicRollover />
 
         <Card className="border-[rgba(255,108,127,0.18)] shadow-none xl:col-span-2">
           <CardContent className="space-y-4 p-5">

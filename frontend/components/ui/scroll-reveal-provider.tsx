@@ -1,21 +1,21 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 /**
- * Global scroll reveal: any element with class "reveal", "reveal-left", or "reveal-right"
- * will animate in when scrolled into view. Elements already in viewport on page load
- * are revealed immediately.
+ * Watches every .reveal / .reveal-left / .reveal-right element on the page
+ * and adds the .revealed class once it scrolls into view. Re-observes on
+ * route changes so new pages get their animations too.
  */
 export function ScrollRevealProvider() {
   const pathname = usePathname();
 
-  const initObserver = useCallback(() => {
-    // Small delay to ensure DOM is ready after navigation
-    setTimeout(() => {
-      const elements = document.querySelectorAll('.reveal:not(.revealed), .reveal-left:not(.revealed), .reveal-right:not(.revealed)');
-      if (elements.length === 0) return;
+  useEffect(() => {
+    // Small delay to let new page DOM render
+    const timeout = setTimeout(() => {
+      const targets = document.querySelectorAll('.reveal:not(.revealed), .reveal-left:not(.revealed), .reveal-right:not(.revealed)');
+      if (targets.length === 0) return;
 
       const observer = new IntersectionObserver(
         (entries) => {
@@ -26,32 +26,15 @@ export function ScrollRevealProvider() {
             }
           });
         },
-        { threshold: 0.05, rootMargin: '0px 0px -20px 0px' }
+        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
       );
 
-      elements.forEach((el) => {
-        // If element is already in viewport, reveal immediately
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          el.classList.add('revealed');
-        } else {
-          observer.observe(el);
-        }
-      });
-
+      targets.forEach((el) => observer.observe(el));
       return () => observer.disconnect();
     }, 100);
-  }, []);
 
-  // Re-run on pathname change (client navigation)
-  useEffect(() => {
-    initObserver();
-  }, [pathname, initObserver]);
-
-  // Also run on initial mount
-  useEffect(() => {
-    initObserver();
-  }, [initObserver]);
+    return () => clearTimeout(timeout);
+  }, [pathname]);
 
   return null;
 }

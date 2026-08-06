@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Table, TBody, TD, TH, THead } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toaster';
@@ -112,11 +114,36 @@ export default function StudentDetailPage() {
 
   const [reverseOpen, setReverseOpen] = useState(false);
   const [reversePayment, setReversePayment] = useState<PaymentRow | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const feeSchema = z.object({ expected_fee_amount: z.coerce.number().min(0) });
   const feeForm = useForm<{ expected_fee_amount: number }>({
     resolver: zodResolver(feeSchema),
     defaultValues: { expected_fee_amount: 0 }
+  });
+
+  const editSchema = z.object({
+    name: z.string().min(1, 'Name is required').max(200),
+    class_name: z.string().max(100).optional().or(z.literal('')),
+    section: z.string().max(50).optional().or(z.literal('')),
+    student_code: z.string().min(1, 'Roll number is required').max(50),
+    serial_no: z.coerce.number().int().positive().optional().or(z.literal(0)).or(z.literal(undefined as unknown as number)),
+    father_name: z.string().max(200).optional().or(z.literal('')),
+    mother_name: z.string().max(200).optional().or(z.literal('')),
+    parent_phone: z.string().max(20).optional().or(z.literal('')),
+    whatsapp_no: z.string().max(20).optional().or(z.literal('')),
+    date_of_birth: z.string().optional().or(z.literal('')),
+    gender: z.string().optional().or(z.literal('')),
+    blood_group: z.string().max(10).optional().or(z.literal('')),
+    address: z.string().max(500).optional().or(z.literal('')),
+    city: z.string().max(100).optional().or(z.literal('')),
+    pincode: z.string().max(10).optional().or(z.literal('')),
+    notes: z.string().max(1000).optional().or(z.literal('')),
+  });
+  type EditValues = z.infer<typeof editSchema>;
+  const editForm = useForm<EditValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: {}
   });
 
   const student = useQuery({ queryKey: ['student', id], queryFn: () => apiFetch<Student>(`/students/${id}`) });
@@ -168,6 +195,72 @@ export default function StudentDetailPage() {
     },
     onError: (e) => toast({ title: 'Delete failed', description: String(e) })
   });
+
+  const editStudent = useMutation({
+    mutationFn: (values: Partial<EditValues>) =>
+      apiFetch<Student>(`/students/${id}`, { method: 'PATCH', body: JSON.stringify(values) }),
+    onSuccess: () => {
+      toast({ title: 'Student updated', variant: 'success' });
+      setEditOpen(false);
+      qc.invalidateQueries({ queryKey: ['student', id] });
+      qc.invalidateQueries({ queryKey: ['students'] });
+    },
+    onError: (e) => toast({ title: 'Update failed', description: String(e) })
+  });
+
+  function openEditDialog() {
+    const s = student.data;
+    if (!s) return;
+    editForm.reset({
+      name: s.name ?? '',
+      class_name: s.class_name ?? '',
+      section: s.section ?? '',
+      student_code: s.student_code ?? '',
+      serial_no: undefined,
+      father_name: s.father_name ?? '',
+      mother_name: s.mother_name ?? '',
+      parent_phone: s.parent_phone ?? '',
+      whatsapp_no: s.whatsapp_no ?? '',
+      date_of_birth: s.date_of_birth ?? '',
+      gender: s.gender ?? '',
+      blood_group: s.blood_group ?? '',
+      address: s.address ?? '',
+      city: s.city ?? '',
+      pincode: s.pincode ?? '',
+      notes: s.notes ?? '',
+    });
+    setEditOpen(true);
+  }
+
+  function handleEditSubmit(values: EditValues) {
+    // Only send changed fields
+    const s = student.data;
+    if (!s) return;
+    const changed: Record<string, unknown> = {};
+    if (values.name !== s.name) changed.name = values.name;
+    if (values.class_name !== (s.class_name ?? '')) changed.class_name = values.class_name || null;
+    if (values.section !== (s.section ?? '')) changed.section = values.section || null;
+    if (values.student_code !== s.student_code) changed.student_code = values.student_code;
+    if (values.serial_no) changed.serial_no = values.serial_no;
+    if (values.father_name !== (s.father_name ?? '')) changed.father_name = values.father_name || null;
+    if (values.mother_name !== (s.mother_name ?? '')) changed.mother_name = values.mother_name || null;
+    if (values.parent_phone !== (s.parent_phone ?? '')) changed.parent_phone = values.parent_phone || null;
+    if (values.whatsapp_no !== (s.whatsapp_no ?? '')) changed.whatsapp_no = values.whatsapp_no || null;
+    if (values.date_of_birth !== (s.date_of_birth ?? '')) changed.date_of_birth = values.date_of_birth || null;
+    if (values.gender !== (s.gender ?? '')) changed.gender = values.gender || null;
+    if (values.blood_group !== (s.blood_group ?? '')) changed.blood_group = values.blood_group || null;
+    if (values.address !== (s.address ?? '')) changed.address = values.address || null;
+    if (values.city !== (s.city ?? '')) changed.city = values.city || null;
+    if (values.pincode !== (s.pincode ?? '')) changed.pincode = values.pincode || null;
+    if (values.notes !== (s.notes ?? '')) changed.notes = values.notes || null;
+
+    if (Object.keys(changed).length === 0) {
+      toast({ title: 'No changes to save' });
+      setEditOpen(false);
+      return;
+    }
+    editStudent.mutate(changed as Partial<EditValues>);
+  }
 
   return (
     <AppShell title="Student Profile" subtitle="Review fee settings, pending months, and full payment history for this student.">
@@ -281,6 +374,9 @@ export default function StudentDetailPage() {
             <Link href={`/collect?student_id=${id}`}>
               <Button>Collect Payment</Button>
             </Link>
+            <Button variant="outline" onClick={openEditDialog}>
+              Edit Profile
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
@@ -487,6 +583,108 @@ export default function StudentDetailPage() {
           </Dialog>
 
           <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} paymentId={receiptPaymentId} />
+
+          {/* Edit Student Dialog */}
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit Student Profile</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={editForm.handleSubmit(handleEditSubmit)}>
+                <DialogBody>
+                  <div className="grid gap-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Name *</label>
+                        <Input {...editForm.register('name')} error={editForm.formState.errors.name?.message} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Roll Number *</label>
+                        <Input {...editForm.register('student_code')} error={editForm.formState.errors.student_code?.message} />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Class</label>
+                        <Input {...editForm.register('class_name')} placeholder="e.g. 10" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Section</label>
+                        <Input {...editForm.register('section')} placeholder="e.g. A" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Serial No</label>
+                        <Input type="number" {...editForm.register('serial_no')} placeholder="Optional" />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Father Name</label>
+                        <Input {...editForm.register('father_name')} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Mother Name</label>
+                        <Input {...editForm.register('mother_name')} />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Parent Phone</label>
+                        <Input {...editForm.register('parent_phone')} placeholder="Phone number" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">WhatsApp No</label>
+                        <Input {...editForm.register('whatsapp_no')} placeholder="WhatsApp number" />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Date of Birth</label>
+                        <Input type="date" {...editForm.register('date_of_birth')} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Gender</label>
+                        <Select {...editForm.register('gender')}>
+                          <option value="">—</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Blood Group</label>
+                        <Input {...editForm.register('blood_group')} placeholder="e.g. O+" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Address</label>
+                      <Input {...editForm.register('address')} placeholder="Street address" />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">City</label>
+                        <Input {...editForm.register('city')} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Pincode</label>
+                        <Input {...editForm.register('pincode')} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Notes</label>
+                      <Input {...editForm.register('notes')} placeholder="Any additional notes" />
+                    </div>
+                  </div>
+                </DialogBody>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                  <Button type="submit" loading={editStudent.isPending}>
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <ReversePaymentDialog
             open={reverseOpen}
