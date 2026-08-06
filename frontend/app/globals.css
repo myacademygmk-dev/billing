@@ -380,20 +380,15 @@ h6 {
   }
 }
 
-.marquee-container {
-  overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-}
-
-.marquee-content {
+.animate-marquee {
   display: inline-block;
-  animation: marquee 90s linear infinite;
-  padding-left: 100%;
+  animation: marquee 15s linear infinite;
 }
 
-.marquee-container:hover .marquee-content {
-  animation-play-state: paused;
+/* Popup Banner Animation */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Animated Counter */

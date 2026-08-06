@@ -1,6 +1,7 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 import GalleryClient from './gallery-client';
+import { GlowOrb } from '@/components/ui/glow-orb';
 
 async function getData() {
   const base = process.env.BACKEND_API_BASE_URL ?? 'http://localhost:8000/api';
@@ -16,7 +17,7 @@ export default async function GalleryPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-16 sm:py-20">
+      <section className="relative bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-8 sm:py-10">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex items-center gap-2 text-sm text-indigo-200">
@@ -24,14 +25,15 @@ export default async function GalleryPage() {
             <span>/</span>
             <span className="text-white font-medium">Gallery</span>
           </div>
-          <h1 className="mt-4 text-4xl font-bold text-white sm:text-5xl">Gallery</h1>
+          <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">Gallery</h1>
           <p className="mt-3 text-lg text-indigo-100">Moments from our events and activities</p>
         </div>
       </section>
 
       {/* Gallery Content */}
-      <section className="bg-[#f5f3ff] py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <section className="relative overflow-hidden bg-[#f5f3ff] py-12 sm:py-14">
+        <GlowOrb color="bg-indigo-200/40" className="-right-20 -top-20 h-72 w-72" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           {albums.length === 0 ? (
             <div className="rounded-2xl bg-white p-12 text-center shadow-md border border-indigo-100">
               <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5]">

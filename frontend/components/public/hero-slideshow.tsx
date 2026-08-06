@@ -2,36 +2,62 @@
 
 import { useEffect, useState } from 'react';
 
-const SLIDES = [
+const DEFAULT_SLIDES = [
   '/images/1920x730_slide1.jpg',
   '/images/1920x730_slide2.jpg',
 ];
 
 export function HeroSlideshow() {
+  const [slides, setSlides] = useState<string[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    const fetchSlides = async () => {
+      try {
+        const res = await fetch('/api/backend/public/website-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hero_slides && data.hero_slides.length > 0) {
+            setSlides(data.hero_slides);
+          } else {
+            setSlides(DEFAULT_SLIDES);
+          }
+        } else {
+          setSlides(DEFAULT_SLIDES);
+        }
+      } catch {
+        setSlides(DEFAULT_SLIDES);
+      }
+    };
+    fetchSlides();
   }, []);
 
+  useEffect(() => {
+    if (!slides || slides.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [slides]);
+
+  // Show nothing until we know which slides to display (prevents flash)
+  if (!slides) {
+    return (
+      <div className="w-full h-[300px] sm:h-[400px] lg:h-[500px] bg-gray-100 animate-pulse" />
+    );
+  }
+
   return (
-    <div className="absolute inset-0">
-      {SLIDES.map((src, i) => (
-        <div
+    <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden">
+      {slides.map((src, i) => (
+        <img
           key={src}
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-          style={{
-            backgroundImage: `url(${src})`,
-            opacity: i === currentIndex ? 1 : 0,
-          }}
-          aria-hidden={i !== currentIndex}
+          src={src}
+          alt={`Slide ${i + 1}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out`}
+          style={{ opacity: i === currentIndex ? 1 : 0 }}
         />
       ))}
-      {/* Purple-to-Indigo gradient overlay — reduced opacity to show images */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#7c3aed]/75 via-[#4f46e5]/70 to-[#1e1b4b]/80" />
     </div>
   );
 }

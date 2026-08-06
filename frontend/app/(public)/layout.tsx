@@ -3,10 +3,13 @@ import Link from 'next/link';
 import { ScrollRevealProvider } from '@/components/ui/scroll-reveal-provider';
 import { PublicNav } from '@/components/public/nav';
 import { Marquee } from '@/components/public/marquee';
+import { PopupBanner } from '@/components/public/popup-banner';
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      {/* Popup Banner */}
+      <PopupBanner />
       {/* Top bar */}
       <div className="hidden bg-[#0f172a] sm:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs sm:px-6">

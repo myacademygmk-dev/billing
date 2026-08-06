@@ -38,6 +38,8 @@ class InstitutionSettingsRead(BaseModel):
     alumni_data: str | None = None
     faculty_data: str | None = None
     facilities_data: str | None = None
+    popup_banner_url: str | None = None
+    hero_slides: str | None = None
     updated_at: datetime
     updated_by: uuid.UUID | None
 
@@ -61,6 +63,8 @@ class InstitutionSettingsUpdate(BaseModel):
     alumni_data: str | None = Field(default=None)
     faculty_data: str | None = Field(default=None)
     facilities_data: str | None = Field(default=None)
+    popup_banner_url: str | None = Field(default=None, max_length=500)
+    hero_slides: str | None = Field(default=None)
 
 
 class DatabaseResetRequest(BaseModel):

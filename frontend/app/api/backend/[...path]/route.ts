@@ -46,10 +46,18 @@ async function tryRefreshToken(refreshToken: string): Promise<{ access_token: st
 }
 
 async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
+  const path = ctx.params.path.join('/');
+
+  // Allow public access to uploaded files and public API (no auth required)
+  if (path.startsWith('uploads/files/') || path.startsWith('public/')) {
+    const target = `${backendBaseUrl()}/${path}`;
+    const res = await fetch(target);
+    return buildResponse(res);
+  }
+
   const token = cookies().get('access_token')?.value;
   if (!token) return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 });
 
-  const path = ctx.params.path.join('/');
   let res = await forwardRequest(req, token, path);
 
   // If access token expired, attempt silent refresh

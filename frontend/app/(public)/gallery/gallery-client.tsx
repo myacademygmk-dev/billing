@@ -36,7 +36,7 @@ export default function GalleryClient({ albums }: { albums: Album[] }) {
     <>
       <div className="space-y-14">
         {albums.map((album) => (
-          <div key={album.id}>
+          <div key={album.id} className="reveal">
             <h2 className="text-2xl font-bold">
               <span className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">{album.title}</span>
             </h2>
@@ -47,7 +47,7 @@ export default function GalleryClient({ albums }: { albums: Album[] }) {
                   key={i}
                   type="button"
                   onClick={() => setLightboxPhoto(photo)}
-                  className="group relative aspect-square overflow-hidden rounded-2xl bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:ring-offset-2"
+                  className={`reveal reveal-delay-${(i % 6) + 1} group relative aspect-square overflow-hidden rounded-2xl bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:ring-offset-2`}
                   aria-label={photo.caption ? `View photo: ${photo.caption}` : 'View photo'}
                 >
                   <img src={photo.url} alt={photo.caption ?? ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />

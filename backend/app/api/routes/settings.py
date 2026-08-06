@@ -100,28 +100,7 @@ def get_institution_settings_route(
     _: User = Depends(get_current_user),
 ) -> InstitutionSettingsRead:
     inst = get_institution_settings(db)
-    return InstitutionSettingsRead(
-        name=inst.name,
-        tagline=inst.tagline,
-        registration_no=inst.registration_no,
-        address=inst.address,
-        phone=inst.phone,
-        email=inst.email,
-        marquee_text=inst.marquee_text,
-        stats_students=inst.stats_students,
-        stats_staff=inst.stats_staff,
-        stats_years=inst.stats_years,
-        stats_standards=inst.stats_standards,
-        hero_title=inst.hero_title,
-        hero_subtitle=inst.hero_subtitle,
-        hero_description=inst.hero_description,
-        admission_text=inst.admission_text,
-        alumni_data=inst.alumni_data,
-        faculty_data=inst.faculty_data,
-        facilities_data=inst.facilities_data,
-        updated_at=inst.updated_at,
-        updated_by=inst.updated_by,
-    )
+    return _inst_to_read(inst)
 
 
 @router.patch("/institution", response_model=InstitutionSettingsRead)
@@ -138,6 +117,10 @@ def update_institution_settings_route(
     inst.updated_by = current_user.id
     db.commit()
     db.refresh(inst)
+    return _inst_to_read(inst)
+
+
+def _inst_to_read(inst) -> InstitutionSettingsRead:
     return InstitutionSettingsRead(
         name=inst.name,
         tagline=inst.tagline,
@@ -157,6 +140,8 @@ def update_institution_settings_route(
         alumni_data=inst.alumni_data,
         faculty_data=inst.faculty_data,
         facilities_data=inst.facilities_data,
+        popup_banner_url=inst.popup_banner_url,
+        hero_slides=inst.hero_slides,
         updated_at=inst.updated_at,
         updated_by=inst.updated_by,
     )

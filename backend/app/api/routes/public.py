@@ -105,6 +105,8 @@ def public_website_config(db: Session = Depends(get_db)) -> dict:
         "alumni": _parse_json_field(inst.alumni_data),
         "faculty": _parse_json_field(inst.faculty_data),
         "facilities": _parse_json_field(inst.facilities_data),
+        "popup_banner_url": inst.popup_banner_url,
+        "hero_slides": [s.strip() for s in inst.hero_slides.split("|") if s.strip()] if inst.hero_slides else [],
     }
 
 

@@ -131,7 +131,11 @@ function SidebarContent({
           type="button"
           className="flex w-full items-center gap-2.5 rounded-lg px-3.5 py-2 text-[13px] font-medium text-[var(--sidebar-muted)] transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
           onClick={async () => {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            try {
+              await fetch('/api/auth/logout', { method: 'POST' });
+            } catch {
+              // Ignore errors — clear cookies and redirect anyway
+            }
             window.location.assign('/login');
           }}
         >
