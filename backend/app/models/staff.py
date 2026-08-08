@@ -29,9 +29,11 @@ class Staff(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     # Professional
     qualification: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    designation: Mapped[str | None] = mapped_column(String(200), nullable=True)  # Free text designation
     specialization: Mapped[str | None] = mapped_column(String(300), nullable=True)
     subjects: Mapped[str | None] = mapped_column(Text, nullable=True)  # Comma-separated or JSON
     classes_assigned: Mapped[str | None] = mapped_column(Text, nullable=True)  # Comma-separated
+    experience: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "10 years"
     joining_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     leaving_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 

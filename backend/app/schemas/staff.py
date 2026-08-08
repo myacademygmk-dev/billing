@@ -20,9 +20,11 @@ class StaffCreate(BaseModel):
     photo_url: str | None = None
     address: str | None = None
     qualification: str | None = Field(default=None, max_length=300)
+    designation: str | None = Field(default=None, max_length=200)
     specialization: str | None = Field(default=None, max_length=300)
     subjects: str | None = None
     classes_assigned: str | None = None
+    experience: str | None = Field(default=None, max_length=100)
     joining_date: date | None = None
     monthly_salary: Decimal | None = None
     notes: str | None = None
@@ -39,9 +41,11 @@ class StaffUpdate(BaseModel):
     photo_url: str | None = None
     address: str | None = None
     qualification: str | None = Field(default=None, max_length=300)
+    designation: str | None = Field(default=None, max_length=200)
     specialization: str | None = Field(default=None, max_length=300)
     subjects: str | None = None
     classes_assigned: str | None = None
+    experience: str | None = Field(default=None, max_length=100)
     joining_date: date | None = None
     leaving_date: date | None = None
     monthly_salary: Decimal | None = None
@@ -61,9 +65,11 @@ class StaffRead(BaseModel):
     photo_url: str | None = None
     address: str | None = None
     qualification: str | None = None
+    designation: str | None = None
     specialization: str | None = None
     subjects: str | None = None
     classes_assigned: str | None = None
+    experience: str | None = None
     joining_date: date | None = None
     leaving_date: date | None = None
     monthly_salary: Decimal | None = None

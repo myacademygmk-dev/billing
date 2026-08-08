@@ -23,7 +23,21 @@ type ImportFieldKey =
   | 'payment_period'
   | 'joined_date'
   | 'billing_start_period'
-  | 'billing_end_period';
+  | 'billing_end_period'
+  | 'school_name'
+  | 'date_of_birth'
+  | 'gender'
+  | 'contact_no'
+  | 'father_phone'
+  | 'mother_phone'
+  | 'whatsapp_no'
+  | 'father_name'
+  | 'mother_name'
+  | 'father_occupation'
+  | 'mother_occupation'
+  | 'hobbies'
+  | 'address'
+  | 'student_email';
 
 type StudentImportMapping = Record<ImportFieldKey, string>;
 
@@ -54,12 +68,26 @@ const IMPORT_FIELD_META: Array<{ key: ImportFieldKey; label: string; hint: strin
   { key: 'serial_no', label: 'Serial No', hint: 'Map the source serial / row number column.' },
   { key: 'student_code', label: 'Roll No', hint: 'Student roll number or student code.' },
   { key: 'name', label: 'Student Name', hint: 'Full student name.' },
-  { key: 'class_name', label: 'Class', hint: 'Class or standard. Values like 10-A will be split automatically.' },
+  { key: 'class_name', label: 'Class', hint: 'Class or standard.' },
+  { key: 'school_name', label: 'School', hint: 'School name.' },
+  { key: 'date_of_birth', label: 'D.O.B', hint: 'Date of birth.' },
+  { key: 'joined_date', label: 'D.O.Join', hint: 'Student joining/admission date.' },
+  { key: 'gender', label: 'Sex', hint: 'Male or Female.' },
+  { key: 'contact_no', label: 'Contact No', hint: 'Student contact number.' },
+  { key: 'father_phone', label: 'Father Phone', hint: 'Father phone number.' },
+  { key: 'mother_phone', label: 'Mother Phone', hint: 'Mother phone number.' },
+  { key: 'whatsapp_no', label: 'WhatsApp No', hint: 'WhatsApp number.' },
+  { key: 'father_name', label: 'Father Name', hint: 'Father full name.' },
+  { key: 'mother_name', label: 'Mother Name', hint: 'Mother full name.' },
+  { key: 'father_occupation', label: 'Father Occupation', hint: 'Father occupation.' },
+  { key: 'mother_occupation', label: 'Mother Occupation', hint: 'Mother occupation.' },
+  { key: 'hobbies', label: 'Hobbies', hint: 'Student hobbies.' },
+  { key: 'address', label: 'Address', hint: 'Full address.' },
+  { key: 'student_email', label: 'Email', hint: 'Student email address.' },
   { key: 'expected_fee', label: 'Fee', hint: 'Single-month fee amount.' },
-  { key: 'payment_period', label: 'Period', hint: 'Monthly, Quarterly, Half Yearly, or source label.' },
-  { key: 'joined_date', label: 'Joined Date', hint: 'Student joining/admission date.' },
-  { key: 'billing_start_period', label: 'Start Period', hint: 'Student-specific billing start month, for example Jun.' },
-  { key: 'billing_end_period', label: 'End Period', hint: 'Student-specific billing end month, for example Apr.' }
+  { key: 'payment_period', label: 'Period', hint: 'Monthly, Quarterly, Half Yearly.' },
+  { key: 'billing_start_period', label: 'Batch Start', hint: 'Billing start month (e.g. 6 for June).' },
+  { key: 'billing_end_period', label: 'Batch End', hint: 'Billing end month (e.g. 5 for May).' },
 ];
 function createRandomBillField(): RandomBillField {
   return {
@@ -87,7 +115,21 @@ export default function SettingsPage() {
     payment_period: '',
     joined_date: '',
     billing_start_period: '',
-    billing_end_period: ''
+    billing_end_period: '',
+    school_name: '',
+    date_of_birth: '',
+    gender: '',
+    contact_no: '',
+    father_phone: '',
+    mother_phone: '',
+    whatsapp_no: '',
+    father_name: '',
+    mother_name: '',
+    father_occupation: '',
+    mother_occupation: '',
+    hobbies: '',
+    address: '',
+    student_email: '',
   });
   const [importBatch, setImportBatch] = useState('');
   const [resetText, setResetText] = useState('');
@@ -133,7 +175,21 @@ export default function SettingsPage() {
         payment_period: '',
         joined_date: '',
         billing_start_period: '',
-        billing_end_period: ''
+        billing_end_period: '',
+        school_name: '',
+        date_of_birth: '',
+        gender: '',
+        contact_no: '',
+        father_phone: '',
+        mother_phone: '',
+        whatsapp_no: '',
+        father_name: '',
+        mother_name: '',
+        father_occupation: '',
+        mother_occupation: '',
+        hobbies: '',
+        address: '',
+        student_email: '',
       });
       qc.invalidateQueries({ queryKey: ['students'] });
     },
@@ -156,16 +212,32 @@ export default function SettingsPage() {
     },
     onSuccess: (data) => {
       setImportPreview(data);
+      // Auto-map from backend suggestions
+      const sm = data.suggested_mapping;
       setImportMapping({
-        serial_no: data.suggested_mapping.serial_no ?? '',
-        student_code: data.suggested_mapping.student_code ?? '',
-        name: data.suggested_mapping.name ?? '',
-        class_name: data.suggested_mapping.class_name ?? '',
-        expected_fee: data.suggested_mapping.expected_fee ?? '',
-        payment_period: data.suggested_mapping.payment_period ?? '',
-        joined_date: data.suggested_mapping.joined_date ?? '',
-        billing_start_period: data.suggested_mapping.billing_start_period ?? '',
-        billing_end_period: data.suggested_mapping.billing_end_period ?? ''
+        serial_no: sm.serial_no ?? '',
+        student_code: sm.student_code ?? '',
+        name: sm.name ?? '',
+        class_name: sm.class_name ?? '',
+        expected_fee: sm.expected_fee ?? '',
+        payment_period: sm.payment_period ?? '',
+        joined_date: sm.joined_date ?? '',
+        billing_start_period: sm.billing_start_period ?? '',
+        billing_end_period: sm.billing_end_period ?? '',
+        school_name: sm.school_name ?? '',
+        date_of_birth: sm.date_of_birth ?? '',
+        gender: sm.gender ?? '',
+        contact_no: sm.contact_no ?? '',
+        father_phone: sm.father_phone ?? '',
+        mother_phone: sm.mother_phone ?? '',
+        whatsapp_no: sm.whatsapp_no ?? '',
+        father_name: sm.father_name ?? '',
+        mother_name: sm.mother_name ?? '',
+        father_occupation: sm.father_occupation ?? '',
+        mother_occupation: sm.mother_occupation ?? '',
+        hobbies: sm.hobbies ?? '',
+        address: sm.address ?? '',
+        student_email: sm.student_email ?? '',
       });
     },
     onError: (e) => toast({ title: 'Preview failed', description: String(e) })
@@ -244,11 +316,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-4 p-5">
             <div className="space-y-2">
               <CardTitle>Student Import</CardTitle>
-              <div className="text-sm text-[#91a1bc]">
+              <div className="text-sm text-gray-600">
                 Import the student list from Excel and derive billing months from the uploaded <span className="theme-heading font-medium">Period</span> column.
               </div>
             </div>
-            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-[#91a1bc]">
+            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-gray-600">
               Use this section when starting a new academic batch or refreshing the student master data.
             </div>
             <Button variant="outline" className="h-10 rounded-xl" onClick={() => setImportOpen(true)}>
@@ -262,11 +334,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-4 p-5">
             <div className="space-y-2">
               <CardTitle>Random Bill Generator</CardTitle>
-              <div className="text-sm text-[#91a1bc]">
+              <div className="text-sm text-gray-600">
                 Create a manual bill PDF with custom label and value rows, then download it directly.
               </div>
             </div>
-            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-[#91a1bc]">
+            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-gray-600">
               Useful for one-off bills that should not depend on the normal student payment workflow.
             </div>
             <Button variant="outline" className="h-10 rounded-xl" onClick={() => setRandomBillOpen(true)}>
@@ -282,19 +354,19 @@ export default function SettingsPage() {
           <CardContent className="space-y-4 p-5">
             <div className="space-y-2">
               <CardTitle>Danger Zone</CardTitle>
-              <div className="text-sm text-[#91a1bc]">
+              <div className="text-sm text-gray-600">
                 Permanently remove operational data when you need to reset the environment for a fresh setup.
               </div>
             </div>
             <div className="rounded-[18px] border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                 <AlertTriangle className="h-4 w-4 text-[#ff8a9c]" />
                 Delete all operational data
               </div>
-              <div className="mt-2 text-sm text-[#91a1bc]">
+              <div className="mt-2 text-sm text-gray-600">
                 This clears students, fees, payments, and month-tracking records. Admin login stays preserved and receipt numbering is reset.
               </div>
-              <div className="mt-2 text-sm text-[#91a1bc]">
+              <div className="mt-2 text-sm text-gray-600">
                 After deletion, use <span className="theme-heading font-medium">Student Import</span> above to load a fresh dataset.
               </div>
             </div>
@@ -324,7 +396,21 @@ export default function SettingsPage() {
               payment_period: '',
               joined_date: '',
               billing_start_period: '',
-              billing_end_period: ''
+              billing_end_period: '',
+              school_name: '',
+              date_of_birth: '',
+              gender: '',
+              contact_no: '',
+              father_phone: '',
+              mother_phone: '',
+              whatsapp_no: '',
+              father_name: '',
+              mother_name: '',
+              father_occupation: '',
+              mother_occupation: '',
+              hobbies: '',
+              address: '',
+              student_email: '',
             });
           }
         }}
@@ -335,16 +421,16 @@ export default function SettingsPage() {
           </DialogHeader>
           <DialogBody className="max-h-[78vh] overflow-y-auto">
             <div className="space-y-3">
-              <div className="text-sm text-[#91a1bc]">
-                Upload an <span className="font-medium text-white">.xlsx</span>, load its headers, map the required fields,
-                enter the academic <span className="font-medium text-white">batch</span>, then import into the database.
-                Student billing will follow each row's mapped <span className="font-medium text-white">Start Period</span> and <span className="font-medium text-white">End Period</span>.
+              <div className="text-sm text-gray-600">
+                Upload an <span className="font-medium text-gray-900">.xlsx</span>, load its headers, map the required fields,
+                enter the academic <span className="font-medium text-gray-900">batch</span>, then import into the database.
+                Student billing will follow each row's mapped <span className="font-medium text-gray-900">Start Period</span> and <span className="font-medium text-gray-900">End Period</span>.
               </div>
 
               <div>
-                <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Mode</div>
+                <div className="mb-2 text-sm font-medium text-gray-800">Mode</div>
                 <select
-                  className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-white outline-none"
+                  className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-gray-900 outline-none"
                   value={importMode}
                   onChange={(e) => setImportMode(e.target.value as 'upsert' | 'create_only')}
                 >
@@ -354,7 +440,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Excel file</div>
+                <div className="mb-2 text-sm font-medium text-gray-800">Excel file</div>
                 <input
                   type="file"
                   accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -369,8 +455,8 @@ export default function SettingsPage() {
               <div className="rounded-2xl border border-[rgba(151,164,187,0.12)] bg-[rgba(255,255,255,0.03)] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-white">Column Mapping</div>
-                    <div className="mt-1 text-sm text-[#91a1bc]">
+                    <div className="text-sm font-semibold text-gray-900">Column Mapping</div>
+                    <div className="mt-1 text-sm text-gray-600">
                       Load the file headers first, then confirm which source column maps to each required app field.
                     </div>
                   </div>
@@ -390,9 +476,9 @@ export default function SettingsPage() {
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {IMPORT_FIELD_META.map((field) => (
                         <div key={field.key}>
-                          <div className="mb-2 text-sm font-medium text-[#dbe6ff]">{field.label}</div>
+                          <div className="mb-2 text-sm font-medium text-gray-800">{field.label}</div>
                           <select
-                            className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-white outline-none"
+                            className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-gray-900 outline-none"
                             value={importMapping[field.key]}
                             onChange={(e) =>
                               setImportMapping((current) => ({
@@ -408,30 +494,30 @@ export default function SettingsPage() {
                               </option>
                             ))}
                           </select>
-                          <div className="mt-1 text-xs text-[#91a1bc]">{field.hint}</div>
+                          <div className="mt-1 text-xs text-gray-600">{field.hint}</div>
                         </div>
                       ))}
                     </div>
 
                     <div>
-                      <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Batch</div>
+                      <div className="mb-2 text-sm font-medium text-gray-800">Batch</div>
                       <Input
                         value={importBatch}
                         onChange={(e) => setImportBatch(e.target.value)}
                         placeholder="2026-2027"
                       />
-                      <div className="mt-1 text-xs text-[#91a1bc]">
-                        Enter the academic batch for all imported rows, for example <span className="text-white">2026-2027</span>. Each student's
-                        mapped <span className="text-white">Start Period</span> and <span className="text-white">End Period</span> will control that student's billing range.
+                      <div className="mt-1 text-xs text-gray-600">
+                        Enter the academic batch for all imported rows, for example <span className="text-gray-900">2026-2027</span>. Each student's
+                        mapped <span className="text-gray-900">Start Period</span> and <span className="text-gray-900">End Period</span> will control that student's billing range.
                       </div>
                     </div>
 
                     {importPreview.sample_rows.length ? (
                       <div>
-                        <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Sample Preview</div>
+                        <div className="mb-2 text-sm font-medium text-gray-800">Sample Preview</div>
                         <div className="max-h-72 overflow-auto rounded-2xl border border-[rgba(151,164,187,0.12)]">
-                          <table className="min-w-full text-left text-sm text-[#dbe6ff]">
-                            <thead className="bg-[rgba(255,255,255,0.03)] text-xs uppercase tracking-[0.18em] text-[#91a1bc]">
+                          <table className="min-w-full text-left text-sm text-gray-800">
+                            <thead className="bg-[rgba(255,255,255,0.03)] text-xs uppercase tracking-[0.18em] text-gray-600">
                               <tr>
                                 {importPreview.headers.map((header) => (
                                   <th key={header} className="px-3 py-3 font-medium">
@@ -444,7 +530,7 @@ export default function SettingsPage() {
                               {importPreview.sample_rows.map((row, rowIndex) => (
                                 <tr key={rowIndex} className="border-t border-[rgba(151,164,187,0.08)]">
                                   {importPreview.headers.map((header) => (
-                                    <td key={`${rowIndex}-${header}`} className="px-3 py-3 text-[#91a1bc]">
+                                    <td key={`${rowIndex}-${header}`} className="px-3 py-3 text-gray-600">
                                       {row[header] ?? '-'}
                                     </td>
                                   ))}
@@ -491,16 +577,16 @@ export default function SettingsPage() {
             <DialogTitle>Random Bill Generator</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
-            <div className="text-sm text-[#91a1bc]">
+            <div className="text-sm text-gray-600">
               Add the exact bill fields you want. You can create new label/value rows and the PDF will use those rows directly.
             </div>
             <div>
-              <div className="mb-2 text-sm font-medium text-[#dbe6ff]">File Name</div>
+              <div className="mb-2 text-sm font-medium text-gray-800">File Name</div>
               <Input value={randomBillFileName} onChange={(e) => setRandomBillFileName(e.target.value)} placeholder="random-bill" />
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-[#dbe6ff]">Bill Fields</div>
+                <div className="text-sm font-medium text-gray-800">Bill Fields</div>
                 <Button
                   type="button"
                   variant="outline"
@@ -574,11 +660,11 @@ export default function SettingsPage() {
           </DialogHeader>
           <DialogBody>
             <div className="space-y-3">
-              <div className="rounded-2xl border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] p-4 text-sm text-[#ffd9df]">
+              <div className="rounded-2xl border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] p-4 text-sm text-red-700">
                 This action permanently removes students, fees, payments, and billing periods. It cannot be undone.
               </div>
-              <div className="text-sm text-[#91a1bc]">
-                To confirm, type <span className="font-semibold text-white">{RESET_CONFIRMATION_TEXT}</span>.
+              <div className="text-sm text-gray-600">
+                To confirm, type <span className="font-semibold text-gray-900">{RESET_CONFIRMATION_TEXT}</span>.
               </div>
               <Input
                 value={resetText}

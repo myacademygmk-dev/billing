@@ -277,7 +277,7 @@ export function AppShell({
       </aside>
 
       {/* Main content area */}
-      <main id="main-content" className="flex flex-col px-4 py-3 sm:px-5 lg:h-screen lg:overflow-hidden lg:px-6 lg:py-4">
+      <main id="main-content" className="flex flex-col px-4 py-3 sm:px-5 lg:h-screen lg:overflow-y-auto lg:px-6 lg:py-4">
         <div className="mx-auto max-w-7xl w-full flex flex-col flex-1 min-h-0">
           {/* Page header */}
           <div className={action ? 'mb-0' : 'mb-5'}>

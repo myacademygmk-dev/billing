@@ -164,10 +164,23 @@ def reset_database_route(
     settings = get_billing_settings(db)
     receipt_sequence = db.get(ReceiptSequence, 1)
     try:
+        # Delete child tables first (order matters for FK constraints)
         db.execute(delete(SavingsEntry))
         db.execute(delete(StudentBillingPeriod))
         db.execute(delete(Payment))
         db.execute(delete(StudentFee))
+        # Delete attendance and other FK references
+        from app.models.attendance import StudentAttendance, StaffAttendance
+        from app.models.attendance import StaffClockRecord
+        from app.models.promotion import PromotionHistory, StudentArrears
+        from app.models.exam import Mark
+        db.execute(delete(Mark))
+        db.execute(delete(StudentAttendance))
+        db.execute(delete(StaffAttendance))
+        db.execute(delete(StaffClockRecord))
+        db.execute(delete(PromotionHistory))
+        db.execute(delete(StudentArrears))
+        # Now safe to delete students
         db.execute(delete(Student))
 
         if receipt_sequence is None:
