@@ -65,7 +65,8 @@ export default function ExpensesPage() {
   const expenseMonth = useMemo(() => toMonthDate(month), [month]);
   const monthly = useQuery({
     queryKey: ['expensesMonthly', expenseMonth],
-    queryFn: () => apiFetch<ExpenseMonthly>(`/expenses/monthly?month=${encodeURIComponent(expenseMonth)}`)
+    queryFn: () => apiFetch<ExpenseMonthly>(`/expenses/monthly?month=${encodeURIComponent(expenseMonth)}`),
+    enabled: month.length === 7,
   });
 
   useEffect(() => {
@@ -131,22 +132,22 @@ export default function ExpensesPage() {
     >
       <div className="page-grid">
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="theme-subtle-surface rounded-[20px] px-4 py-3">
-            <div className="text-xs uppercase tracking-[0.14em] text-[#7484a1]">Income</div>
-            <div className="theme-heading mt-1 text-2xl font-semibold">
-              {monthly.isLoading ? <Spinner /> : monthly.data?.income_total ?? '0'}
+          <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-green-600">Income (Fees Collected)</div>
+            <div className="mt-1 text-xl font-bold text-green-700">
+              ₹{monthly.isLoading ? '...' : monthly.data?.income_total ?? '0'}
             </div>
           </div>
-          <div className="theme-subtle-surface rounded-[20px] px-4 py-3">
-            <div className="text-xs uppercase tracking-[0.14em] text-[#7484a1]">Expenses</div>
-            <div className="theme-heading mt-1 text-2xl font-semibold">
-              {monthly.isLoading ? <Spinner /> : monthly.data?.expense_total ?? '0'}
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-red-600">Expenses</div>
+            <div className="mt-1 text-xl font-bold text-red-700">
+              ₹{monthly.isLoading ? '...' : monthly.data?.expense_total ?? '0'}
             </div>
           </div>
-          <div className="theme-subtle-surface rounded-[20px] px-4 py-3">
-            <div className="text-xs uppercase tracking-[0.14em] text-[#7484a1]">Net</div>
-            <div className={`mt-1 text-2xl font-semibold ${Number(monthly.data?.net_total ?? 0) < 0 ? 'text-rose-300' : 'theme-heading'}`}>
-              {monthly.isLoading ? <Spinner /> : monthly.data?.net_total ?? '0'}
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-blue-600">Savings (Net)</div>
+            <div className={`mt-1 text-xl font-bold ${Number(monthly.data?.net_total ?? 0) < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+              ₹{monthly.isLoading ? '...' : monthly.data?.net_total ?? '0'}
             </div>
           </div>
         </div>

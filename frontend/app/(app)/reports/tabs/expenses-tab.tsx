@@ -25,6 +25,15 @@ type ExpenseItem = {
   notes?: string | null;
 };
 
+type ExpenseMonthly = {
+  month: string;
+  month_label: string;
+  income_total: string;
+  expense_total: string;
+  net_total: string;
+  items: ExpenseItem[];
+};
+
 export default function ExpensesTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -32,13 +41,19 @@ export default function ExpensesTab() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', amount: '', category: '', notes: '' });
 
-  const expenses = useQuery<{ items: ExpenseItem[] }>({
+  const expenses = useQuery<ExpenseMonthly>({
     queryKey: ['expenses', month],
-    queryFn: () => apiFetch(`/expenses?month=${month}-01`),
+    queryFn: () => apiFetch(`/expenses/monthly?month=${month}-01`),
+    enabled: month.length === 7,
   });
 
   const createExpense = useMutation({
-    mutationFn: (data: Record<string, unknown>) => apiFetch('/expenses', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: Record<string, unknown>) => {
+      // Append to existing items
+      const existingItems = expenses.data?.items.map(i => ({ title: i.title, amount: Number(i.amount), notes: i.notes || null })) || [];
+      const newItems = [...existingItems, data];
+      return apiFetch('/expenses/monthly', { method: 'PUT', body: JSON.stringify({ month: `${month}-01`, items: newItems }) });
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); setShowAdd(false); setForm({ title: '', amount: '', category: '', notes: '' }); toast({ title: 'Expense added' }); },
     onError: (e) => toast({ title: 'Failed', description: String(e.message || e) }),
   });
@@ -54,10 +69,25 @@ export default function ExpensesTab() {
 
   return (
     <div className="page-grid">
+      {/* Income / Expense / Savings Summary */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2">
+          <div className="text-[10px] font-medium uppercase text-green-600">Income (Fees)</div>
+          <div className="text-lg font-bold text-green-700">₹{expenses.data?.income_total ?? '0'}</div>
+        </div>
+        <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+          <div className="text-[10px] font-medium uppercase text-red-600">Expenses</div>
+          <div className="text-lg font-bold text-red-700">₹{expenses.data?.expense_total ?? '0'}</div>
+        </div>
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+          <div className="text-[10px] font-medium uppercase text-blue-600">Savings</div>
+          <div className={`text-lg font-bold ${Number(expenses.data?.net_total ?? 0) < 0 ? 'text-red-600' : 'text-blue-700'}`}>₹{expenses.data?.net_total ?? '0'}</div>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Input className="h-9 w-[160px] rounded-lg" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <span className="text-sm text-[var(--muted)]">Total: <strong className="text-[var(--heading)]">₹{total.toLocaleString()}</strong></span>
         </div>
         <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add Expense</Button>
       </div>

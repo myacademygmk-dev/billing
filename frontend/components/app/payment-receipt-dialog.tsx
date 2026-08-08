@@ -24,11 +24,11 @@ export function PaymentReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Receipt</DialogTitle>
         </DialogHeader>
-        <DialogBody>
+        <DialogBody className="max-h-[75vh] overflow-y-auto">
           {receipt.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
               <Spinner /> Loading
