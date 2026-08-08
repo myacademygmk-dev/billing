@@ -27,10 +27,12 @@ type Student = {
   student_code: string;
   name: string;
   class_name: string | null;
-  section: string | null;
+  school_name?: string | null;
   status: 'active' | 'inactive' | 'passed_out' | 'withdrawn' | 'transferred';
   date_of_birth?: string | null;
+  joined_date?: string | null;
   gender?: string | null;
+  contact_no?: string | null;
   blood_group?: string | null;
   photo_url?: string | null;
   admission_no?: string | null;
@@ -42,13 +44,16 @@ type Student = {
   parent_email?: string | null;
   parent_occupation?: string | null;
   whatsapp_no?: string | null;
+  father_occupation?: string | null;
+  mother_occupation?: string | null;
+  hobbies?: string | null;
   address?: string | null;
   city?: string | null;
   pincode?: string | null;
+  student_email?: string | null;
   previous_school?: string | null;
   emergency_contact?: string | null;
   emergency_phone?: string | null;
-  joined_date?: string | null;
   batch?: string | null;
   notes?: string | null;
 };
@@ -125,19 +130,25 @@ export default function StudentDetailPage() {
   const editSchema = z.object({
     name: z.string().min(1, 'Name is required').max(200),
     class_name: z.string().max(100).optional().or(z.literal('')),
-    section: z.string().max(50).optional().or(z.literal('')),
+    school_name: z.string().max(200).optional().or(z.literal('')),
     student_code: z.string().min(1, 'Roll number is required').max(50),
     serial_no: z.coerce.number().int().positive().optional().or(z.literal(0)).or(z.literal(undefined as unknown as number)),
     father_name: z.string().max(200).optional().or(z.literal('')),
     mother_name: z.string().max(200).optional().or(z.literal('')),
     parent_phone: z.string().max(20).optional().or(z.literal('')),
+    parent_phone_2: z.string().max(20).optional().or(z.literal('')),
     whatsapp_no: z.string().max(20).optional().or(z.literal('')),
+    contact_no: z.string().max(20).optional().or(z.literal('')),
     date_of_birth: z.string().optional().or(z.literal('')),
     gender: z.string().optional().or(z.literal('')),
     blood_group: z.string().max(10).optional().or(z.literal('')),
+    father_occupation: z.string().max(200).optional().or(z.literal('')),
+    mother_occupation: z.string().max(200).optional().or(z.literal('')),
+    hobbies: z.string().max(500).optional().or(z.literal('')),
     address: z.string().max(500).optional().or(z.literal('')),
     city: z.string().max(100).optional().or(z.literal('')),
     pincode: z.string().max(10).optional().or(z.literal('')),
+    student_email: z.string().max(200).optional().or(z.literal('')),
     notes: z.string().max(1000).optional().or(z.literal('')),
   });
   type EditValues = z.infer<typeof editSchema>;
@@ -214,19 +225,25 @@ export default function StudentDetailPage() {
     editForm.reset({
       name: s.name ?? '',
       class_name: s.class_name ?? '',
-      section: s.section ?? '',
+      school_name: s.school_name ?? '',
       student_code: s.student_code ?? '',
       serial_no: undefined,
       father_name: s.father_name ?? '',
       mother_name: s.mother_name ?? '',
       parent_phone: s.parent_phone ?? '',
+      parent_phone_2: s.parent_phone_2 ?? '',
       whatsapp_no: s.whatsapp_no ?? '',
+      contact_no: s.contact_no ?? '',
       date_of_birth: s.date_of_birth ?? '',
       gender: s.gender ?? '',
       blood_group: s.blood_group ?? '',
+      father_occupation: s.father_occupation ?? '',
+      mother_occupation: s.mother_occupation ?? '',
+      hobbies: s.hobbies ?? '',
       address: s.address ?? '',
       city: s.city ?? '',
       pincode: s.pincode ?? '',
+      student_email: s.student_email ?? '',
       notes: s.notes ?? '',
     });
     setEditOpen(true);
@@ -239,19 +256,25 @@ export default function StudentDetailPage() {
     const changed: Record<string, unknown> = {};
     if (values.name !== s.name) changed.name = values.name;
     if (values.class_name !== (s.class_name ?? '')) changed.class_name = values.class_name || null;
-    if (values.section !== (s.section ?? '')) changed.section = values.section || null;
+    if (values.school_name !== (s.school_name ?? '')) changed.school_name = values.school_name || null;
     if (values.student_code !== s.student_code) changed.student_code = values.student_code;
     if (values.serial_no) changed.serial_no = values.serial_no;
     if (values.father_name !== (s.father_name ?? '')) changed.father_name = values.father_name || null;
     if (values.mother_name !== (s.mother_name ?? '')) changed.mother_name = values.mother_name || null;
     if (values.parent_phone !== (s.parent_phone ?? '')) changed.parent_phone = values.parent_phone || null;
+    if (values.parent_phone_2 !== (s.parent_phone_2 ?? '')) changed.parent_phone_2 = values.parent_phone_2 || null;
     if (values.whatsapp_no !== (s.whatsapp_no ?? '')) changed.whatsapp_no = values.whatsapp_no || null;
+    if (values.contact_no !== (s.contact_no ?? '')) changed.contact_no = values.contact_no || null;
     if (values.date_of_birth !== (s.date_of_birth ?? '')) changed.date_of_birth = values.date_of_birth || null;
     if (values.gender !== (s.gender ?? '')) changed.gender = values.gender || null;
     if (values.blood_group !== (s.blood_group ?? '')) changed.blood_group = values.blood_group || null;
+    if (values.father_occupation !== (s.father_occupation ?? '')) changed.father_occupation = values.father_occupation || null;
+    if (values.mother_occupation !== (s.mother_occupation ?? '')) changed.mother_occupation = values.mother_occupation || null;
+    if (values.hobbies !== (s.hobbies ?? '')) changed.hobbies = values.hobbies || null;
     if (values.address !== (s.address ?? '')) changed.address = values.address || null;
     if (values.city !== (s.city ?? '')) changed.city = values.city || null;
     if (values.pincode !== (s.pincode ?? '')) changed.pincode = values.pincode || null;
+    if (values.student_email !== (s.student_email ?? '')) changed.student_email = values.student_email || null;
     if (values.notes !== (s.notes ?? '')) changed.notes = values.notes || null;
 
     if (Object.keys(changed).length === 0) {
@@ -280,7 +303,7 @@ export default function StudentDetailPage() {
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-3">
               <div className="text-sm text-[#91a1bc]">
-                {student.data?.class_name ?? '-'} {student.data?.section ?? ''}
+                {student.data?.class_name ?? '-'}
               </div>
               <Badge className={student.data?.status === 'active' ? 'bg-[rgba(46,216,143,0.16)] text-[#48e69b]' : 'bg-[rgba(151,164,187,0.08)] text-[#9aa8c2]'}>
                 {student.data?.status}
@@ -293,28 +316,37 @@ export default function StudentDetailPage() {
             <CardHeader><CardTitle>Profile Details</CardTitle></CardHeader>
             <CardContent>
               <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                {student.data?.date_of_birth && <div><span className="text-[var(--muted)]">Date of Birth:</span> <span className="font-medium">{student.data.date_of_birth}</span></div>}
-                {student.data?.gender && <div><span className="text-[var(--muted)]">Gender:</span> <span className="font-medium capitalize">{student.data.gender}</span></div>}
-                {student.data?.blood_group && <div><span className="text-[var(--muted)]">Blood Group:</span> <span className="font-medium">{student.data.blood_group}</span></div>}
-                {student.data?.admission_no && <div><span className="text-[var(--muted)]">Admission No:</span> <span className="font-medium">{student.data.admission_no}</span></div>}
-                {student.data?.joined_date && <div><span className="text-[var(--muted)]">Joined:</span> <span className="font-medium">{student.data.joined_date}</span></div>}
-                {student.data?.batch && <div><span className="text-[var(--muted)]">Batch:</span> <span className="font-medium">{student.data.batch}</span></div>}
-                {student.data?.father_name && <div><span className="text-[var(--muted)]">Father:</span> <span className="font-medium">{student.data.father_name}</span></div>}
-                {student.data?.mother_name && <div><span className="text-[var(--muted)]">Mother:</span> <span className="font-medium">{student.data.mother_name}</span></div>}
-                {student.data?.guardian_name && <div><span className="text-[var(--muted)]">Guardian:</span> <span className="font-medium">{student.data.guardian_name}</span></div>}
-                {student.data?.parent_phone && <div><span className="text-[var(--muted)]">Parent Phone:</span> <span className="font-medium">{student.data.parent_phone}</span></div>}
-                {student.data?.parent_phone_2 && <div><span className="text-[var(--muted)]">Phone 2:</span> <span className="font-medium">{student.data.parent_phone_2}</span></div>}
-                {student.data?.whatsapp_no && <div><span className="text-[var(--muted)]">WhatsApp:</span> <span className="font-medium">{student.data.whatsapp_no}</span></div>}
-                {student.data?.parent_email && <div><span className="text-[var(--muted)]">Email:</span> <span className="font-medium">{student.data.parent_email}</span></div>}
-                {student.data?.parent_occupation && <div><span className="text-[var(--muted)]">Occupation:</span> <span className="font-medium">{student.data.parent_occupation}</span></div>}
-                {student.data?.address && <div className="sm:col-span-2"><span className="text-[var(--muted)]">Address:</span> <span className="font-medium">{student.data.address}{student.data.city ? `, ${student.data.city}` : ''}{student.data.pincode ? ` - ${student.data.pincode}` : ''}</span></div>}
-                {student.data?.previous_school && <div className="sm:col-span-2"><span className="text-[var(--muted)]">Previous School:</span> <span className="font-medium">{student.data.previous_school}</span></div>}
-                {student.data?.emergency_contact && <div><span className="text-[var(--muted)]">Emergency:</span> <span className="font-medium">{student.data.emergency_contact} {student.data.emergency_phone ? `(${student.data.emergency_phone})` : ''}</span></div>}
+                {/* Basic Info */}
+                <div><span className="text-[var(--muted)]">Roll Number:</span> <span className="font-medium">{student.data?.student_code ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Name:</span> <span className="font-medium">{student.data?.name ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Class:</span> <span className="font-medium">{student.data?.class_name ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">School:</span> <span className="font-medium">{student.data?.school_name ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">D.O.B:</span> <span className="font-medium">{student.data?.date_of_birth ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">D.O.Join:</span> <span className="font-medium">{student.data?.joined_date ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Gender:</span> <span className="font-medium capitalize">{student.data?.gender ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Contact No:</span> <span className="font-medium">{student.data?.contact_no ?? '-'}</span></div>
+
+                {/* Parent Info */}
+                <div><span className="text-[var(--muted)]">Father Name:</span> <span className="font-medium">{student.data?.father_name ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Mother Name:</span> <span className="font-medium">{student.data?.mother_name ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Father Phone:</span> <span className="font-medium">{student.data?.parent_phone ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Mother Phone:</span> <span className="font-medium">{student.data?.parent_phone_2 ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">WhatsApp No:</span> <span className="font-medium">{student.data?.whatsapp_no ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Father Occupation:</span> <span className="font-medium">{student.data?.father_occupation ?? '-'}</span></div>
+                <div><span className="text-[var(--muted)]">Mother Occupation:</span> <span className="font-medium">{student.data?.mother_occupation ?? '-'}</span></div>
+
+                {/* Additional Info */}
+                <div><span className="text-[var(--muted)]">Hobbies:</span> <span className="font-medium">{student.data?.hobbies ?? '-'}</span></div>
+                <div className="sm:col-span-2"><span className="text-[var(--muted)]">Address:</span> <span className="font-medium">{student.data?.address ?? '-'}{student.data?.city ? `, ${student.data.city}` : ''}{student.data?.pincode ? ` - ${student.data.pincode}` : ''}</span></div>
+                <div><span className="text-[var(--muted)]">Email:</span> <span className="font-medium">{student.data?.student_email ?? '-'}</span></div>
+
+                {/* Fee & Status */}
+                <div><span className="text-[var(--muted)]">Monthly Fee:</span> <span className="font-medium">₹{fee.data?.expected_fee_amount ?? '0'}</span></div>
+                <div><span className="text-[var(--muted)]">Status:</span> <span className="font-medium capitalize">{student.data?.status ?? '-'}</span></div>
+
+                {/* Notes */}
                 {student.data?.notes && <div className="sm:col-span-3"><span className="text-[var(--muted)]">Notes:</span> <span className="font-medium">{student.data.notes}</span></div>}
               </div>
-              {!student.data?.father_name && !student.data?.date_of_birth && !student.data?.parent_phone && (
-                <p className="mt-2 text-sm text-[var(--muted)]">No additional profile details available. Update student to add parent info, DOB, address, etc.</p>
-              )}
             </CardContent>
           </Card>
 
@@ -609,32 +641,12 @@ export default function StudentDetailPage() {
                         <Input {...editForm.register('class_name')} placeholder="e.g. 10" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Section</label>
-                        <Input {...editForm.register('section')} placeholder="e.g. A" />
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">School</label>
+                        <Input {...editForm.register('school_name')} placeholder="School name" />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Serial No</label>
                         <Input type="number" {...editForm.register('serial_no')} placeholder="Optional" />
-                      </div>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Father Name</label>
-                        <Input {...editForm.register('father_name')} />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Mother Name</label>
-                        <Input {...editForm.register('mother_name')} />
-                      </div>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Parent Phone</label>
-                        <Input {...editForm.register('parent_phone')} placeholder="Phone number" />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">WhatsApp No</label>
-                        <Input {...editForm.register('whatsapp_no')} placeholder="WhatsApp number" />
                       </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-3">
@@ -652,8 +664,52 @@ export default function StudentDetailPage() {
                         </Select>
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Blood Group</label>
-                        <Input {...editForm.register('blood_group')} placeholder="e.g. O+" />
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Contact No</label>
+                        <Input {...editForm.register('contact_no')} placeholder="Student phone" />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Father Name</label>
+                        <Input {...editForm.register('father_name')} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Mother Name</label>
+                        <Input {...editForm.register('mother_name')} />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Father Phone</label>
+                        <Input {...editForm.register('parent_phone')} placeholder="Father phone" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Mother Phone</label>
+                        <Input {...editForm.register('parent_phone_2')} placeholder="Mother phone" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">WhatsApp No</label>
+                        <Input {...editForm.register('whatsapp_no')} placeholder="WhatsApp number" />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Father Occupation</label>
+                        <Input {...editForm.register('father_occupation')} placeholder="Father's occupation" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Mother Occupation</label>
+                        <Input {...editForm.register('mother_occupation')} placeholder="Mother's occupation" />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Hobbies</label>
+                        <Input {...editForm.register('hobbies')} placeholder="Student hobbies" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Email</label>
+                        <Input type="email" {...editForm.register('student_email')} placeholder="Student email" />
                       </div>
                     </div>
                     <div>
@@ -668,6 +724,12 @@ export default function StudentDetailPage() {
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Pincode</label>
                         <Input {...editForm.register('pincode')} />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Blood Group</label>
+                        <Input {...editForm.register('blood_group')} placeholder="e.g. O+" />
                       </div>
                     </div>
                     <div>

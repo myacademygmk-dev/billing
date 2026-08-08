@@ -15,7 +15,6 @@ type AttendanceItem = {
   student_code: string;
   student_name: string;
   class_name?: string | null;
-  section?: string | null;
   date: string;
   status: string;
 };
@@ -166,7 +165,7 @@ export default function AttendanceTab() {
                       <span className="shrink-0 text-[11px] text-[var(--muted)]">{item.student_code}</span>
                     </div>
                     <div className="text-[11px] text-[var(--muted)] mt-0.5">
-                      {item.class_name ?? '—'}{item.section ? ` / ${item.section}` : ''}
+                      {item.class_name ?? "—"}
                     </div>
                   </div>
 

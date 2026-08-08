@@ -17,7 +17,6 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     student_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     class_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    section: Mapped[str | None] = mapped_column(String(50), nullable=True)
     payment_period: Mapped[str | None] = mapped_column(String(50), nullable=True)
     joined_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     batch: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -55,7 +54,13 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     # Academic
     previous_school: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    school_name: Mapped[str | None] = mapped_column(String(300), nullable=True)  # Current school name
     subjects: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON or comma-separated
+    hobbies: Mapped[str | None] = mapped_column(Text, nullable=True)
+    student_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    father_occupation: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    mother_occupation: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    contact_no: Mapped[str | None] = mapped_column(String(20), nullable=True)  # Student's own contact
 
     # Emergency
     emergency_contact: Mapped[str | None] = mapped_column(String(200), nullable=True)

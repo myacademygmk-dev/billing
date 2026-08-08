@@ -106,7 +106,6 @@ def list_student_attendance(
             "student_code": student.student_code,
             "student_name": student.name,
             "class_name": student.class_name,
-            "section": student.section,
             "date": attendance_date.isoformat(),
             "status": record.status if record else "not_marked",
             "remarks": record.remarks if record else None,

@@ -20,7 +20,6 @@ type MonthlyStudent = {
   student_code: string;
   name: string;
   class_name: string | null;
-  section: string | null;
   payment_period: string;
   monthly_fee: string;
   month: string;

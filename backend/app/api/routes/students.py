@@ -177,9 +177,23 @@ def _default_import_mapping(headers: dict[str, int], ordered_headers: list[str])
         class_name=_find_header_name(headers, ["classname", "class", "std", "standard"], ordered_headers),
         expected_fee=_find_header_name(headers, ["expectedfeeamount", "expectedfee", "fee", "fees"], ordered_headers),
         payment_period=_find_header_name(headers, ["paymentperiod", "period", "cycle", "paymentcycle"], ordered_headers),
-        joined_date=_find_header_name(headers, ["joineddate", "datejoined", "joindate", "admissiondate"], ordered_headers),
-        billing_start_period=_find_header_name(headers, ["start", "startmonth", "startperiod", "periodstart"], ordered_headers),
-        billing_end_period=_find_header_name(headers, ["end", "endmonth", "endperiod", "periodend"], ordered_headers),
+        joined_date=_find_header_name(headers, ["joineddate", "datejoined", "joindate", "admissiondate", "dojoin", "doj"], ordered_headers),
+        billing_start_period=_find_header_name(headers, ["start", "startmonth", "startperiod", "periodstart", "batchstart"], ordered_headers),
+        billing_end_period=_find_header_name(headers, ["end", "endmonth", "endperiod", "periodend", "batchend"], ordered_headers),
+        school_name=_find_header_name(headers, ["school", "schoolname", "institute"], ordered_headers),
+        date_of_birth=_find_header_name(headers, ["dob", "dateofbirth", "birthdate", "birthday"], ordered_headers),
+        gender=_find_header_name(headers, ["sex", "gender"], ordered_headers),
+        contact_no=_find_header_name(headers, ["contactno", "contact", "phone", "mobile", "mobileno"], ordered_headers),
+        father_phone=_find_header_name(headers, ["fatherphone", "fathermobile", "fatherno"], ordered_headers),
+        mother_phone=_find_header_name(headers, ["motherphone", "mothermobile", "motherno"], ordered_headers),
+        whatsapp_no=_find_header_name(headers, ["whatsappno", "whatsapp", "wano"], ordered_headers),
+        father_name=_find_header_name(headers, ["fathername", "father"], ordered_headers),
+        mother_name=_find_header_name(headers, ["mothername", "mother"], ordered_headers),
+        father_occupation=_find_header_name(headers, ["fatheroccupation", "fatherjob", "fatherwork"], ordered_headers),
+        mother_occupation=_find_header_name(headers, ["motheroccupation", "motherjob", "motherwork"], ordered_headers),
+        hobbies=_find_header_name(headers, ["hobbies", "hobby", "interests"], ordered_headers),
+        address=_find_header_name(headers, ["address", "fulladdress", "addr"], ordered_headers),
+        student_email=_find_header_name(headers, ["email", "emailid", "studentemail", "mail"], ordered_headers),
     )
 
 
@@ -192,20 +206,16 @@ def _header_index_by_label(ordered_headers: list[str]) -> dict[str, int]:
     return labels
 
 
-def _split_class_and_section(value: str | None) -> tuple[str | None, str | None]:
+def _split_class_and_section(value: str | None) -> str | None:
+    """Extract class name from a value like 'VII' or 'VII-A' (section part ignored)."""
     if value is None:
-        return None, None
+        return None
     text = value.strip()
     if text == "":
-        return None, None
-    if "-" not in text:
-        return text, None
-    left, right = text.split("-", 1)
-    left = left.strip()
-    right = right.strip()
-    if left and right and right.replace(" ", "").isalpha():
-        return left, right
-    return text, None
+        return None
+    if "-" in text:
+        return text.split("-", 1)[0].strip() or text
+    return text
 
 
 def _validate_batch(batch: str) -> str:
@@ -337,6 +347,20 @@ async def import_students_from_excel(
     joined_date_col = mapped_col(mapping.joined_date)
     billing_start_col = mapped_col(mapping.billing_start_period)
     billing_end_col = mapped_col(mapping.billing_end_period)
+    school_col = mapped_col(mapping.school_name)
+    dob_col = mapped_col(mapping.date_of_birth)
+    gender_col = mapped_col(mapping.gender)
+    contact_col = mapped_col(mapping.contact_no)
+    father_phone_col = mapped_col(mapping.father_phone)
+    mother_phone_col = mapped_col(mapping.mother_phone)
+    whatsapp_col = mapped_col(mapping.whatsapp_no)
+    father_name_col = mapped_col(mapping.father_name)
+    mother_name_col = mapped_col(mapping.mother_name)
+    father_occ_col = mapped_col(mapping.father_occupation)
+    mother_occ_col = mapped_col(mapping.mother_occupation)
+    hobbies_col = mapped_col(mapping.hobbies)
+    address_col = mapped_col(mapping.address)
+    email_col = mapped_col(mapping.student_email)
 
     created = 0
     updated = 0
@@ -363,7 +387,7 @@ async def import_students_from_excel(
             if class_col is not None:
                 v = cell(class_col)
                 class_raw = None if v is None or str(v).strip() == "" else str(v).strip()
-            class_name, section = _split_class_and_section(class_raw)
+            class_name = _split_class_and_section(class_raw)
             payment_period_val = cell(payment_period_col)
             payment_period = "" if payment_period_val is None else str(payment_period_val).strip()
             billing_start_cell = cell(billing_start_col)
@@ -422,6 +446,23 @@ async def import_students_from_excel(
                 continue
 
             student = db.execute(select(Student).where(Student.student_code == student_code)).scalar_one_or_none()
+
+            # Read new profile fields from mapped columns
+            _school = str(cell(school_col)).strip() if cell(school_col) else None
+            _dob = _to_date(cell(dob_col)) if dob_col is not None else None
+            _gender = str(cell(gender_col)).strip() if cell(gender_col) else None
+            _contact = str(cell(contact_col)).strip() if cell(contact_col) else None
+            _father_phone = str(cell(father_phone_col)).strip() if cell(father_phone_col) else None
+            _mother_phone = str(cell(mother_phone_col)).strip() if cell(mother_phone_col) else None
+            _whatsapp = str(cell(whatsapp_col)).strip() if cell(whatsapp_col) else None
+            _father_name = str(cell(father_name_col)).strip() if cell(father_name_col) else None
+            _mother_name = str(cell(mother_name_col)).strip() if cell(mother_name_col) else None
+            _father_occ = str(cell(father_occ_col)).strip() if cell(father_occ_col) else None
+            _mother_occ = str(cell(mother_occ_col)).strip() if cell(mother_occ_col) else None
+            _hobbies = str(cell(hobbies_col)).strip() if cell(hobbies_col) else None
+            _address = str(cell(address_col)).strip() if cell(address_col) else None
+            _email = str(cell(email_col)).strip() if cell(email_col) else None
+
             if student:
                 if mode == "create_only":
                     errors.append({"row": row_index, "error": f"student_code '{student_code}' already exists"})
@@ -429,13 +470,26 @@ async def import_students_from_excel(
                 student.serial_no = serial_no
                 student.name = name
                 student.class_name = class_name
-                student.section = section
                 student.payment_period = payment_period
                 student.joined_date = joined_date
                 student.batch = normalized_batch
                 student.batch_start_month = normalized_batch_start_month
                 student.billing_start_month = billing_start_month
                 student.billing_end_month = billing_end_month
+                if _school: student.school_name = _school
+                if _dob: student.date_of_birth = _dob
+                if _gender: student.gender = _gender.lower() if _gender.lower() in ('male', 'female') else None
+                if _contact: student.contact_no = _contact
+                if _father_phone: student.parent_phone = _father_phone
+                if _mother_phone: student.parent_phone_2 = _mother_phone
+                if _whatsapp: student.whatsapp_no = _whatsapp
+                if _father_name: student.father_name = _father_name
+                if _mother_name: student.mother_name = _mother_name
+                if _father_occ: student.father_occupation = _father_occ
+                if _mother_occ: student.mother_occupation = _mother_occ
+                if _hobbies: student.hobbies = _hobbies
+                if _address: student.address = _address
+                if _email: student.student_email = _email
                 updated += 1
             else:
                 student = Student(
@@ -443,13 +497,26 @@ async def import_students_from_excel(
                     student_code=student_code,
                     name=name,
                     class_name=class_name,
-                    section=section,
                     payment_period=payment_period,
                     joined_date=joined_date,
                     batch=normalized_batch,
                     batch_start_month=normalized_batch_start_month,
                     billing_start_month=billing_start_month,
                     billing_end_month=billing_end_month,
+                    school_name=_school,
+                    date_of_birth=_dob,
+                    gender=_gender.lower() if _gender and _gender.lower() in ('male', 'female') else None,
+                    contact_no=_contact,
+                    parent_phone=_father_phone,
+                    parent_phone_2=_mother_phone,
+                    whatsapp_no=_whatsapp,
+                    father_name=_father_name,
+                    mother_name=_mother_name,
+                    father_occupation=_father_occ,
+                    mother_occupation=_mother_occ,
+                    hobbies=_hobbies,
+                    address=_address,
+                    student_email=_email,
                 )
                 db.add(student)
                 db.flush()
@@ -506,7 +573,6 @@ def list_students(
     class_code: str | None = None,
     status: StudentStatus | None = None,
     class_name: str | None = None,
-    section: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> dict:
@@ -524,8 +590,6 @@ def list_students(
         stmt = stmt.where(Student.status == status)
     if class_name:
         stmt = stmt.where(Student.class_name == class_name)
-    if section:
-        stmt = stmt.where(Student.section == section)
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = (
@@ -548,7 +612,6 @@ def list_student_balances(
     class_code: str | None = None,
     status: StudentStatus | None = None,
     class_name: str | None = None,
-    section: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> dict:
@@ -569,8 +632,6 @@ def list_student_balances(
         stmt = stmt.where(Student.status == status)
     if class_name:
         stmt = stmt.where(Student.class_name == class_name)
-    if section:
-        stmt = stmt.where(Student.section == section)
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     rows = (
@@ -609,7 +670,6 @@ def list_student_balances(
                 student_code=student.student_code,
                 name=student.name,
                 class_name=student.class_name,
-                section=student.section,
                 payment_period=student.payment_period,
                 joined_date=student.joined_date,
                 batch=student.batch,
@@ -642,7 +702,6 @@ def create_student(
         student_code=payload.student_code,
         name=payload.name,
         class_name=payload.class_name,
-        section=payload.section,
         payment_period=payload.payment_period,
         joined_date=payload.joined_date,
         batch=payload.batch,
@@ -704,7 +763,7 @@ def update_student(
         raise HTTPException(status_code=404, detail="Student not found")
 
     _ALLOWED_UPDATE_FIELDS = {
-        "name", "class_name", "section", "payment_period", "joined_date",
+        "name", "class_name", "payment_period", "joined_date",
         "batch", "batch_start_month", "billing_start_month", "billing_end_month",
         "status", "serial_no", "student_code",
     }
@@ -809,3 +868,4 @@ def hard_delete_student(
     db.delete(student)
     db.commit()
     return Response(status_code=204)
+

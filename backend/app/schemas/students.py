@@ -14,7 +14,6 @@ class StudentCreate(BaseModel):
     student_code: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=1, max_length=200)
     class_name: str | None = Field(default=None, max_length=100)
-    section: str | None = Field(default=None, max_length=50)
     payment_period: str | None = Field(default=None, max_length=50)
     joined_date: date | None = None
     batch: str | None = Field(default=None, max_length=20)
@@ -39,6 +38,12 @@ class StudentCreate(BaseModel):
     city: str | None = Field(default=None, max_length=100)
     pincode: str | None = Field(default=None, max_length=10)
     previous_school: str | None = Field(default=None, max_length=300)
+    school_name: str | None = Field(default=None, max_length=300)
+    hobbies: str | None = None
+    student_email: str | None = Field(default=None, max_length=200)
+    father_occupation: str | None = Field(default=None, max_length=200)
+    mother_occupation: str | None = Field(default=None, max_length=200)
+    contact_no: str | None = Field(default=None, max_length=20)
     emergency_contact: str | None = Field(default=None, max_length=200)
     emergency_phone: str | None = Field(default=None, max_length=20)
     notes: str | None = None
@@ -49,7 +54,6 @@ class StudentUpdate(BaseModel):
     student_code: str | None = Field(default=None, min_length=1, max_length=50)
     name: str | None = Field(default=None, min_length=1, max_length=200)
     class_name: str | None = Field(default=None, max_length=100)
-    section: str | None = Field(default=None, max_length=50)
     payment_period: str | None = Field(default=None, max_length=50)
     joined_date: date | None = None
     batch: str | None = Field(default=None, max_length=20)
@@ -75,6 +79,12 @@ class StudentUpdate(BaseModel):
     city: str | None = Field(default=None, max_length=100)
     pincode: str | None = Field(default=None, max_length=10)
     previous_school: str | None = Field(default=None, max_length=300)
+    school_name: str | None = Field(default=None, max_length=300)
+    hobbies: str | None = None
+    student_email: str | None = Field(default=None, max_length=200)
+    father_occupation: str | None = Field(default=None, max_length=200)
+    mother_occupation: str | None = Field(default=None, max_length=200)
+    contact_no: str | None = Field(default=None, max_length=20)
     emergency_contact: str | None = Field(default=None, max_length=200)
     emergency_phone: str | None = Field(default=None, max_length=20)
     notes: str | None = None
@@ -86,7 +96,6 @@ class StudentRead(BaseModel):
     student_code: str
     name: str
     class_name: str | None
-    section: str | None
     payment_period: str | None = None
     joined_date: date | None = None
     batch: str | None = None
@@ -112,6 +121,12 @@ class StudentRead(BaseModel):
     city: str | None = None
     pincode: str | None = None
     previous_school: str | None = None
+    school_name: str | None = None
+    hobbies: str | None = None
+    student_email: str | None = None
+    father_occupation: str | None = None
+    mother_occupation: str | None = None
+    contact_no: str | None = None
     emergency_contact: str | None = None
     emergency_phone: str | None = None
     notes: str | None = None
@@ -138,7 +153,6 @@ class StudentListItem(BaseModel):
     student_code: str
     name: str
     class_name: str | None
-    section: str | None
     payment_period: str | None = None
     joined_date: date | None = None
     batch: str | None = None
@@ -206,6 +220,20 @@ class StudentImportMapping(BaseModel):
     joined_date: str | None = None
     billing_start_period: str | None = None
     billing_end_period: str | None = None
+    school_name: str | None = None
+    date_of_birth: str | None = None
+    gender: str | None = None
+    contact_no: str | None = None
+    father_phone: str | None = None
+    mother_phone: str | None = None
+    whatsapp_no: str | None = None
+    father_name: str | None = None
+    mother_name: str | None = None
+    father_occupation: str | None = None
+    mother_occupation: str | None = None
+    hobbies: str | None = None
+    address: str | None = None
+    student_email: str | None = None
 
 
 class StudentImportPreviewRead(BaseModel):
