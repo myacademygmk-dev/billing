@@ -310,74 +310,51 @@ export default function SettingsPage() {
     randomBillFields.every((field) => field.label.trim() !== '' && field.value.trim() !== '');
 
   return (
-    <AppShell title="Admin Settings" subtitle="Manage student imports and controlled maintenance actions.">
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
+    <AppShell title="Admin Settings" subtitle="Manage student imports and maintenance.">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {/* Student Import */}
         <Card className="shadow-none">
-          <CardContent className="space-y-4 p-5">
-            <div className="space-y-2">
-              <CardTitle>Student Import</CardTitle>
-              <div className="text-sm text-gray-600">
-                Import the student list from Excel and derive billing months from the uploaded <span className="theme-heading font-medium">Period</span> column.
-              </div>
-            </div>
-            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-gray-600">
-              Use this section when starting a new academic batch or refreshing the student master data.
-            </div>
-            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4" />
-              Upload Student Excel
+          <CardContent className="p-4 space-y-3">
+            <CardTitle>Student Import</CardTitle>
+            <p className="text-xs text-gray-500">Import students from Excel with column mapping.</p>
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setImportOpen(true)}>
+              <Upload className="h-3.5 w-3.5" />
+              Upload Excel
             </Button>
           </CardContent>
         </Card>
 
+        {/* Random Bill */}
         <Card className="shadow-none">
-          <CardContent className="space-y-4 p-5">
-            <div className="space-y-2">
-              <CardTitle>Random Bill Generator</CardTitle>
-              <div className="text-sm text-gray-600">
-                Create a manual bill PDF with custom label and value rows, then download it directly.
-              </div>
-            </div>
-            <div className="theme-subtle-surface rounded-[18px] px-4 py-3 text-sm text-gray-600">
-              Useful for one-off bills that should not depend on the normal student payment workflow.
-            </div>
-            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setRandomBillOpen(true)}>
-              <FileText className="h-4 w-4" />
-              Open Bill Generator
+          <CardContent className="p-4 space-y-3">
+            <CardTitle>Bill Generator</CardTitle>
+            <p className="text-xs text-gray-500">Create a custom bill PDF with manual fields.</p>
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setRandomBillOpen(true)}>
+              <FileText className="h-3.5 w-3.5" />
+              Create Bill
             </Button>
           </CardContent>
         </Card>
 
+        {/* Academic Rollover */}
         <AcademicRollover />
 
-        <Card className="border-[rgba(255,108,127,0.18)] shadow-none xl:col-span-2">
-          <CardContent className="space-y-4 p-5">
-            <div className="space-y-2">
-              <CardTitle>Danger Zone</CardTitle>
-              <div className="text-sm text-gray-600">
-                Permanently remove operational data when you need to reset the environment for a fresh setup.
-              </div>
+        {/* Danger Zone */}
+        <Card className="shadow-none border-red-100">
+          <CardContent className="p-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-red-700">Danger Zone</p>
+              <p className="text-xs text-gray-500">Delete all students, fees, payments data</p>
             </div>
-            <div className="rounded-[18px] border border-[rgba(255,108,127,0.24)] bg-[rgba(217,58,86,0.08)] px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                <AlertTriangle className="h-4 w-4 text-[#ff8a9c]" />
-                Delete all operational data
-              </div>
-              <div className="mt-2 text-sm text-gray-600">
-                This clears students, fees, payments, and month-tracking records. Admin login stays preserved and receipt numbering is reset.
-              </div>
-              <div className="mt-2 text-sm text-gray-600">
-                After deletion, use <span className="theme-heading font-medium">Student Import</span> above to load a fresh dataset.
-              </div>
-            </div>
-            <Button variant="destructive" className="h-10 rounded-xl" onClick={() => setResetOpen(true)}>
-              <AlertTriangle className="h-4 w-4" />
-              Delete Entire Database Data
+            <Button variant="destructive" size="sm" className="rounded-lg shrink-0" onClick={() => setResetOpen(true)}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Reset
             </Button>
           </CardContent>
         </Card>
       </div>
 
+      {/* Import Dialog */}
       <Dialog
         open={importOpen}
         onOpenChange={(v) => {
