@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -10,6 +12,8 @@ from app.core.database import get_db
 from app.models.cms import GalleryPhoto, WebContent
 from app.models.enums import ContentType
 from app.models.institution_settings import InstitutionSettings
+from app.models.student_creativity import StudentCreativity
+from app.models.testimonial import Testimonial
 
 router = APIRouter()
 
@@ -107,6 +111,13 @@ def public_website_config(db: Session = Depends(get_db)) -> dict:
         "facilities": _parse_json_field(inst.facilities_data),
         "popup_banner_url": inst.popup_banner_url,
         "hero_slides": [s.strip() for s in inst.hero_slides.split("|") if s.strip()] if inst.hero_slides else [],
+        "videos": [v.strip() for v in inst.videos.split("|") if v.strip()] if inst.videos else [],
+        "countdown_date": inst.countdown_date,
+        "countdown_title": inst.countdown_title,
+        "top_bar_text": inst.top_bar_text,
+        "management_team": _parse_json_field(inst.management_team),
+        "technical_team": _parse_json_field(inst.technical_team),
+        "former_staff": _parse_json_field(inst.former_staff),
     }
 
 
@@ -203,3 +214,76 @@ def public_submit_enquiry(payload: dict, db: Session = Depends(get_db)) -> dict:
     db.add(enquiry)
     db.commit()
     return {"message": "Enquiry submitted successfully"}
+
+
+@router.get("/student-creativity")
+def public_student_creativity(db: Session = Depends(get_db), limit: int = Query(20, ge=1, le=100)) -> list[dict]:
+    """Returns published student creativity entries."""
+    items = db.execute(
+        select(StudentCreativity)
+        .where(StudentCreativity.is_published == True)
+        .order_by(StudentCreativity.display_order, StudentCreativity.created_at.desc())
+        .limit(limit)
+    ).scalars().all()
+    return [
+        {
+            "id": str(i.id),
+            "title": i.title,
+            "student_name": i.student_name,
+            "class_name": i.class_name,
+            "file_type": i.file_type,
+            "file_url": i.file_url,
+            "description": i.description,
+            "created_at": i.created_at.isoformat(),
+        }
+        for i in items
+    ]
+
+
+@router.get("/testimonials")
+def public_testimonials(db: Session = Depends(get_db), limit: int = Query(20, ge=1, le=50)) -> list[dict]:
+    """Returns approved and published testimonials."""
+    items = db.execute(
+        select(Testimonial)
+        .where(Testimonial.is_approved == True, Testimonial.is_published == True)
+        .order_by(Testimonial.submitted_at.desc())
+        .limit(limit)
+    ).scalars().all()
+    return [
+        {
+            "id": str(i.id),
+            "name": i.name,
+            "role": i.role,
+            "message": i.message,
+            "rating": i.rating,
+            "photo_url": i.photo_url,
+            "submitted_at": i.submitted_at.isoformat(),
+        }
+        for i in items
+    ]
+
+
+class FeedbackSubmit(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    role: str | None = Field(default=None, max_length=100)
+    message: str = Field(min_length=1, max_length=2000)
+    rating: int | None = Field(default=None, ge=1, le=5)
+    photo_url: str | None = Field(default=None, max_length=500)
+
+
+@router.post("/feedback")
+def public_submit_feedback(payload: FeedbackSubmit, db: Session = Depends(get_db)) -> dict:
+    """Submit a testimonial/feedback (no auth required). Admin must approve before it's shown."""
+    testimonial = Testimonial(
+        name=payload.name.strip(),
+        role=payload.role.strip() if payload.role else None,
+        message=payload.message.strip(),
+        rating=payload.rating,
+        photo_url=payload.photo_url,
+        is_approved=False,
+        is_published=False,
+        submitted_at=datetime.now(UTC),
+    )
+    db.add(testimonial)
+    db.commit()
+    return {"message": "Feedback submitted successfully. It will be visible after admin approval."}

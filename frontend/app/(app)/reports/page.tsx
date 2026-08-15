@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic';
 const ReportsTab = dynamic(() => import('./tabs/reports-tab'), { ssr: false });
 const TransactionsTab = dynamic(() => import('./tabs/transactions-tab'), { ssr: false });
 const ExpensesTab = dynamic(() => import('./tabs/expenses-tab'), { ssr: false });
+const SavingsTab = dynamic(() => import('./tabs/savings-tab'), { ssr: false });
 
 export default function ReportsPage() {
   return (
@@ -48,6 +49,7 @@ function ReportsPageInner() {
     { id: 'reports', label: 'Reports & Analytics', permission: 'reports' },
     { id: 'transactions', label: 'Transactions', permission: 'transactions' },
     { id: 'expenses', label: 'Expenses', permission: 'expenses' },
+    { id: 'savings', label: 'Savings', permission: 'savings' },
   ];
 
   // Tabs visible to this user
@@ -95,6 +97,7 @@ function ReportsPageInner() {
           {effectiveTab === 'reports' && <ReportsTab />}
           {effectiveTab === 'transactions' && <TransactionsTab />}
           {effectiveTab === 'expenses' && <ExpensesTab />}
+          {effectiveTab === 'savings' && <SavingsTab />}
         </div>
       )}
     </AppShell>

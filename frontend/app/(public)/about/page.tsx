@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Card } from '@/components/ui/public-card';
 import { GlowOrb } from '@/components/ui/glow-orb';
+import { ManagementTeamSection } from './management-team';
+import { TechnicalTeamSection } from './technical-team';
 
 const MILESTONES = [
   { date: 'June 4, 2009', text: 'Established "MY ACADEMY" at Cemetery Road with', bold: '10 students and 2 teachers', dot: 'bg-indigo-600', badge: 'bg-slate-100 text-slate-600' },
@@ -153,6 +155,68 @@ export default function AboutPage() {
             <Link href="/facilities" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-800">
               See our campus facilities
               <svg className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Management Team */}
+      <ManagementTeamSection />
+
+      {/* Technical Team */}
+      <TechnicalTeamSection />
+
+      {/* Quick Links */}
+      <section className="bg-white py-12 sm:py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <p className="reveal text-xs font-semibold uppercase tracking-widest text-indigo-600 text-center">Quick Links</p>
+          <h2 className="reveal mt-1 text-2xl font-bold text-center">
+            <span className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">Explore More</span>
+          </h2>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Link href="/faculty" className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition-transform duration-300 group-hover:scale-110">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Faculty</p>
+                <p className="text-xs text-slate-500">Meet our experienced teaching staff</p>
+              </div>
+              <svg className="ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </Link>
+
+            <Link href="/facilities" className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition-transform duration-300 group-hover:scale-110">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Facilities</p>
+                <p className="text-xs text-slate-500">Our campus and learning infrastructure</p>
+              </div>
+              <svg className="ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </Link>
+
+            <Link href="/achievements" className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition-transform duration-300 group-hover:scale-110">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .982-3.172M12 3.75a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Achievements</p>
+                <p className="text-xs text-slate-500">Our students' academic excellence</p>
+              </div>
+              <svg className="ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </Link>
+
+            <Link href="/contact" className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600 transition-transform duration-300 group-hover:scale-110">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Contact Us</p>
+                <p className="text-xs text-slate-500">Get in touch with us</p>
+              </div>
+              <svg className="ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </Link>
           </div>
         </div>

@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     receipt_prefix: str = "FEE-"
 
+    # WhatsApp Cloud API
+    whatsapp_phone_number_id: str = ""
+    whatsapp_access_token: str = ""
+
     jwt_algorithm: str = "HS256"
     jwt_access_token_exp_minutes: int = 60 * 2  # 2 hours
     jwt_refresh_token_exp_days: int = 30

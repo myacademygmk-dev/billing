@@ -602,3 +602,229 @@ def get_upcoming_birthdays(
 
     upcoming.sort(key=lambda x: x["days_away"])
     return {"items": upcoming, "total": len(upcoming)}
+
+
+# ═══════════════════════════════════════════════
+# WhatsApp API Integration
+# ═══════════════════════════════════════════════
+
+@router.post("/whatsapp/send-receipt")
+def whatsapp_send_receipt(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> dict:
+    """Send payment receipt via WhatsApp to student's parent."""
+    from app.services.whatsapp_api import send_text_message_sync
+
+    payment_id = payload.get("payment_id")
+    if not payment_id:
+        raise HTTPException(status_code=422, detail="payment_id is required")
+
+    from app.models.payment import Payment
+    payment = db.get(Payment, uuid.UUID(payment_id))
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    student = db.get(Student, payment.student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    phone = student.whatsapp_no or student.parent_phone or student.contact_no
+    if not phone:
+        raise HTTPException(status_code=422, detail="No phone number found for this student")
+
+    message = (
+        f"✅ *Fee Payment Received*\n\n"
+        f"🏫 MY Academy\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 Student: *{student.name}*\n"
+        f"🧾 Receipt: {payment.receipt_no}\n"
+        f"💰 Amount: *₹{payment.amount}*\n"
+        f"💳 Mode: {(payment.mode or 'cash').upper()}\n"
+        f"📅 Date: {payment.paid_at.strftime('%d %b %Y') if payment.paid_at else '-'}\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"Thank you for the payment! 🙏"
+    )
+
+    result = send_text_message_sync(phone, message)
+    return {"status": result.get("status"), "phone": phone, "message": "Receipt sent via WhatsApp" if result.get("status") == "sent" else result.get("error")}
+
+
+@router.post("/whatsapp/send-reminder")
+def whatsapp_send_reminder(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> dict:
+    """Send fee reminder to a specific student's parent via WhatsApp."""
+    from app.services.whatsapp_api import send_text_message_sync
+    from app.services.billing import get_student_billing_overview, pending_amount, pending_details
+    from app.models.student_billing_period import StudentBillingPeriod
+
+    student_id = payload.get("student_id")
+    if not student_id:
+        raise HTTPException(status_code=422, detail="student_id is required")
+
+    student = db.execute(
+        select(Student)
+        .where(Student.id == uuid.UUID(student_id))
+        .options(selectinload(Student.fee), selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment))
+    ).scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    phone = student.whatsapp_no or student.parent_phone or student.contact_no
+    if not phone:
+        raise HTTPException(status_code=422, detail="No phone number found for this student")
+
+    overview = get_student_billing_overview(db, student)
+    amount = pending_amount(overview)
+    details = pending_details(overview)
+
+    message = (
+        f"📢 *Fee Reminder*\n\n"
+        f"Dear Parent,\n\n"
+        f"This is a gentle reminder regarding pending fees for *{student.name}*.\n\n"
+        f"💰 Pending: *₹{amount}*\n"
+    )
+    if details:
+        message += f"📅 Months: {details}\n"
+    message += (
+        f"\nKindly clear the dues at your earliest convenience.\n\n"
+        f"Thank you,\nMY Academy\n📞 044-4356 8296"
+    )
+
+    result = send_text_message_sync(phone, message)
+    return {"status": result.get("status"), "phone": phone, "message": "Reminder sent" if result.get("status") == "sent" else result.get("error")}
+
+
+@router.post("/whatsapp/send-bulk-reminder")
+def whatsapp_send_bulk_reminder(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_user),
+) -> dict:
+    """Send fee reminder to all students with pending fees (or filtered by class)."""
+    from app.services.whatsapp_api import send_text_message_sync
+    from app.services.billing import get_student_billing_overview, pending_amount, pending_details
+    from app.models.student_billing_period import StudentBillingPeriod
+
+    class_name = payload.get("class_name")
+    _BILLING_OPTS = [selectinload(Student.fee), selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment)]
+
+    stmt = select(Student).where(Student.status == StudentStatus.active).options(*_BILLING_OPTS)
+    if class_name:
+        stmt = stmt.where(Student.class_name == class_name)
+
+    students = db.execute(stmt).scalars().all()
+    sent = 0
+    failed = 0
+    skipped = 0
+
+    for student in students:
+        overview = get_student_billing_overview(db, student)
+        amount = pending_amount(overview)
+        if amount <= 0:
+            skipped += 1
+            continue
+
+        phone = student.whatsapp_no or student.parent_phone or student.contact_no
+        if not phone:
+            skipped += 1
+            continue
+
+        details = pending_details(overview)
+        message = (
+            f"📢 *Fee Reminder*\n\n"
+            f"Dear Parent,\n\n"
+            f"Pending fees for *{student.name}*: *₹{amount}*\n"
+        )
+        if details:
+            message += f"Months: {details}\n"
+        message += f"\nPlease clear at the earliest.\n— MY Academy"
+
+        result = send_text_message_sync(phone, message)
+        if result.get("status") == "sent":
+            sent += 1
+        else:
+            failed += 1
+
+    return {"sent": sent, "failed": failed, "skipped": skipped, "total": len(students)}
+
+
+@router.post("/whatsapp/send-announcement")
+def whatsapp_send_announcement(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_user),
+) -> dict:
+    """Send announcement/ad to all students or a filtered class via WhatsApp."""
+    from app.services.whatsapp_api import send_text_message_sync
+
+    title = payload.get("title", "").strip()
+    body = payload.get("body", "").strip()
+    class_name = payload.get("class_name")
+
+    if not title or not body:
+        raise HTTPException(status_code=422, detail="title and body are required")
+
+    message = f"📣 *{title}*\n\n{body}\n\n— MY Academy"
+
+    stmt = select(Student).where(Student.status == StudentStatus.active)
+    if class_name:
+        stmt = stmt.where(Student.class_name == class_name)
+
+    students = db.execute(stmt).scalars().all()
+    sent = 0
+    failed = 0
+
+    for student in students:
+        phone = student.whatsapp_no or student.parent_phone or student.contact_no
+        if not phone:
+            continue
+        result = send_text_message_sync(phone, message)
+        if result.get("status") == "sent":
+            sent += 1
+        else:
+            failed += 1
+
+    return {"sent": sent, "failed": failed, "total": len(students)}
+
+
+@router.post("/whatsapp/send-leave-info")
+def whatsapp_send_leave_info(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> dict:
+    """Send leave/absence notification to parent via WhatsApp."""
+    from app.services.whatsapp_api import send_text_message_sync
+
+    student_id = payload.get("student_id")
+    leave_date = payload.get("date", "")
+    reason = payload.get("reason", "")
+
+    if not student_id:
+        raise HTTPException(status_code=422, detail="student_id is required")
+
+    student = db.get(Student, uuid.UUID(student_id))
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    phone = student.whatsapp_no or student.parent_phone or student.contact_no
+    if not phone:
+        raise HTTPException(status_code=422, detail="No phone number found")
+
+    message = (
+        f"📋 *Absence Notification*\n\n"
+        f"Student: *{student.name}*\n"
+        f"Class: {student.class_name or '-'}\n"
+        f"Date: {leave_date}\n"
+    )
+    if reason:
+        message += f"Reason: {reason}\n"
+    message += f"\n— MY Academy"
+
+    result = send_text_message_sync(phone, message)
+    return {"status": result.get("status"), "phone": phone}

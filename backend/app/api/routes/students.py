@@ -708,8 +708,29 @@ def create_student(
         batch_start_month=payload.batch_start_month,
         billing_start_month=payload.billing_start_month,
         billing_end_month=payload.billing_end_month,
+        school_name=payload.school_name,
+        date_of_birth=payload.date_of_birth,
+        gender=payload.gender,
+        contact_no=payload.contact_no,
+        parent_phone=payload.parent_phone,
+        parent_phone_2=payload.parent_phone_2,
+        whatsapp_no=payload.whatsapp_no,
+        father_name=payload.father_name,
+        mother_name=payload.mother_name,
+        father_occupation=payload.father_occupation,
+        mother_occupation=payload.mother_occupation,
+        hobbies=payload.hobbies,
+        address=payload.address,
+        student_email=payload.student_email,
     )
-    student.fee = StudentFee(expected_fee_amount=0)
+    # Set fee if provided
+    fee_amount = Decimal("0")
+    if hasattr(payload, 'expected_fee') and payload.expected_fee:
+        try:
+            fee_amount = Decimal(str(payload.expected_fee))
+        except Exception:
+            pass
+    student.fee = StudentFee(expected_fee_amount=fee_amount)
     db.add(student)
     db.commit()
     db.refresh(student)
@@ -766,6 +787,12 @@ def update_student(
         "name", "class_name", "payment_period", "joined_date",
         "batch", "batch_start_month", "billing_start_month", "billing_end_month",
         "status", "serial_no", "student_code",
+        "school_name", "date_of_birth", "gender", "contact_no",
+        "parent_phone", "parent_phone_2", "whatsapp_no",
+        "father_name", "mother_name", "father_occupation", "mother_occupation",
+        "hobbies", "address", "student_email", "photo_url", "blood_group",
+        "admission_no", "guardian_name", "parent_email", "parent_occupation",
+        "city", "pincode", "previous_school", "emergency_contact", "emergency_phone", "notes",
     }
     data = payload.model_dump(exclude_unset=True)
 

@@ -22,7 +22,7 @@ function StatItem({ value, suffix = '', label, icon, delay }: StatItemProps) {
           if (entry.isIntersecting && !hasAnimated) {
             setHasAnimated(true);
             const startTime = performance.now();
-            const duration = 1400;
+            const duration = 3000;
             const step = (currentTime: number) => {
               const elapsed = currentTime - startTime;
               const progress = Math.min(elapsed / duration, 1);

@@ -18,6 +18,7 @@ from app.models.enums import StudentStatus
 from app.models.payment import Payment
 from app.models.student import Student
 from app.models.student_billing_period import StudentBillingPeriod
+from app.models.student_fee import StudentFee
 from app.models.user import User
 from app.services.billing import fee_period_label, get_student_billing_overview, pending_amount
 from app.services.billing import normalize_month
@@ -56,7 +57,12 @@ def export_students_csv(
     _: User = Depends(get_current_user),
 ) -> StreamingResponse:
     def generate():
-        yield _csv_row(["student_code", "name", "class_name", "section", "status", "created_at"])
+        yield _csv_row([
+            "roll_no", "name", "class", "school", "dob", "doj", "gender",
+            "contact_no", "father_name", "mother_name", "father_phone", "mother_phone",
+            "whatsapp", "father_occupation", "mother_occupation",
+            "hobbies", "address", "email", "fee", "status"
+        ])
         offset = 0
         while True:
             students = db.execute(
@@ -68,7 +74,21 @@ def export_students_csv(
             if not students:
                 break
             for s in students:
-                yield _csv_row([s.student_code, s.name, s.class_name or "", s.section or "", s.status.value, s.created_at.isoformat()])
+                # Get fee
+                fee_row = db.get(StudentFee, s.id)
+                fee_val = str(fee_row.expected_fee_amount) if fee_row else "0"
+                yield _csv_row([
+                    s.student_code, s.name, s.class_name or "",
+                    s.school_name or "", 
+                    s.date_of_birth.isoformat() if s.date_of_birth else "",
+                    s.joined_date.isoformat() if s.joined_date else "",
+                    s.gender or "",
+                    s.contact_no or "", s.father_name or "", s.mother_name or "",
+                    s.parent_phone or "", s.parent_phone_2 or "",
+                    s.whatsapp_no or "", s.father_occupation or "", s.mother_occupation or "",
+                    s.hobbies or "", s.address or "", s.student_email or "",
+                    fee_val, s.status.value,
+                ])
             if len(students) < _CHUNK_SIZE:
                 break
             offset += _CHUNK_SIZE
@@ -85,10 +105,10 @@ def export_payments_csv(
     to_dt: datetime | None = Query(default=None, alias="to"),
 ) -> StreamingResponse:
     def generate():
-        yield _csv_row(["receipt_no", "student_id", "amount", "mode", "reference_no", "notes", "fee_period", "paid_at", "created_by"])
+        yield _csv_row(["receipt_no", "roll_no", "student_name", "class", "amount", "mode", "reference_no", "notes", "fee_period", "paid_at"])
         offset = 0
         while True:
-            stmt = select(Payment).order_by(Payment.paid_at.desc())
+            stmt = select(Payment).options(selectinload(Payment.student)).order_by(Payment.paid_at.desc())
             if student_id:
                 stmt = stmt.where(Payment.student_id == student_id)
             if from_dt:
@@ -100,11 +120,15 @@ def export_payments_csv(
             if not payments:
                 break
             for p in payments:
+                student_name = p.student.name if p.student else ""
+                student_code = p.student.student_code if p.student else ""
+                class_name = p.student.class_name if p.student else ""
                 yield _csv_row([
-                    p.receipt_no, str(p.student_id), str(p.amount), p.mode.value,
+                    p.receipt_no, student_code, student_name, class_name,
+                    str(p.amount), p.mode.value if p.mode else "",
                     p.reference_no or "", p.notes or "",
                     fee_period_label(p.billing_start_month, p.billing_cycle_months) or "",
-                    p.paid_at.isoformat(), str(p.created_by),
+                    p.paid_at.isoformat() if p.paid_at else "",
                 ])
             if len(payments) < _CHUNK_SIZE:
                 break
@@ -219,3 +243,102 @@ def export_monthly_students_csv(
             offset += _CHUNK_SIZE
 
     return _csv_streaming_response(f"students_{payment_state}_{selected_month.isoformat()}.csv", generate())
+
+
+@router.get("/students.xlsx")
+def export_students_excel(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> StreamingResponse:
+    """Export students as multi-sheet Excel: Full Details, Summary, Attendance, Marks."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from app.models.attendance import StudentAttendance
+    from app.models.exam import Mark, Exam
+
+    wb = openpyxl.Workbook()
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+
+    def style_header(ws):
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+    # --- Sheet 1: Full Details ---
+    ws1 = wb.active
+    ws1.title = "Full Details"
+    ws1.append([
+        "Roll No", "Name", "Class", "School", "DOB", "DOJ", "Gender",
+        "Contact", "Father Name", "Mother Name", "Father Phone", "Mother Phone",
+        "WhatsApp", "Father Occupation", "Mother Occupation",
+        "Hobbies", "Address", "Email", "Fee", "Status"
+    ])
+    style_header(ws1)
+
+    students = db.execute(select(Student).order_by(Student.student_code)).scalars().all()
+    for s in students:
+        fee_row = db.get(StudentFee, s.id)
+        fee_val = str(fee_row.expected_fee_amount) if fee_row else "0"
+        ws1.append([
+            s.student_code, s.name, s.class_name or "", s.school_name or "",
+            s.date_of_birth.isoformat() if s.date_of_birth else "",
+            s.joined_date.isoformat() if s.joined_date else "",
+            s.gender or "", s.contact_no or "",
+            s.father_name or "", s.mother_name or "",
+            s.parent_phone or "", s.parent_phone_2 or "",
+            s.whatsapp_no or "", s.father_occupation or "", s.mother_occupation or "",
+            s.hobbies or "", s.address or "", s.student_email or "",
+            fee_val, s.status.value,
+        ])
+
+    # --- Sheet 2: Summary (Short) ---
+    ws2 = wb.create_sheet("Summary")
+    ws2.append(["Roll No", "Name", "Class", "Fee", "Status"])
+    style_header(ws2)
+    for s in students:
+        fee_row = db.get(StudentFee, s.id)
+        fee_val = str(fee_row.expected_fee_amount) if fee_row else "0"
+        ws2.append([s.student_code, s.name, s.class_name or "", fee_val, s.status.value])
+
+    # --- Sheet 3: Attendance ---
+    ws3 = wb.create_sheet("Attendance")
+    ws3.append(["Roll No", "Name", "Class", "Date", "Status"])
+    style_header(ws3)
+    attendance_rows = db.execute(
+        select(StudentAttendance, Student)
+        .join(Student, StudentAttendance.student_id == Student.id)
+        .order_by(StudentAttendance.date.desc())
+        .limit(5000)
+    ).all()
+    for att, stu in attendance_rows:
+        ws3.append([stu.student_code, stu.name, stu.class_name or "", att.date.isoformat(), att.status])
+
+    # --- Sheet 4: Marks ---
+    ws4 = wb.create_sheet("Marks")
+    ws4.append(["Roll No", "Name", "Class", "Exam", "Marks Obtained", "Max Marks", "Grade"])
+    style_header(ws4)
+    mark_rows = db.execute(
+        select(Mark, Student, Exam)
+        .join(Student, Mark.student_id == Student.id)
+        .join(Exam, Mark.exam_id == Exam.id)
+        .order_by(Exam.name, Student.student_code)
+        .limit(5000)
+    ).all()
+    for m, stu, exam in mark_rows:
+        ws4.append([
+            stu.student_code, stu.name, stu.class_name or "",
+            exam.name, str(m.marks_obtained), str(m.max_marks), m.grade or "",
+        ])
+
+    # Save to buffer
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=students_export.xlsx"},
+    )

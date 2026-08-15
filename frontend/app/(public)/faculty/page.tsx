@@ -1,11 +1,20 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardBadge } from '@/components/ui/public-card';
 import { GlowOrb } from '@/components/ui/glow-orb';
 
 const AVATAR_COLORS = ['bg-indigo-600', 'bg-violet-600', 'bg-teal-600', 'bg-amber-600'];
 
-const TEACHING_STAFF = [
+interface StaffMember {
+  name: string;
+  initials?: string;
+  designation: string;
+  qualification: string;
+  photo_url?: string;
+}
+
+const TEACHING_STAFF_FALLBACK: StaffMember[] = [
   { name: 'Dr. Srinivasan R.', initials: 'SR', designation: 'Principal & Physics', qualification: 'M.Sc., Ph.D., B.Ed.' },
   { name: 'Mrs. Lakshmi Narayanan', initials: 'LN', designation: 'Vice Principal & Mathematics', qualification: 'M.Sc., M.Phil., B.Ed.' },
   { name: 'Mr. Karthikeyan P.', initials: 'KP', designation: 'Head of Science Dept.', qualification: 'M.Sc. Chemistry, B.Ed.' },
@@ -23,7 +32,41 @@ const STATS = [
   { label: 'Years Avg Experience', value: '10+' },
 ];
 
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter((w) => w.length > 1 && w[0] === w[0].toUpperCase())
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('');
+}
+
 export default function FacultyPage() {
+  const [staff, setStaff] = useState<StaffMember[]>(TEACHING_STAFF_FALLBACK);
+  const [formerStaff, setFormerStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/backend/public/website-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.faculty && Array.isArray(data.faculty) && data.faculty.length > 0) {
+            setStaff(data.faculty);
+          }
+          if (data.former_staff && Array.isArray(data.former_staff) && data.former_staff.length > 0) {
+            setFormerStaff(data.former_staff);
+          }
+        }
+      } catch {
+        // use fallback
+      }
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
   return (
     <main className="min-h-screen">
       {/* Hero */}
@@ -63,42 +106,103 @@ export default function FacultyPage() {
         <GlowOrb color="bg-indigo-200/40" className="-right-16 -top-16 h-72 w-72" />
         <GlowOrb color="bg-amber-200/30" className="-bottom-16 -left-16 h-64 w-64" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="reveal text-center">
+          <div className="text-center">
             <h2 className="text-3xl font-bold">
               <span className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">Teaching Staff</span>
             </h2>
             <p className="mt-3 text-gray-600">Meet the experienced educators who guide and inspire our students</p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {TEACHING_STAFF.map((staff, i) => (
-              <Card key={staff.name} className={`reveal reveal-delay-${(i % 6) + 1}`}>
-                <div className="p-6">
+          {loading ? (
+            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-6">
                   <div className="flex items-center gap-4">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg overflow-hidden ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
-                      {i < 3 ? (
-                        <img src={`/images/260x260_staff${8 + i}.jpg`} alt={staff.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-semibold text-white">{staff.initials}</span>
-                      )}
+                    <div className="h-12 w-12 rounded-lg bg-slate-200" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 w-3/4 rounded bg-slate-200" />
+                      <div className="h-3 w-1/2 rounded bg-slate-200" />
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-slate-900 truncate">{staff.name}</h3>
-                      <p className="mt-0.5 text-sm text-slate-500">{staff.designation}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
-                    </svg>
-                    <p className="text-sm text-slate-500">{staff.qualification}</p>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {staff.map((member, i) => (
+                <Card key={member.name + i}>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg overflow-hidden ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
+                        {member.photo_url ? (
+                          <img src={member.photo_url} alt={member.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-semibold text-white">{member.initials || getInitials(member.name)}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-900 truncate">{member.name}</h3>
+                        <p className="mt-0.5 text-sm text-slate-500">{member.designation}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+                      </svg>
+                      <p className="text-sm text-slate-500">{member.qualification}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Former Staff */}
+      {formerStaff.length > 0 && (
+        <section className="relative overflow-hidden bg-white py-12 sm:py-14">
+          <GlowOrb color="bg-slate-200/40" className="-left-16 -top-16 h-64 w-64" />
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold">
+                <span className="bg-gradient-to-r from-slate-600 to-slate-800 bg-clip-text text-transparent">Former Staff</span>
+              </h2>
+              <p className="mt-3 text-gray-600">We honour the contributions of our former educators</p>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {formerStaff.map((member, i) => (
+                <Card key={member.name + i}>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-slate-400">
+                        {member.photo_url ? (
+                          <img src={member.photo_url} alt={member.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-semibold text-white">{member.initials || getInitials(member.name)}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-900 truncate">{member.name}</h3>
+                        <p className="mt-0.5 text-sm text-slate-500">{member.designation}</p>
+                      </div>
+                    </div>
+                    {member.qualification && (
+                      <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+                        </svg>
+                        <p className="text-sm text-slate-500">{member.qualification}</p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-12">

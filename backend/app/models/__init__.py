@@ -19,6 +19,8 @@ from app.models.attendance import StudentAttendance, StaffAttendance, StaffClock
 from app.models.enquiry import Enquiry
 from app.models.file_upload import FileUpload
 from app.models.promotion import PromotionHistory, StudentArrears
+from app.models.student_creativity import StudentCreativity
+from app.models.testimonial import Testimonial
 
 __all__ = [
     "Base",
@@ -52,4 +54,6 @@ __all__ = [
     "FileUpload",
     "PromotionHistory",
     "StudentArrears",
+    "StudentCreativity",
+    "Testimonial",
 ]

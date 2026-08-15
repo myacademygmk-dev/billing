@@ -12,6 +12,7 @@ from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
 from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
+from app.models.enums import StudentStatus
 from app.models.user import User
 from app.schemas.savings import (
     SavingsEntryCreate,
@@ -94,15 +95,18 @@ def list_student_savings_balances(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
     search: str | None = None,
+    class_name: str | None = None,
     class_prefix: str | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(200, ge=1, le=500),
 ) -> dict:
-    stmt = select(Student)
+    stmt = select(Student).where(Student.status == StudentStatus.active)
     if search:
         s = f"%{search.lower()}%"
         stmt = stmt.where(func.lower(Student.student_code).like(s))
-    if class_prefix:
+    if class_name:
+        stmt = stmt.where(Student.class_name == class_name)
+    elif class_prefix:
         stmt = stmt.where(func.lower(Student.student_code).like(f"{class_prefix.lower()[:2]}%"))
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
@@ -116,28 +120,46 @@ def list_student_savings_balances(
         .all()
     )
 
-    # Batch query for savings totals
+    # Batch query for savings — separate deposits and withdrawals
     student_ids = [s.id for s in students]
-    savings_totals: dict = {}
+    deposits_map: dict = {}
+    withdrawals_map: dict = {}
     if student_ids:
-        savings_rows = db.execute(
+        # Deposits (positive amounts)
+        dep_rows = db.execute(
             select(SavingsEntry.student_id, func.coalesce(func.sum(SavingsEntry.amount), 0))
-            .where(SavingsEntry.student_id.in_(student_ids))
+            .where(SavingsEntry.student_id.in_(student_ids), SavingsEntry.amount > 0)
             .group_by(SavingsEntry.student_id)
         ).all()
-        savings_totals = {sid: total for sid, total in savings_rows}
+        deposits_map = {sid: amt for sid, amt in dep_rows}
+
+        # Withdrawals (negative amounts)
+        wd_rows = db.execute(
+            select(SavingsEntry.student_id, func.coalesce(func.sum(SavingsEntry.amount), 0))
+            .where(SavingsEntry.student_id.in_(student_ids), SavingsEntry.amount < 0)
+            .group_by(SavingsEntry.student_id)
+        ).all()
+        withdrawals_map = {sid: abs(amt) for sid, amt in wd_rows}
 
     items: list[StudentSavingsBalanceRead] = []
     for student in students:
-        items.append(
-            StudentSavingsBalanceRead(
-                student_id=student.id,
-                student_code=student.student_code,
-                student_name=student.name,
-                total_savings=Decimal(savings_totals.get(student.id, 0)),
+        deposited = Decimal(deposits_map.get(student.id, 0))
+        withdrawn = Decimal(withdrawals_map.get(student.id, 0))
+        balance = deposited - withdrawn
+        # Only include students who have savings activity
+        if deposited > 0 or withdrawn > 0:
+            items.append(
+                StudentSavingsBalanceRead(
+                    student_id=student.id,
+                    student_code=student.student_code,
+                    student_name=student.name,
+                    class_name=student.class_name,
+                    total_deposited=deposited,
+                    total_withdrawn=withdrawn,
+                    balance=balance,
+                )
             )
-        )
-    return {"items": items, "total": total}
+    return {"items": items, "total": len(items)}
 
 
 @router.delete("/{entry_id}", status_code=204, response_model=None)

@@ -196,6 +196,17 @@ export default function StudentDetailPage() {
     onError: (e) => toast({ title: 'Action failed', description: String(e) })
   });
 
+  async function handleReactivate() {
+    try {
+      await apiFetch(`/students/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
+      toast({ title: 'Student reactivated' });
+      qc.invalidateQueries({ queryKey: ['student', id] });
+      qc.invalidateQueries({ queryKey: ['students'] });
+    } catch (e: any) {
+      toast({ title: 'Failed', description: String(e.message || e) });
+    }
+  }
+
   const hardDelete = useMutation({
     mutationFn: async () => {
       await apiFetch(`/students/${id}`, { method: 'DELETE' });
@@ -423,9 +434,14 @@ export default function StudentDetailPage() {
                 Mark Inactive
               </Button>
             ) : (
-              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                Permanently Delete
-              </Button>
+              <>
+                <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50" onClick={() => handleReactivate()}>
+                  Reactivate
+                </Button>
+                <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  Permanently Delete
+                </Button>
+              </>
             )}
             <Button
               variant="outline"
@@ -545,15 +561,15 @@ export default function StudentDetailPage() {
               <form onSubmit={feeForm.handleSubmit((v) => updateFee.mutate(v))}>
                 <DialogBody>
                   <div>
-                    <div className="mb-2 text-sm font-medium text-[#dbe6ff]">Monthly Fee</div>
+                    <div className="mb-2 text-sm font-medium text-gray-700">Monthly Fee (₹)</div>
                     <input
                       type="number"
                       step="0.01"
-                      className="h-12 w-full rounded-2xl border border-[rgba(151,164,187,0.14)] bg-[rgba(255,255,255,0.04)] px-4 text-sm text-white outline-none"
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       {...feeForm.register('expected_fee_amount')}
                     />
                     {feeForm.formState.errors.expected_fee_amount ? (
-                      <div className="mt-1 text-xs text-rose-300">{feeForm.formState.errors.expected_fee_amount.message}</div>
+                      <div className="mt-1 text-xs text-red-600">{feeForm.formState.errors.expected_fee_amount.message}</div>
                     ) : null}
                   </div>
                 </DialogBody>

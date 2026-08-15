@@ -47,7 +47,7 @@ class StudentCreate(BaseModel):
     emergency_contact: str | None = Field(default=None, max_length=200)
     emergency_phone: str | None = Field(default=None, max_length=20)
     notes: str | None = None
-
+    expected_fee: str | None = None  # Fee amount, parsed to Decimal on backend
 
 class StudentUpdate(BaseModel):
     serial_no: int | None = None
