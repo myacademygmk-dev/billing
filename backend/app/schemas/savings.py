@@ -49,4 +49,7 @@ class StudentSavingsBalanceRead(BaseModel):
     student_id: uuid.UUID
     student_code: str
     student_name: str
-    total_savings: Decimal
+    class_name: str | None = None
+    total_deposited: Decimal = Decimal("0")
+    total_withdrawn: Decimal = Decimal("0")
+    balance: Decimal = Decimal("0")

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/public-card';
 import { GlowOrb } from '@/components/ui/glow-orb';
 
@@ -11,9 +11,40 @@ const INFO_ACCENTS = [
   { chip: 'bg-violet-50', icon: 'text-violet-600' },
 ];
 
+interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  message: string;
+  rating: number;
+}
+
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Testimonials state
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+
+  // Feedback form state
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+
+  useEffect(() => {
+    async function fetchTestimonials() {
+      try {
+        const res = await fetch('/api/backend/public/testimonials');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setTestimonials(data);
+        }
+      } catch {
+        // silent
+      }
+    }
+    fetchTestimonials();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,6 +71,27 @@ export default function ContactPage() {
     setLoading(false);
   }
 
+  async function handleFeedback(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFeedbackLoading(true);
+    const form = e.currentTarget;
+    const data = {
+      name: (form.elements.namedItem('feedback_name') as HTMLInputElement).value,
+      role: (form.elements.namedItem('feedback_role') as HTMLSelectElement).value,
+      message: (form.elements.namedItem('feedback_message') as HTMLTextAreaElement).value,
+      rating: feedbackRating,
+    };
+    try {
+      const res = await fetch('/api/backend/public/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) setFeedbackSubmitted(true);
+    } catch {}
+    setFeedbackLoading(false);
+  }
+
   return (
     <div>
       {/* Hero */}
@@ -63,7 +115,7 @@ export default function ContactPage() {
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-5 lg:gap-10">
             {/* Form */}
-            <div className="reveal-left lg:col-span-3">
+            <div className="lg:col-span-3">
               <Card interactive={false}>
                 <div className="p-8 sm:p-10">
                   <h3 className="text-xl font-semibold text-slate-900 sm:text-2xl">Admission Enquiry</h3>
@@ -112,7 +164,7 @@ export default function ContactPage() {
             </div>
 
             {/* Info Cards */}
-            <div className="reveal-right space-y-4 lg:col-span-2">
+            <div className="space-y-4 lg:col-span-2">
               {[
                 { label: 'Address', value: '20/4, Kalingarayan Street, 1st Lane,\nOld Washermenpet, Chennai-21.', icon: 'M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z' },
                 { label: 'Phone', value: '044-4356 8296', icon: 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z' },
@@ -140,7 +192,7 @@ export default function ContactPage() {
           </div>
 
           {/* Map Placeholder */}
-          <Card interactive={false} className="reveal mt-8">
+          <Card interactive={false} className="mt-8">
             <div className="p-4">
               <div className="rounded-lg bg-slate-100 h-64 flex items-center justify-center">
                 <div className="text-center">
@@ -150,6 +202,147 @@ export default function ContactPage() {
                   <p className="mt-3 text-sm font-medium text-slate-400">Map • Old Washermenpet, Chennai-21</p>
                 </div>
               </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      {testimonials.length > 0 && (
+        <section className="relative overflow-hidden bg-white py-12 sm:py-14">
+          <GlowOrb color="bg-violet-200/30" className="-right-20 -top-16 h-64 w-64" />
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600 text-center">What People Say</p>
+            <h2 className="mt-1 text-2xl font-bold text-center">
+              <span className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">Testimonials</span>
+            </h2>
+
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {testimonials.map((t) => (
+                <Card key={t.id}>
+                  <div className="p-5">
+                    {/* Star Rating */}
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`h-4 w-4 ${star <= t.rating ? 'text-amber-400' : 'text-slate-200'}`}
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      ))}
+                    </div>
+
+                    {/* Message */}
+                    <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-4">&ldquo;{t.message}&rdquo;</p>
+
+                    {/* Author */}
+                    <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-600">
+                        {t.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{t.name}</p>
+                        <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600">{t.role}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Share Your Feedback */}
+      <section className="relative overflow-hidden bg-slate-50 py-12 sm:py-14">
+        <GlowOrb color="bg-amber-200/30" className="-left-16 -bottom-16 h-64 w-64" />
+        <div className="relative mx-auto max-w-2xl px-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600 text-center">Your Voice Matters</p>
+          <h2 className="mt-1 text-2xl font-bold text-center">
+            <span className="bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">Share Your Feedback</span>
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-500">Help us improve by sharing your experience</p>
+
+          <Card interactive={false} className="mt-8">
+            <div className="p-8">
+              {feedbackSubmitted ? (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-8 text-center">
+                  <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-emerald-600 animate-[pulse_1.5s_ease-in-out_1]">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <p className="mt-4 text-lg font-semibold text-slate-900">Thank You!</p>
+                  <p className="mt-2 text-sm text-slate-500">Your feedback has been submitted successfully.</p>
+                </div>
+              ) : (
+                <form className="space-y-5" onSubmit={handleFeedback}>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <input
+                      name="feedback_name"
+                      type="text"
+                      placeholder="Your Name *"
+                      required
+                      className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition"
+                    />
+                    <select
+                      name="feedback_role"
+                      required
+                      className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition"
+                    >
+                      <option value="">Select Role *</option>
+                      <option value="Parent">Parent</option>
+                      <option value="Student">Student</option>
+                      <option value="Alumni">Alumni</option>
+                    </select>
+                  </div>
+
+                  {/* Star Rating Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Rating *</label>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className="p-1 transition-transform hover:scale-110"
+                          aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className={`h-7 w-7 transition-colors ${star <= feedbackRating ? 'text-amber-400' : 'text-slate-200 hover:text-amber-200'}`}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea
+                    name="feedback_message"
+                    placeholder="Share your experience... *"
+                    required
+                    rows={4}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition resize-none"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={feedbackLoading}
+                    className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/25 active:scale-[0.99] disabled:opacity-50"
+                  >
+                    {feedbackLoading ? 'Submitting...' : 'Submit Feedback'}
+                  </button>
+                </form>
+              )}
             </div>
           </Card>
         </div>

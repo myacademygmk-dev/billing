@@ -266,9 +266,9 @@ export default function StudentsTab() {
                 Bulk Edit ({selectedIds.size})
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => window.location.assign('/api/backend/export/students.csv')}>
+            <Button size="sm" variant="outline" onClick={() => window.location.assign('/api/backend/export/students.xlsx')}>
               <Download className="h-3 w-3" />
-              <span className="hidden sm:inline">CSV</span>
+              <span className="hidden sm:inline">Export</span>
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-3 w-3" />

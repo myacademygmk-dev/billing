@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_admin_user
-from app.api.routes import auth, academic, attendance, cms, enquiries, exams, expenses, export, fee_mgmt, health, payments, public, reports, savings, settings, staff, students, uploads, utilities
+from app.api.routes import auth, academic, attendance, cms, creativity, enquiries, exams, expenses, export, fee_mgmt, health, payments, public, reports, savings, settings, staff, students, testimonials, uploads, utilities
 
 
 api_router = APIRouter(prefix="/api")
@@ -25,3 +25,5 @@ api_router.include_router(public.router, prefix="/public", tags=["public"])
 api_router.include_router(enquiries.router, prefix="/enquiries", tags=["enquiries"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(utilities.router, prefix="/utils", tags=["utilities"])
+api_router.include_router(creativity.router, prefix="/creativity", tags=["creativity"], dependencies=[Depends(require_admin_user)])
+api_router.include_router(testimonials.router, prefix="/testimonials", tags=["testimonials"], dependencies=[Depends(require_admin_user)])

@@ -40,6 +40,13 @@ class InstitutionSettingsRead(BaseModel):
     facilities_data: str | None = None
     popup_banner_url: str | None = None
     hero_slides: str | None = None
+    videos: str | None = None
+    countdown_date: str | None = None
+    countdown_title: str | None = None
+    top_bar_text: str | None = None
+    management_team: str | None = None
+    technical_team: str | None = None
+    former_staff: str | None = None
     updated_at: datetime
     updated_by: uuid.UUID | None
 
@@ -65,6 +72,13 @@ class InstitutionSettingsUpdate(BaseModel):
     facilities_data: str | None = Field(default=None)
     popup_banner_url: str | None = Field(default=None, max_length=500)
     hero_slides: str | None = Field(default=None)
+    videos: str | None = Field(default=None)
+    countdown_date: str | None = Field(default=None, max_length=50)
+    countdown_title: str | None = Field(default=None, max_length=200)
+    top_bar_text: str | None = Field(default=None, max_length=500)
+    management_team: str | None = Field(default=None)
+    technical_team: str | None = Field(default=None)
+    former_staff: str | None = Field(default=None)
 
 
 class DatabaseResetRequest(BaseModel):

@@ -142,6 +142,13 @@ def _inst_to_read(inst) -> InstitutionSettingsRead:
         facilities_data=inst.facilities_data,
         popup_banner_url=inst.popup_banner_url,
         hero_slides=inst.hero_slides,
+        videos=inst.videos,
+        countdown_date=inst.countdown_date,
+        countdown_title=inst.countdown_title,
+        top_bar_text=inst.top_bar_text,
+        management_team=inst.management_team,
+        technical_team=inst.technical_team,
+        former_staff=inst.former_staff,
         updated_at=inst.updated_at,
         updated_by=inst.updated_by,
     )

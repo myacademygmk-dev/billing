@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { HeroSlideshow } from '@/components/public/hero-slideshow';
 import { CountUpStats } from '@/components/public/count-up-stats';
+import { OurVideos } from '@/components/public/our-videos';
+import { StudentCreativity } from '@/components/public/student-creativity';
+import { Countdown } from '@/components/public/countdown';
 import { Card, RankRibbon, rankCardTint, rankHoverGlow } from '@/components/ui/public-card';
 import { AchievementMedal } from '@/components/ui/achievement-medal';
 import { GlowOrb } from '@/components/ui/glow-orb';
@@ -91,6 +94,16 @@ export default async function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════
+          OUR VIDEOS SECTION
+          ═══════════════════════════════════════════════ */}
+      <OurVideos />
+
+      {/* ═══════════════════════════════════════════════
+          COUNTDOWN SECTION
+          ═══════════════════════════════════════════════ */}
+      <Countdown />
+
+      {/* ═══════════════════════════════════════════════
           CLASSES SECTION
           ═══════════════════════════════════════════════ */}
       <section className="relative overflow-hidden py-14 bg-[#f5f3ff]">
@@ -156,6 +169,11 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════
+          STUDENT CREATIVITY
+          ═══════════════════════════════════════════════ */}
+      <StudentCreativity />
 
       {/* ═══════════════════════════════════════════════
           FACILITIES — Dark Section

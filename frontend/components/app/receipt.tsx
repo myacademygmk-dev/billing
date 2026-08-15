@@ -42,7 +42,7 @@ function buildPrintHtml(data: ReceiptData): string {
     '<div class="receipt">',
     // Header
     '<div class="header">',
-    '  <div class="brand"><img src="/images/logo.jpeg" class="logo-img" alt="Logo" /><div class="brand-text"><h1>MY ACADEMY</h1><p>Gain More Knowledge</p></div></div>',
+    '  <div class="brand"><img src="' + (typeof window !== 'undefined' ? window.location.origin : '') + '/images/logo.jpeg" class="logo-img" alt="Logo" /><div class="brand-text"><h1>MY ACADEMY</h1><p>Gain More Knowledge</p></div></div>',
     '  <div class="header-right"><div class="doc-type">RECEIPT</div><div class="regd">Regd.No - 469/2016</div></div>',
     '</div>',
     '<div class="divider"></div>',
@@ -176,6 +176,26 @@ function handlePrint(data: ReceiptData) {
 }
 
 export function Receipt({ data, onClose }: { data: ReceiptData; onClose: () => void }) {
+  async function handleWhatsApp(d: ReceiptData) {
+    try {
+      const res = await fetch('/api/backend/utils/whatsapp/send-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ payment_id: d.id }),
+      });
+      const result = await res.json();
+      if (result.status === 'sent') {
+        alert('Receipt sent via WhatsApp ✅');
+      } else if (result.status === 'skipped') {
+        alert('WhatsApp API not configured. Add WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN to .env');
+      } else {
+        alert(`Failed: ${result.message || result.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      alert('Failed to send WhatsApp message');
+    }
+  }
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-[var(--panel-line)] bg-white p-4 shadow-sm text-xs">
@@ -248,9 +268,12 @@ export function Receipt({ data, onClose }: { data: ReceiptData; onClose: () => v
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 mt-3">
+      <div className="flex flex-wrap gap-2 mt-3">
         <Button size="sm" onClick={() => handlePrint(data)}>Print</Button>
         <Button size="sm" variant="outline" onClick={() => handleDownload(data)}>Download</Button>
+        <Button size="sm" variant="outline" className="text-green-700 border-green-200 hover:bg-green-50" onClick={() => handleWhatsApp(data)}>
+          WhatsApp
+        </Button>
         <Button size="sm" variant="outline" onClick={onClose}>Done</Button>
       </div>
     </div>

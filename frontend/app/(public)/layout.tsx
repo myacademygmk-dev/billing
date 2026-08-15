@@ -12,14 +12,14 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <PopupBanner />
       {/* Top bar */}
       <div className="hidden bg-[#0f172a] sm:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 text-sm sm:px-6">
           <div className="flex items-center gap-5">
             <span className="text-gray-300">✉ myacademy2009@gmail.com</span>
             <span className="text-gray-300">✆ 044-4356 8296</span>
           </div>
           <div className="flex items-center gap-5">
-            <span className="font-semibold text-yellow-400">RegNo: 469/2016</span>
-            <span className="text-gray-300">Since 2009</span>
+            <span className="font-bold text-yellow-400">RegNo: 469/2016</span>
+            <span className="font-medium text-gray-300">Since 2009</span>
           </div>
         </div>
       </div>
@@ -34,10 +34,10 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               className="h-12 w-12 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14"
             />
             <div>
-              <div className="text-xl font-extrabold tracking-tight text-indigo-600 sm:text-2xl">
+              <div className="text-2xl font-extrabold tracking-tight text-indigo-600 sm:text-[1.7rem]">
                 MY ACADEMY
               </div>
-              <div className="hidden text-[10px] font-bold uppercase tracking-[0.2em] text-yellow-500 sm:block">
+              <div className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-500 sm:block">
                 Gain More Knowledge
               </div>
             </div>
