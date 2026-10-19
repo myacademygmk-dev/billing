@@ -50,7 +50,7 @@ export function LoginClient() {
   });
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh">
       {/* Left panel — dark branded section */}
       <div className="hidden lg:flex lg:w-[52%] bg-gradient-to-br from-[#1e2d42] to-[#0f1a2a] p-10 flex-col justify-between relative overflow-hidden">
         {/* Background dot pattern */}
@@ -83,7 +83,7 @@ export function LoginClient() {
             <ShieldCheck className="h-3 w-3" />
             Secure Portal
           </div>
-          <h1 className="mt-5 text-4xl font-bold text-white tracking-[-0.03em]">MY ACADEMY</h1>
+          <h1 className="mt-5 text-balance text-4xl font-bold text-white">MY ACADEMY</h1>
           <p className="mt-1.5 text-sm font-medium text-[#8fb3ff]">Fee Management System</p>
           <p className="mt-4 max-w-sm text-[13px] text-[#94a3bd] leading-relaxed">
             Complete fee payment tracking, receipt management, and financial reporting for educational institutions.
@@ -305,13 +305,9 @@ export function LoginClient() {
             </Button>
           </form>
 
-          {/* Footer links */}
-          <div className="mt-5 flex items-center justify-between text-[11px]">
-            <a href="/setup-password" className="text-[var(--accent)] hover:underline">
-              Set up password
-            </a>
-            <span className="text-[var(--muted)]">Need help? Contact admin</span>
-          </div>
+          <p className="mt-5 text-center text-[11px] text-[var(--muted)]">
+            Need an account or a new invitation? Contact an administrator.
+          </p>
 
           {/* Security note */}
           <div className="mt-4 border-t border-[var(--panel-line)] pt-3">

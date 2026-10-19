@@ -5,6 +5,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
+import { ApplyFeeDialog } from '@/components/app/apply-fee-dialog';
+import { MetricTile } from '@/components/ui/app-ux';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +42,9 @@ export default function FeesPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showAddFee, setShowAddFee] = useState(false);
+  const [applyFee, setApplyFee] = useState<FeeStructure | null>(null);
+  const years = useQuery<{ id: string; name: string; is_current: boolean }[]>({ queryKey: ['academicYears'], queryFn: () => apiFetch('/academic/years') });
+  const studentClasses = useQuery<string[]>({ queryKey: ['studentClasses'], queryFn: () => apiFetch('/students/classes') });
   const [showAddDiscount, setShowAddDiscount] = useState(false);
   const [feeForm, setFeeForm] = useState({ name: '', amount: '', class_name: '', academic_year: '', is_recurring: true });
   const [discountForm, setDiscountForm] = useState({ name: '', discount_type: 'percentage', value: '', description: '' });
@@ -101,6 +106,11 @@ export default function FeesPage() {
   return (
     <AppShell title="Fee Structure & Discounts" subtitle="Define fee types and concessions for students.">
       <div className="page-grid">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <MetricTile label="Fee structures" value={fees.isLoading ? '...' : fees.isError ? 'Unavailable' : fees.data?.length ?? 0} tone="accent" />
+          <MetricTile label="Monthly templates" value={fees.isLoading ? '...' : fees.isError ? 'Unavailable' : fees.data?.filter((fee) => fee.is_recurring).length ?? 0} tone="success" />
+          <MetricTile label="Concessions" value={discounts.isLoading ? '...' : discounts.isError ? 'Unavailable' : discounts.data?.length ?? 0} tone="warning" />
+        </div>
         {/* Fee Structures */}
         <Card square transparent>
           <CardHeader>
@@ -117,7 +127,7 @@ export default function FeesPage() {
           <CardContent className="px-0 sm:px-0">
             {fees.isLoading ? (
               <SkeletonTable rows={3} cols={5} />
-            ) : !fees.data?.length ? (
+            ) : fees.isError ? <div role="alert" className="p-4 text-sm text-[var(--danger)]">Fee structures could not be loaded. <Button size="sm" variant="outline" onClick={() => fees.refetch()}>Retry</Button></div> : !fees.data?.length ? (
               <EmptyState
                 icon={<EmptyStateIcon type="fees" />}
                 title="No fee structures"
@@ -156,6 +166,7 @@ export default function FeesPage() {
                           </Badge>
                         </TD>
                         <TD className="text-right">
+                          {f.is_recurring && f.is_active && <Button size="sm" variant="outline" className="mr-2" onClick={() => setApplyFee(f)}>Apply monthly fee</Button>}
                           <Button
                             size="icon"
                             variant="ghost"
@@ -279,18 +290,20 @@ export default function FeesPage() {
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Class (optional)</label>
                   <Input
-                    placeholder="e.g. 10 or LKG"
+                    list="fee-classes"
+                    placeholder="All classes"
                     value={feeForm.class_name}
                     onChange={(e) => setFeeForm({ ...feeForm, class_name: e.target.value })}
                   />
+                  <datalist id="fee-classes">{studentClasses.data?.map((name) => <option key={name} value={name} />)}</datalist>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Academic Year</label>
-                  <Input
-                    placeholder="e.g. 2025-2026"
+                  <Select
+                    aria-label="Fee academic year"
                     value={feeForm.academic_year}
                     onChange={(e) => setFeeForm({ ...feeForm, academic_year: e.target.value })}
-                  />
+                  ><option value="">All academic years</option>{years.data?.map((year) => <option key={year.id} value={year.name}>{year.name}</option>)}</Select>
                 </div>
               </div>
               <label className="flex items-center gap-2.5 text-sm text-[var(--text)]">
@@ -318,7 +331,7 @@ export default function FeesPage() {
                   academic_year: feeForm.academic_year || null,
                 })
               }
-              disabled={!feeForm.name || !feeForm.amount}
+              disabled={!feeForm.name.trim() || !feeForm.amount || !Number.isFinite(Number(feeForm.amount)) || Number(feeForm.amount) < 0}
               loading={createFee.isPending}
             >
               Create Fee
@@ -410,6 +423,7 @@ export default function FeesPage() {
           else deleteDiscount.mutate(deleteTarget.id);
         }}
       />
+      {applyFee && <ApplyFeeDialog fee={applyFee} onClose={() => setApplyFee(null)} />}
     </AppShell>
   );
 }

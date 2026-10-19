@@ -4,9 +4,8 @@ import { CountUpStats } from '@/components/public/count-up-stats';
 import { OurVideos } from '@/components/public/our-videos';
 import { StudentCreativity } from '@/components/public/student-creativity';
 import { Countdown } from '@/components/public/countdown';
-import { Card, RankRibbon, rankCardTint, rankHoverGlow } from '@/components/ui/public-card';
-import { AchievementMedal } from '@/components/ui/achievement-medal';
-import { GlowOrb } from '@/components/ui/glow-orb';
+import { Card } from '@/components/ui/public-card';
+import { AchievementCard } from '@/components/public/achievement-card';
 
 export const revalidate = 60;
 
@@ -32,6 +31,23 @@ async function getData() {
   }
 }
 
+const HOME_LINKS = [
+  { href: '/about', label: 'About Us', description: 'Story, mission, management, faculty, facilities' },
+  { href: '/classes', label: 'Classes', description: 'Tuition, music, and summer batches' },
+  { href: '/achievements', label: 'Achievements', description: 'Student ranks, centums, and awards' },
+  { href: '/gallery', label: 'Gallery', description: 'Academy photos and memories' },
+  { href: '/news', label: 'News & Events', description: 'Latest updates and upcoming programs' },
+  { href: '/student-corner/creativity', label: 'Creativity', description: 'Student artwork and submissions' },
+  { href: '/student-corner/question-papers', label: 'Question Papers', description: 'Practice and exam resources' },
+  { href: '/student-corner/results', label: 'Results', description: 'Published academic results' },
+  { href: '/timetable', label: 'Timetable', description: 'Class and exam schedules' },
+  { href: '/publications', label: 'Publications', description: 'Notes, circulars, and documents' },
+  { href: '/payment-terms', label: 'Payment Terms', description: 'Fee and payment guidelines' },
+  { href: '/admissions', label: 'Admissions', description: 'Admission information and enquiries' },
+  { href: '/alumni', label: 'Alumni', description: 'Former student community' },
+  { href: '/contact', label: 'Contact', description: 'Address, phone, and enquiry details' },
+];
+
 export default async function HomePage() {
   const { news, events, achievements } = await getData();
 
@@ -53,18 +69,14 @@ export default async function HomePage() {
           ABOUT SECTION
           ═══════════════════════════════════════════════ */}
       <section className="relative overflow-hidden py-14 sm:py-16">
-        <GlowOrb color="bg-indigo-100/50" className="-right-24 top-0 h-72 w-72" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
             {/* Left - Logo */}
             <div className="reveal-left">
               <div className="relative">
-                <div className="aspect-[4/3] rounded-2xl border border-indigo-100 bg-white overflow-hidden flex items-center justify-center p-8">
+                <div className="aspect-[4/3] rounded-md border border-slate-200 bg-white overflow-hidden flex items-center justify-center p-8">
                   <img src="/images/logo.jpeg" alt="MY Academy" className="max-h-full max-w-full object-contain" />
                 </div>
-                {/* Decorative accent */}
-                <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 -z-10" />
-                <div className="absolute -top-4 -left-4 h-16 w-16 rounded-xl bg-indigo-600/10 border border-indigo-600/20 -z-10" />
               </div>
             </div>
 
@@ -72,9 +84,7 @@ export default async function HomePage() {
             <div className="reveal-right">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-teal-600">About Us</div>
               <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">
-                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  Excellence in Education
-                </span>
+                <span className="text-indigo-700">Excellence in Education</span>
                 <br />
                 <span className="text-gray-900">Since 2009</span>
               </h2>
@@ -84,7 +94,7 @@ export default async function HomePage() {
               <p className="mt-3 text-gray-600 leading-relaxed text-base">
                 Our focus on discipline, smart work, and happiness creates an environment where students thrive academically and personally.
               </p>
-              <div className="mt-6 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-5">
+              <div className="mt-6 border-l-4 border-indigo-600 bg-indigo-50 p-5">
                 <p className="text-sm italic text-gray-700">&ldquo;All of us do not have equal talents. But all of us have an equal opportunity to develop our talents.&rdquo;</p>
                 <p className="mt-2 text-xs font-bold text-indigo-600">— A.P.J. Abdul Kalam</p>
               </div>
@@ -107,12 +117,11 @@ export default async function HomePage() {
           CLASSES SECTION
           ═══════════════════════════════════════════════ */}
       <section className="relative overflow-hidden py-14 bg-[#f5f3ff]">
-        <GlowOrb color="bg-violet-200/40" className="-left-20 -bottom-20 h-72 w-72" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div className="text-center reveal">
             <div className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600">Programs</div>
-            <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">
-              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Our Classes</span>
+              <h2 className="mt-2 text-2xl font-extrabold text-slate-900 sm:text-3xl">
+              <span>Our Classes</span>
             </h2>
             <p className="mt-2 text-sm text-gray-500 max-w-lg mx-auto">Comprehensive education programs designed for every student&apos;s growth and success.</p>
           </div>
@@ -140,23 +149,23 @@ export default async function HomePage() {
                 icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />,
               },
             ].map((cls, i) => (
-              <Card key={cls.title} className={`reveal reveal-delay-${i + 1}`}>
-                <div className="p-5">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${cls.iconBg} ${cls.iconColor}`}>
+              <article key={cls.title} className={`reveal reveal-delay-${i + 1} relative overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm`}>
+                <div className="relative p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className={`flex size-12 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-black/5 ${cls.iconBg} ${cls.iconColor}`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
                         {cls.icon}
                       </svg>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">{cls.title}</h3>
-                      <p className="text-xs text-slate-400">{cls.tagline}</p>
+                    <div className="min-w-0 flex-1 text-right">
+                      <h3 className="text-xl font-extrabold text-slate-900">{cls.title}</h3>
+                      <p className="mt-1 text-sm font-medium text-slate-500">{cls.tagline}</p>
                     </div>
                   </div>
-                  <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+                  <ul className="mt-5 space-y-2.5 border-t border-slate-100 pt-5">
                     {cls.items.map((item) => (
-                      <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${cls.checkColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <li key={item} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 shrink-0 ${cls.checkColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
                         <span>{item}</span>
@@ -164,7 +173,7 @@ export default async function HomePage() {
                     ))}
                   </ul>
                 </div>
-              </Card>
+              </article>
             ))}
           </div>
         </div>
@@ -226,31 +235,16 @@ export default async function HomePage() {
             <div className="text-center reveal">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-600">Excellence</div>
               <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">
-                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Our Achievements</span>
+                <span className="text-indigo-700">Our Achievements</span>
               </h2>
             </div>
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {achievements.map((a: any, i: number) => (
-                <Card key={a.id} className={`reveal reveal-delay-${(i % 6) + 1} overflow-hidden transition-transform hover:-translate-y-0.5 ${rankCardTint(a.rank)} ${rankHoverGlow(a.rank)}`}>
-                  <RankRibbon rank={a.rank} />
-                  <div className="flex items-start gap-3 p-4 pb-3">
-                    <AchievementMedal rank={a.rank} marks={a.marks} size="sm" />
-                    <div className="min-w-0 pt-0.5">
-                      <div className="text-[15px] font-semibold text-slate-900 leading-tight truncate pr-6">{a.student_name}</div>
-                      <div className="mt-1 text-xs text-slate-500">{a.class_name} • {a.year}</div>
-                    </div>
-                  </div>
-                  {a.marks && (
-                    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Marks</span>
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{a.marks}</span>
-                    </div>
-                  )}
-                </Card>
+                <div key={a.id} className={`reveal reveal-delay-${(i % 6) + 1}`}><AchievementCard achievement={a} /></div>
               ))}
             </div>
             <div className="mt-10 text-center">
-              <Link href="/achievements" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-indigo-700 hover:scale-105 shadow-md">
+              <Link href="/achievements" className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700">
                 View All Achievements
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               </Link>
@@ -281,17 +275,18 @@ export default async function HomePage() {
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-400">Calendar</div>
               <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">Upcoming Events</h2>
             </div>
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-4 lg:grid-cols-4">
               {events.map((event: any, i: number) => (
-                <Card key={event.id} tone="dark" className={`reveal reveal-delay-${(i % 6) + 1}`}>
-                  <div className="p-6">
+                <Card key={event.id} tone="dark" className={`reveal reveal-delay-${(i % 6) + 1} overflow-hidden ${i === 0 ? 'lg:col-span-2 lg:row-span-2' : ''}`}>
+                  <div className={`${i === 0 ? 'p-7 sm:p-8' : 'p-5'} relative h-full`}>
+                    <div className="absolute left-0 top-0 h-full w-1 bg-yellow-400" />
                     {event.date && (
-                      <div className="inline-flex items-center rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-300">
+                      <div className="inline-flex items-center rounded-full bg-yellow-400 px-3 py-1 text-xs font-extrabold text-slate-950">
                         {new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     )}
-                    <h3 className="mt-3 text-lg font-semibold text-white">{event.title}</h3>
-                    {event.description && <p className="mt-2 text-sm text-slate-400 line-clamp-2">{event.description}</p>}
+                    <h3 className={`${i === 0 ? 'mt-5 text-2xl sm:text-3xl' : 'mt-4 text-lg'} font-extrabold text-white`}>{event.title}</h3>
+                    {event.description && <p className={`${i === 0 ? 'mt-4 text-base line-clamp-5' : 'mt-2 text-sm line-clamp-3'} text-slate-300`}>{event.description}</p>}
                   </div>
                 </Card>
               ))}
@@ -309,34 +304,34 @@ export default async function HomePage() {
             <div className="text-center reveal">
               <div className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600">Latest</div>
               <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">
-                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">News & Updates</span>
+                <span className="text-indigo-700">News & Updates</span>
               </h2>
             </div>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-5 lg:grid-cols-5">
               {news.map((item: any, i: number) => (
-                <Card key={item.id} className={`reveal reveal-delay-${(i % 6) + 1} overflow-hidden`}>
+                <Card key={item.id} className={`reveal reveal-delay-${(i % 6) + 1} overflow-hidden ${i === 0 ? 'lg:col-span-3 lg:row-span-3' : 'lg:col-span-2'}`}>
                   {/* Image */}
-                  <div className="aspect-[16/9] bg-slate-100 overflow-hidden">
+                  <div className={`${i === 0 ? 'aspect-[16/8]' : 'hidden'} bg-slate-100 overflow-hidden`}>
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     ) : (
                       <img src={`/images/360x220_img${7 + (i % 3)}.jpg`} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     )}
                   </div>
-                  <div className="p-5">
+                  <div className={i === 0 ? 'p-6' : 'border-l-4 border-indigo-500 p-5'}>
                     {item.date && (
-                      <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                      <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700">
                         {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
-                    <h3 className="mt-2 text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.title}</h3>
-                    {item.content && <p className="mt-2 text-sm text-slate-500 line-clamp-2">{item.content}</p>}
+                    <h3 className={`${i === 0 ? 'mt-4 text-2xl' : 'mt-3 text-lg'} font-extrabold text-slate-900 transition-colors group-hover:text-indigo-600`}>{item.title}</h3>
+                    {item.description && <p className={`${i === 0 ? 'mt-3 text-base line-clamp-3' : 'mt-2 text-sm line-clamp-2'} text-slate-500`}>{item.description}</p>}
                   </div>
                 </Card>
               ))}
             </div>
             <div className="mt-10 text-center">
-              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 transition-colors hover:text-indigo-800">
                 View All News
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               </Link>
@@ -348,6 +343,39 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════
           QUOTE
           ═══════════════════════════════════════════════ */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="text-center reveal">
+            <div className="text-xs font-bold uppercase tracking-[0.25em] text-teal-600">Explore</div>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 sm:text-4xl">Find Everything Quickly</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-500">
+              Direct links to every important public page and student resource.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {HOME_LINKS.map((item, index) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group reveal reveal-delay-${(index % 6) + 1} rounded-md border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-indigo-200 hover:bg-indigo-50`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-indigo-600 ring-1 ring-slate-200 transition-colors group-hover:bg-indigo-600 group-hover:text-white group-hover:ring-indigo-600">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-extrabold text-slate-900">{item.label}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.description}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative py-12 bg-[#fefce8] overflow-hidden">
         {/* Decorative quotes */}
         <div className="absolute left-8 top-8 text-[120px] font-serif text-yellow-400/20 leading-none select-none hidden lg:block">&ldquo;</div>
@@ -360,10 +388,7 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════
           CTA — Yellow Gradient Banner
           ═══════════════════════════════════════════════ */}
-      <section className="relative py-14 overflow-hidden bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400">
-        {/* Geometric decorations */}
-        <div className="absolute top-6 left-10 h-20 w-20 rotate-12 border-2 border-yellow-600/20 rounded-xl hidden lg:block" />
-        <div className="absolute bottom-6 right-10 h-16 w-16 rotate-45 border-2 border-yellow-600/20 hidden lg:block" />
+       <section className="relative overflow-hidden bg-amber-300 py-14">
 
         <div className="reveal relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">Ready to Join Our Family?</h2>
@@ -371,13 +396,13 @@ export default async function HomePage() {
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/contact"
-              className="rounded-xl bg-indigo-600 px-8 py-4 text-base font-bold text-white shadow-lg shadow-indigo-600/30 transition-all duration-300 hover:scale-105 hover:bg-indigo-700 hover:shadow-xl"
+              className="rounded-md bg-indigo-600 px-8 py-4 text-base font-bold text-white transition-colors hover:bg-indigo-700"
             >
               Enquire Now
             </Link>
             <a
               href="tel:04443568296"
-              className="rounded-xl border-2 border-gray-900 px-8 py-4 text-base font-bold text-gray-900 transition-all duration-300 hover:bg-gray-900 hover:text-white"
+              className="rounded-md border border-gray-900 px-8 py-4 text-base font-bold text-gray-900 transition-colors hover:bg-gray-900 hover:text-white"
             >
               Call: 044-4356 8296
             </a>

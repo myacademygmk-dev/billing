@@ -311,37 +311,40 @@ export default function SettingsPage() {
 
   return (
     <AppShell title="Admin Settings" subtitle="Manage student imports and maintenance.">
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <nav aria-label="Administration" className="mb-5 flex flex-wrap gap-4 border-b border-[var(--panel-line)] pb-4 text-sm font-semibold text-[var(--accent)]">
+        <a href="/academic">Academic years & classes</a><a href="/fees">Fee structures</a><a href="/staff">Staff & access</a><a href="/cms">Website content</a>
+      </nav>
+      <div className="grid gap-5 lg:grid-cols-2">
         {/* Student Import */}
-        <Card className="shadow-none">
-          <CardContent className="p-4 space-y-3">
-            <CardTitle>Student Import</CardTitle>
-            <p className="text-xs text-gray-500">Import students from Excel with column mapping.</p>
+        <section className="flex flex-wrap items-center justify-between gap-4 border-y border-[var(--panel-line)] py-4">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">Student import</h2>
+            <p className="text-xs text-[var(--muted)]">Excel records and column mapping</p>
+          </div>
             <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setImportOpen(true)}>
               <Upload className="h-3.5 w-3.5" />
               Upload Excel
             </Button>
-          </CardContent>
-        </Card>
+        </section>
 
         {/* Random Bill */}
-        <Card className="shadow-none">
-          <CardContent className="p-4 space-y-3">
-            <CardTitle>Bill Generator</CardTitle>
-            <p className="text-xs text-gray-500">Create a custom bill PDF with manual fields.</p>
+        <section className="flex flex-wrap items-center justify-between gap-4 border-y border-[var(--panel-line)] py-4">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold">Bill generator</h2>
+            <p className="text-xs text-[var(--muted)]">Custom PDF bills</p>
+          </div>
             <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setRandomBillOpen(true)}>
               <FileText className="h-3.5 w-3.5" />
               Create Bill
             </Button>
-          </CardContent>
-        </Card>
+        </section>
 
         {/* Academic Rollover */}
         <AcademicRollover />
 
         {/* Danger Zone */}
         <Card className="shadow-none border-red-100">
-          <CardContent className="p-3 flex items-center justify-between gap-3">
+          <CardContent className="p-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-red-700">Danger Zone</p>
               <p className="text-xs text-gray-500">Delete all students, fees, payments data</p>
@@ -401,7 +404,7 @@ export default function SettingsPage() {
               <div className="text-sm text-gray-600">
                 Upload an <span className="font-medium text-gray-900">.xlsx</span>, load its headers, map the required fields,
                 enter the academic <span className="font-medium text-gray-900">batch</span>, then import into the database.
-                Student billing will follow each row's mapped <span className="font-medium text-gray-900">Start Period</span> and <span className="font-medium text-gray-900">End Period</span>.
+                Student billing will follow each row&apos;s mapped <span className="font-medium text-gray-900">Start Period</span> and <span className="font-medium text-gray-900">End Period</span>.
               </div>
 
               <div>
@@ -484,8 +487,8 @@ export default function SettingsPage() {
                         placeholder="2026-2027"
                       />
                       <div className="mt-1 text-xs text-gray-600">
-                        Enter the academic batch for all imported rows, for example <span className="text-gray-900">2026-2027</span>. Each student's
-                        mapped <span className="text-gray-900">Start Period</span> and <span className="text-gray-900">End Period</span> will control that student's billing range.
+                        Enter the academic batch for all imported rows, for example <span className="text-gray-900">2026-2027</span>. Each student&apos;s
+                        mapped <span className="text-gray-900">Start Period</span> and <span className="text-gray-900">End Period</span> will control that student&apos;s billing range.
                       </div>
                     </div>
 

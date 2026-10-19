@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import UserRole
 
@@ -42,8 +42,10 @@ class UpdateUserPermissionsRequest(BaseModel):
 
 
 class SetupPasswordRequest(BaseModel):
-    email: str
+    token: str
     password: str
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class UserRead(BaseModel):
@@ -54,5 +56,14 @@ class UserRead(BaseModel):
     has_password: bool = False
     permissions: list[str] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InvitationResponse(BaseModel):
+    invitation_token: str
+    expires_in_seconds: int
+
+
+class RegisteredUserResponse(UserRead):
+    invitation_token: str
+    expires_in_seconds: int

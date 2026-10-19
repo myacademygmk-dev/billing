@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle, FileText, Globe, Image, Megaphone, Newspaper, Plus, Star, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileText, Globe, Image, Megaphone, Newspaper, Plus, Star, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
@@ -61,10 +61,27 @@ const SECTIONS = [
   { type: 'testimonials', label: 'Testimonials', icon: Megaphone, description: 'Feedback and testimonials from parents/students', color: 'text-teal-500' },
 ];
 
+function CmsQueryError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-xl border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
+      <div className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{message}</p>
+          <Button type="button" size="sm" variant="outline" className="mt-3" onClick={onRetry}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CmsPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [activeSection, setActiveSection] = useState('achievement');
+  const [sectionSearch, setSectionSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showAddPhoto, setShowAddPhoto] = useState(false);
   const [selectedContent, setSelectedContent] = useState<string | null>(null);
@@ -107,17 +124,21 @@ export default function CmsPage() {
 
   return (
     <AppShell title="Website CMS" subtitle="Manage your public website content — achievements, news, events, gallery & circulars">
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="mb-4 flex justify-end"><a href="/" target="_blank" rel="noreferrer" className="text-sm font-semibold text-[var(--accent)] underline">Open public website</a></div>
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         {/* Section Selector */}
-        <div className="space-y-2">
-          {SECTIONS.map((section) => {
+        <div className="min-w-0 self-start space-y-1 lg:sticky lg:top-0 lg:border-r lg:border-[var(--panel-line)] lg:pr-4">
+          <Input aria-label="Find website section" value={sectionSearch} onChange={(event) => setSectionSearch(event.target.value)} placeholder="Find a section" className="mb-3" />
+          <div className="flex gap-2 overflow-x-auto pb-2 lg:block lg:max-h-[70vh] lg:space-y-1 lg:overflow-y-auto">
+          {SECTIONS.filter((section) => `${section.label} ${section.description}`.toLowerCase().includes(sectionSearch.toLowerCase())).map((section) => {
             const Icon = section.icon;
             const isActive = activeSection === section.type;
             return (
               <button
                 key={section.type}
-                onClick={() => setActiveSection(section.type)}
-                className={`w-full rounded-xl border px-4 py-3.5 text-left transition-all duration-200 ${isActive ? 'border-[var(--accent)] bg-[var(--accent-soft)] shadow-sm' : 'border-[var(--field-border)] hover:bg-[var(--surface-subtle)]'}`}
+                aria-pressed={isActive}
+                onClick={() => { setActiveSection(section.type); setSelectedContent(null); }}
+                className={`w-48 shrink-0 rounded-[6px] border border-transparent px-3 py-2.5 text-left transition-colors lg:w-full ${isActive ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'hover:bg-[var(--surface-subtle)]'}`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-[var(--accent)]' : section.color}`} />
@@ -129,6 +150,7 @@ export default function CmsPage() {
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Content Area */}
@@ -155,6 +177,8 @@ export default function CmsPage() {
           <CardContent>
             {content.isLoading ? (
               <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
+            ) : content.isError ? (
+              <CmsQueryError message={`${currentSection.label} could not be loaded.`} onRetry={() => content.refetch()} />
             ) : content.data?.items.length === 0 ? (
               <div className="py-10 text-center">
                 <div className="text-3xl opacity-30">📭</div>
@@ -187,8 +211,10 @@ export default function CmsPage() {
                               <div key={p.id} className="group relative">
                                 <img src={p.url} alt={p.caption ?? ''} className="h-10 w-10 rounded-lg object-cover border border-[var(--panel-line)]" />
                                 <button
+                                  type="button"
+                                  aria-label={`Delete photo${p.caption ? `: ${p.caption}` : ''}`}
                                   onClick={() => deletePhoto.mutate(p.id)}
-                                  className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] text-white group-hover:flex"
+                                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                                 >×</button>
                               </div>
                             ))}
@@ -197,11 +223,11 @@ export default function CmsPage() {
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0">
                         {activeSection === 'gallery' && (
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedContent(item.id); setShowAddPhoto(true); }}>
-                            <Image className="h-3 w-3" />
+                          <Button size="sm" variant="outline" aria-label="Add gallery photo" title="Add gallery photo" onClick={() => { setSelectedContent(item.id); setShowAddPhoto(true); }}>
+                            <Image className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => { if (confirm('Delete this item?')) deleteContent.mutate(item.id); }}>
+                        <Button size="sm" variant="outline" aria-label={`Delete ${item.title}`} title={`Delete ${item.title}`} onClick={() => { if (confirm('Delete this item?')) deleteContent.mutate(item.id); }}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -443,6 +469,8 @@ function CreativityPanel() {
         <CardContent>
           {creativity.isLoading ? (
             <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
+          ) : creativity.isError ? (
+            <CmsQueryError message="Student creativity entries could not be loaded." onRetry={() => creativity.refetch()} />
           ) : !creativity.data?.length ? (
             <div className="py-10 text-center">
               <div className="text-3xl opacity-30">🎨</div>
@@ -611,6 +639,8 @@ function TestimonialsPanel() {
       <CardContent>
         {testimonials.isLoading ? (
           <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
+        ) : testimonials.isError ? (
+          <CmsQueryError message="Testimonials could not be loaded." onRetry={() => testimonials.refetch()} />
         ) : !testimonials.data?.length ? (
           <div className="py-10 text-center">
             <div className="text-3xl opacity-30">💬</div>
@@ -791,9 +821,10 @@ function WebsiteSettingsPanel() {
   }
 
   if (settings.isLoading) return <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading settings...</div>;
+  if (settings.isError) return <CmsQueryError message="Website settings could not be loaded." onRetry={() => settings.refetch()} />;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)]">
+    <div className="flex min-w-0 flex-col">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-[var(--panel-line)] bg-[var(--panel-bg)] px-5 py-4 rounded-t-xl">
         <h3 className="text-base font-semibold text-[var(--heading)]">Website Settings</h3>
@@ -801,7 +832,7 @@ function WebsiteSettingsPanel() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+      <div className="min-w-0 flex-1 px-3 py-5 space-y-6 sm:px-5">
         {/* Marquee */}
         <div>
           <label className="text-sm font-semibold text-[var(--heading)]">Marquee / News Ticker</label>

@@ -2,7 +2,7 @@
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 text-center">
       <div className="text-lg font-semibold text-white">Something went wrong</div>
       <div className="text-sm text-[#91a1bc]">{error.message}</div>
       <button

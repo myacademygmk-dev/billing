@@ -13,6 +13,7 @@ from app.api.deps import get_current_user, require_admin_user
 from app.core.database import get_db
 from app.models.enquiry import Enquiry
 from app.models.user import User
+from app.schemas.enquiries import EnquirySubmit, EnquiryUpdate
 
 router = APIRouter()
 
@@ -21,24 +22,19 @@ router = APIRouter()
 
 @router.post("/submit", status_code=201)
 def submit_enquiry(
-    payload: dict,
+    payload: EnquirySubmit,
     db: Session = Depends(get_db),
 ) -> dict:
     """Public contact form submission — no auth required."""
-    student_name = payload.get("student_name", "").strip()
-    phone = payload.get("phone", "").strip()
-    if not student_name or not phone:
-        raise HTTPException(status_code=422, detail="Student name and phone are required")
-
     enquiry = Enquiry(
-        student_name=student_name,
-        parent_name=payload.get("parent_name", "").strip() or None,
-        phone=phone,
-        email=payload.get("email", "").strip() or None,
-        standard=payload.get("standard", "").strip() or None,
-        board=payload.get("board", "").strip() or None,
-        message=payload.get("message", "").strip() or None,
-        source=payload.get("source", "website"),
+        student_name=payload.student_name.strip(),
+        parent_name=payload.parent_name.strip() if payload.parent_name else None,
+        phone=payload.phone.strip(),
+        email=payload.email.strip() if payload.email else None,
+        standard=payload.standard.strip() if payload.standard else None,
+        board=payload.board.strip() if payload.board else None,
+        message=payload.message.strip() if payload.message else None,
+        source=payload.source.strip() if payload.source else "website",
     )
     db.add(enquiry)
     db.commit()
@@ -69,21 +65,18 @@ def list_enquiries(
 @router.patch("/{enquiry_id}", response_model=dict)
 def update_enquiry(
     enquiry_id: uuid.UUID,
-    payload: dict,
+    payload: EnquiryUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin_user),
 ) -> dict:
     """Update enquiry status, follow-up, notes."""
     enquiry = db.get(Enquiry, enquiry_id)
     if not enquiry:
         raise HTTPException(status_code=404, detail="Enquiry not found")
 
-    for field in ["status", "follow_up_notes", "source"]:
-        if field in payload:
-            setattr(enquiry, field, payload[field])
-    if "follow_up_date" in payload:
-        enquiry.follow_up_date = payload["follow_up_date"] if payload["follow_up_date"] else None
-    if payload.get("status") == "enrolled":
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(enquiry, field, value)
+    if payload.status == "enrolled":
         enquiry.converted_at = datetime.now(UTC)
     enquiry.assigned_to = current_user.id
     db.commit()

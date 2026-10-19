@@ -44,8 +44,15 @@ def test_savings_retract_blocks_double_retraction(client):
 def test_savings_delete_requires_admin(client):
     """Non-admin cannot delete savings entries."""
     headers = auth_header(client)
-    client.post("/api/auth/register", json={"username": "staffdel", "email": "staffdel@test.com", "role": "staff"}, headers=headers)
-    client.post("/api/auth/setup-password", json={"email": "staffdel@test.com", "password": "staff123"})
+    registration = client.post(
+        "/api/auth/register",
+        json={"username": "staffdel", "email": "staffdel@test.com", "role": "staff", "permissions": ["savings"]},
+        headers=headers,
+    )
+    client.post(
+        "/api/auth/setup-password",
+        json={"token": registration.json()["invitation_token"], "password": "staff123"},
+    )
     staff_login = client.post("/api/auth/login", json={"username": "staffdel", "password": "staff123"})
     staff_headers = {"Authorization": f"Bearer {staff_login.json()['access_token']}"}
 
@@ -60,8 +67,15 @@ def test_savings_delete_requires_admin(client):
 def test_savings_edit_requires_admin(client):
     """Non-admin cannot edit savings entries."""
     headers = auth_header(client)
-    client.post("/api/auth/register", json={"username": "staffedit", "email": "staffedit@test.com", "role": "staff"}, headers=headers)
-    client.post("/api/auth/setup-password", json={"email": "staffedit@test.com", "password": "staff123"})
+    registration = client.post(
+        "/api/auth/register",
+        json={"username": "staffedit", "email": "staffedit@test.com", "role": "staff", "permissions": ["savings"]},
+        headers=headers,
+    )
+    client.post(
+        "/api/auth/setup-password",
+        json={"token": registration.json()["invitation_token"], "password": "staff123"},
+    )
     staff_login = client.post("/api/auth/login", json={"username": "staffedit", "password": "staff123"})
     staff_headers = {"Authorization": f"Bearer {staff_login.json()['access_token']}"}
 

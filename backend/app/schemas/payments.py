@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import PaymentCycle, PaymentMode
 
@@ -55,8 +55,7 @@ class PaymentRead(BaseModel):
             return str(value).zfill(4)
         return str(value)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaymentReverseRequest(BaseModel):

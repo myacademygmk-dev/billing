@@ -11,12 +11,7 @@ interface TeamMember {
   qualification?: string;
 }
 
-const PLACEHOLDER_TEAM: TeamMember[] = [
-  { name: 'Mr. V. Pradeep Kumar', role: 'Founder & Managing Director', qualification: 'M.COM, M.B.A, Ph.D' },
-  { name: 'Mrs. Priya Kumar', role: 'Administrative Director', qualification: 'M.A., B.Ed.' },
-  { name: 'Mr. Rajan S.', role: 'Academic Coordinator', qualification: 'M.Sc., M.Ed.' },
-  { name: 'Mrs. Kavitha R.', role: 'Finance & Operations Head', qualification: 'M.Com., CA Inter' },
-];
+const PLACEHOLDER_TEAM: TeamMember[] = [];
 
 function getInitials(name: string) {
   return name
@@ -43,14 +38,14 @@ export function ManagementTeamSection() {
           }
         }
       } catch {
-        // fallback to placeholder
+        // Keep the section empty when published data is unavailable.
       }
     }
     fetchTeam();
   }, []);
 
   return (
-    <section id="management-team" className="relative overflow-hidden bg-slate-50 py-12 sm:py-14">
+    <section id="management" className="relative scroll-mt-32 overflow-hidden bg-slate-50 py-12 sm:py-14">
       <GlowOrb color="bg-indigo-200/30" className="-left-20 -top-16 h-64 w-64" />
       <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600 text-center">Our Team</p>
@@ -60,7 +55,7 @@ export function ManagementTeamSection() {
         <p className="mt-2 text-center text-sm text-slate-500">The leadership behind MY Academy&apos;s success</p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {team.map((member, i) => (
+          {team.length > 0 && team.map((member, i) => (
             <Card key={member.name + i}>
               <div className="flex items-center gap-4 p-5">
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>

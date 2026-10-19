@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import select, func
+from sqlalchemy import and_, or_, select, func
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, require_admin_user
@@ -24,9 +24,20 @@ from app.models.academic import AcademicYear
 from app.models.fee_structure import FeeStructure
 from app.models.promotion import PromotionHistory, StudentArrears
 from app.schemas.promotion import PromotionConfig, PromotionDetail, PromotionResult
+from app.schemas.utilities import (
+    FeeReminderRequest,
+    PromoteStudentsRequest,
+    WhatsappAnnouncementRequest,
+    WhatsappLeaveInfoRequest,
+    WhatsappReceiptRequest,
+    WhatsappStudentRequest,
+)
 from app.services.bill_pdf import InstitutionBranding
+from app.services.billing import batch_range_for, get_student_billing_overview, pending_amount
 
 router = APIRouter()
+
+_REPORT_CHUNK_SIZE = 500
 
 
 # --- Roman numeral / class number helpers ---
@@ -57,6 +68,62 @@ def class_to_number(cls: str) -> int:
     # Fallback: extract first number
     nums = re.findall(r"\d+", cls)
     return int(nums[0]) if nums else 0
+
+
+def _batch_month_count(student: Student) -> int:
+    batch_start, batch_end = batch_range_for(student)
+    return ((batch_end.year - batch_start.year) * 12) + (batch_end.month - batch_start.month) + 1
+
+
+def _paid_period_counts_for_students(db: Session, students: list[Student]) -> dict[uuid.UUID, int]:
+    filters = []
+    for student in students:
+        batch_start, batch_end = batch_range_for(student)
+        filters.append(
+            (StudentBillingPeriod.student_id == student.id)
+            & (StudentBillingPeriod.period_month >= batch_start)
+            & (StudentBillingPeriod.period_month <= batch_end)
+        )
+    if not filters:
+        return {}
+    rows = db.execute(
+        select(StudentBillingPeriod.student_id, func.count(StudentBillingPeriod.id))
+        .where(StudentBillingPeriod.payment_id.is_not(None))
+        .where(or_(*filters))
+        .group_by(StudentBillingPeriod.student_id)
+    ).all()
+    return {student_id: count for student_id, count in rows}
+
+
+def _iter_pending_reminder_rows(db: Session, class_name: str | None = None):
+    offset = 0
+    while True:
+        stmt = (
+            select(Student, func.coalesce(StudentFee.expected_fee_amount, 0).label("monthly_fee"))
+            .outerjoin(StudentFee, StudentFee.student_id == Student.id)
+            .where(Student.status == StudentStatus.active)
+            .order_by(Student.student_code)
+            .offset(offset)
+            .limit(_REPORT_CHUNK_SIZE)
+        )
+        if class_name:
+            stmt = stmt.where(Student.class_name == class_name)
+
+        rows = db.execute(stmt).all()
+        if not rows:
+            break
+
+        students = [student for student, _monthly_fee in rows]
+        paid_counts = _paid_period_counts_for_students(db, students)
+        for student, monthly_fee in rows:
+            pending_months = max(_batch_month_count(student) - paid_counts.get(student.id, 0), 0)
+            pending_amount = Decimal(monthly_fee or 0) * Decimal(pending_months)
+            if pending_amount > 0:
+                yield student, pending_amount, pending_months
+
+        if len(rows) < _REPORT_CHUNK_SIZE:
+            break
+        offset += _REPORT_CHUNK_SIZE
 
 
 # --- Database Backup ---
@@ -131,17 +198,14 @@ def download_backup(
 
 @router.post("/promote-students")
 def promote_students_simple(
-    payload: dict,
+    payload: PromoteStudentsRequest,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> dict:
     """Simple promotion: updates class_name and batch only. Use /academic-rollover for full year-end processing."""
-    from_class = payload.get("from_class", "").strip()
-    to_class = payload.get("to_class", "").strip()
-    new_batch = payload.get("new_batch", "").strip()
-
-    if not from_class or not to_class:
-        raise HTTPException(status_code=422, detail="from_class and to_class are required")
+    from_class = payload.from_class.strip()
+    to_class = payload.to_class.strip()
+    new_batch = payload.new_batch.strip() if payload.new_batch else None
 
     students = db.execute(
         select(Student).where(Student.class_name == from_class, Student.status == StudentStatus.active)
@@ -224,12 +288,12 @@ def academic_rollover(
         return serial_counters[to_class]
 
     def _calculate_arrears(student: Student) -> Decimal:
-        """Calculate unpaid billing periods amount for the current year."""
-        unpaid_periods = [bp for bp in student.billing_periods if bp.payment_id is None]
-        if not unpaid_periods or not student.fee:
+        """Calculate every unpaid month in the source billing range."""
+        if not student.fee:
             return Decimal("0")
-        monthly_fee = student.fee.expected_fee_amount
-        return monthly_fee * len(unpaid_periods)
+        # Ordinary unpaid months have no stored StudentBillingPeriod row. The
+        # overview materializes the complete source range before rollover.
+        return pending_amount(get_student_billing_overview(db, student))
 
     def _generate_code(to_class: str, serial: int, pattern: str) -> str:
         """Generate a student code from the pattern."""
@@ -243,7 +307,14 @@ def academic_rollover(
 
         students = db.execute(
             select(Student)
-            .where(Student.class_name == from_class, Student.status == StudentStatus.active)
+            .where(
+                Student.class_name == from_class,
+                Student.status == StudentStatus.active,
+                or_(
+                    Student.academic_year_id == payload.from_academic_year_id,
+                    and_(Student.academic_year_id.is_(None), Student.batch == from_ay.name),
+                ),
+            )
             .options(selectinload(Student.fee), selectinload(Student.billing_periods))
             .order_by(Student.serial_no, Student.name)
         ).scalars().all()
@@ -348,7 +419,14 @@ def academic_rollover(
         final_class = final_class.strip()
         students = db.execute(
             select(Student)
-            .where(Student.class_name == final_class, Student.status == StudentStatus.active)
+            .where(
+                Student.class_name == final_class,
+                Student.status == StudentStatus.active,
+                or_(
+                    Student.academic_year_id == payload.from_academic_year_id,
+                    and_(Student.academic_year_id.is_(None), Student.batch == from_ay.name),
+                ),
+            )
             .options(selectinload(Student.fee), selectinload(Student.billing_periods))
         ).scalars().all()
 
@@ -420,40 +498,25 @@ def academic_rollover(
 
 @router.post("/fee-reminder")
 def send_fee_reminder(
-    payload: dict,
+    payload: FeeReminderRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(require_admin_user),
 ) -> dict:
     """Generate fee reminder data for students with pending fees.
     Returns the list of students + phone numbers for manual or WhatsApp sending."""
-    from app.services.billing import get_student_billing_overview, pending_amount
-    from app.models.student_billing_period import StudentBillingPeriod
-    from sqlalchemy.orm import selectinload
-
-    _BILLING_OPTS = [selectinload(Student.fee), selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment)]
-
-    class_name = payload.get("class_name")
-    stmt = select(Student).where(Student.status == StudentStatus.active).options(*_BILLING_OPTS)
-    if class_name:
-        stmt = stmt.where(Student.class_name == class_name)
-
-    students = db.execute(stmt).scalars().all()
     reminders = []
 
-    for student in students:
-        overview = get_student_billing_overview(db, student)
-        pending = pending_amount(overview)
-        if pending > 0:
-            reminders.append({
-                "student_id": str(student.id),
-                "student_code": student.student_code,
-                "student_name": student.name,
-                "class_name": student.class_name,
-                "parent_phone": student.parent_phone,
-                "whatsapp_no": student.whatsapp_no or student.parent_phone,
-                "pending_amount": str(pending),
-                "pending_months": len(overview.pending_months),
-            })
+    for student, pending, pending_months in _iter_pending_reminder_rows(db, payload.class_name):
+        reminders.append({
+            "student_id": str(student.id),
+            "student_code": student.student_code,
+            "student_name": student.name,
+            "class_name": student.class_name,
+            "parent_phone": student.parent_phone,
+            "whatsapp_no": student.whatsapp_no or student.parent_phone,
+            "pending_amount": str(pending),
+            "pending_months": pending_months,
+        })
 
     return {"items": reminders, "total": len(reminders)}
 
@@ -610,19 +673,15 @@ def get_upcoming_birthdays(
 
 @router.post("/whatsapp/send-receipt")
 def whatsapp_send_receipt(
-    payload: dict,
+    payload: WhatsappReceiptRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_admin_user),
 ) -> dict:
     """Send payment receipt via WhatsApp to student's parent."""
     from app.services.whatsapp_api import send_text_message_sync
 
-    payment_id = payload.get("payment_id")
-    if not payment_id:
-        raise HTTPException(status_code=422, detail="payment_id is required")
-
     from app.models.payment import Payment
-    payment = db.get(Payment, uuid.UUID(payment_id))
+    payment = db.get(Payment, payload.payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
 
@@ -653,22 +712,18 @@ def whatsapp_send_receipt(
 
 @router.post("/whatsapp/send-reminder")
 def whatsapp_send_reminder(
-    payload: dict,
+    payload: WhatsappStudentRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_admin_user),
 ) -> dict:
     """Send fee reminder to a specific student's parent via WhatsApp."""
     from app.services.whatsapp_api import send_text_message_sync
     from app.services.billing import get_student_billing_overview, pending_amount, pending_details
     from app.models.student_billing_period import StudentBillingPeriod
 
-    student_id = payload.get("student_id")
-    if not student_id:
-        raise HTTPException(status_code=422, detail="student_id is required")
-
     student = db.execute(
         select(Student)
-        .where(Student.id == uuid.UUID(student_id))
+        .where(Student.id == payload.student_id)
         .options(selectinload(Student.fee), selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment))
     ).scalar_one_or_none()
     if not student:
@@ -701,47 +756,30 @@ def whatsapp_send_reminder(
 
 @router.post("/whatsapp/send-bulk-reminder")
 def whatsapp_send_bulk_reminder(
-    payload: dict,
+    payload: FeeReminderRequest,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> dict:
     """Send fee reminder to all students with pending fees (or filtered by class)."""
     from app.services.whatsapp_api import send_text_message_sync
-    from app.services.billing import get_student_billing_overview, pending_amount, pending_details
-    from app.models.student_billing_period import StudentBillingPeriod
-
-    class_name = payload.get("class_name")
-    _BILLING_OPTS = [selectinload(Student.fee), selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment)]
-
-    stmt = select(Student).where(Student.status == StudentStatus.active).options(*_BILLING_OPTS)
-    if class_name:
-        stmt = stmt.where(Student.class_name == class_name)
-
-    students = db.execute(stmt).scalars().all()
     sent = 0
     failed = 0
     skipped = 0
+    total = 0
 
-    for student in students:
-        overview = get_student_billing_overview(db, student)
-        amount = pending_amount(overview)
-        if amount <= 0:
-            skipped += 1
-            continue
-
+    for student, amount, pending_months in _iter_pending_reminder_rows(db, payload.class_name):
+        total += 1
         phone = student.whatsapp_no or student.parent_phone or student.contact_no
         if not phone:
             skipped += 1
             continue
 
-        details = pending_details(overview)
         message = (
             f"📢 *Fee Reminder*\n\n"
             f"Dear Parent,\n\n"
             f"Pending fees for *{student.name}*: *₹{amount}*\n"
         )
-        if details:
-            message += f"Months: {details}\n"
+        message += f"Pending months: {pending_months}\n"
         message += f"\nPlease clear at the earliest.\n— MY Academy"
 
         result = send_text_message_sync(phone, message)
@@ -750,24 +788,21 @@ def whatsapp_send_bulk_reminder(
         else:
             failed += 1
 
-    return {"sent": sent, "failed": failed, "skipped": skipped, "total": len(students)}
+    return {"sent": sent, "failed": failed, "skipped": skipped, "total": total}
 
 
 @router.post("/whatsapp/send-announcement")
 def whatsapp_send_announcement(
-    payload: dict,
+    payload: WhatsappAnnouncementRequest,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> dict:
     """Send announcement/ad to all students or a filtered class via WhatsApp."""
     from app.services.whatsapp_api import send_text_message_sync
 
-    title = payload.get("title", "").strip()
-    body = payload.get("body", "").strip()
-    class_name = payload.get("class_name")
-
-    if not title or not body:
-        raise HTTPException(status_code=422, detail="title and body are required")
+    title = payload.title.strip()
+    body = payload.body.strip()
+    class_name = payload.class_name
 
     message = f"📣 *{title}*\n\n{body}\n\n— MY Academy"
 
@@ -794,21 +829,17 @@ def whatsapp_send_announcement(
 
 @router.post("/whatsapp/send-leave-info")
 def whatsapp_send_leave_info(
-    payload: dict,
+    payload: WhatsappLeaveInfoRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_admin_user),
 ) -> dict:
     """Send leave/absence notification to parent via WhatsApp."""
     from app.services.whatsapp_api import send_text_message_sync
 
-    student_id = payload.get("student_id")
-    leave_date = payload.get("date", "")
-    reason = payload.get("reason", "")
+    leave_date = payload.date.isoformat() if payload.date else ""
+    reason = payload.reason or ""
 
-    if not student_id:
-        raise HTTPException(status_code=422, detail="student_id is required")
-
-    student = db.get(Student, uuid.UUID(student_id))
+    student = db.get(Student, payload.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 

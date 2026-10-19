@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
+import { MetricTile } from '@/components/ui/app-ux';
 import { PaymentReceiptDialog } from '@/components/app/payment-receipt-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { EmptyState, EmptyStateIcon } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
+import { cn } from '@/components/ui/cn';
 
 type Summary = {
   total_collected: string;
@@ -117,25 +119,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {statCards.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Card key={item.label} className="metric-card">
-                  <CardContent className="space-y-4 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-sm font-medium text-[var(--text-secondary)]">{item.label}</div>
-                        <div className="theme-heading mt-2 text-2xl font-bold sm:text-3xl">{item.value}</div>
-                      </div>
-                      <div className={`rounded-xl p-3 ${item.bg}`}>
-                        <Icon className={`h-5 w-5 ${item.iconColor}`} />
-                      </div>
-                    </div>
-                    <div className="text-xs text-[var(--muted)]">{item.caption}</div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {statCards.map((item, index) => <MetricTile key={item.label} label={item.label} value={item.value} detail={item.caption} icon={item.icon} tone={index === 0 ? 'accent' : index === 1 ? 'success' : 'warning'} />)}
           </div>
         )}
 
@@ -192,10 +176,10 @@ export default function DashboardPage() {
                             <div className="text-xs text-[var(--muted)]">{payment.student_code ?? ''}</div>
                           </TD>
                           <TD>
-                            <span className="font-mono text-xs">{payment.receipt_no}</span>
+                            <span className="font-mono text-xs tabular-nums">{payment.receipt_no}</span>
                           </TD>
                           <TD>
-                            <span className={isNegative ? 'text-[var(--danger)]' : 'text-[var(--success)]'}>
+                            <span className={cn('tabular-nums', isNegative ? 'text-[var(--danger)]' : 'text-[var(--success)]')}>
                               {isNegative ? '-' : '+'}₹{Math.abs(parseFloat(payment.amount)).toLocaleString('en-IN')}
                             </span>
                           </TD>
@@ -217,6 +201,7 @@ export default function DashboardPage() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              aria-label={`View receipt ${payment.receipt_no}`}
                               onClick={() => {
                                 setReceiptPaymentId(payment.id);
                                 setReceiptOpen(true);

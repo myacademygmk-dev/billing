@@ -52,6 +52,7 @@ services:
     build:
       context: ./frontend
     environment:
+      HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api}
       BACKEND_API_BASE_URL: http://backend:8000/api
     ports:
@@ -60,7 +61,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000"]
       interval: 10s
       timeout: 5s
       retries: 3

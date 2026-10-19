@@ -11,10 +11,10 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Response, UploadFile
 from fastapi import File as FastAPIFile
 from openpyxl import load_workbook
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import get_current_user, require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.payment import Payment
 from app.models.student import Student
@@ -36,6 +36,7 @@ from app.schemas.students import (
     StudentUpdate,
 )
 from app.services.billing import billing_list_snapshot, get_student_billing_overview, month_label, pending_amount
+from app.services.reporting import pending_students_query
 
 
 router = APIRouter()
@@ -445,11 +446,16 @@ async def import_students_from_excel(
                 errors.append({"row": row_index, "error": "fees must be >= 0"})
                 continue
 
+            try:
+                _dob = _to_date(cell(dob_col)) if dob_col is not None else None
+            except ValueError:
+                errors.append({"row": row_index, "error": "date_of_birth must be a valid date"})
+                continue
+
             student = db.execute(select(Student).where(Student.student_code == student_code)).scalar_one_or_none()
 
             # Read new profile fields from mapped columns
             _school = str(cell(school_col)).strip() if cell(school_col) else None
-            _dob = _to_date(cell(dob_col)) if dob_col is not None else None
             _gender = str(cell(gender_col)).strip() if cell(gender_col) else None
             _contact = str(cell(contact_col)).strip() if cell(contact_col) else None
             _father_phone = str(cell(father_phone_col)).strip() if cell(father_phone_col) else None
@@ -563,6 +569,30 @@ def list_student_classes(
         .distinct()
     ).scalars().all()
     return sorted(rows, key=lambda x: (x or "").zfill(10))
+
+
+@router.get("/statistics", response_model=dict)
+def student_statistics(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+    month: date | None = None,
+) -> dict:
+    month_start = (month or datetime.now(UTC).date()).replace(day=1)
+    next_month = date(month_start.year + (month_start.month == 12), month_start.month % 12 + 1, 1)
+    totals = db.execute(select(
+        func.count(Student.id).label("total_students"),
+        func.count(case((Student.status == StudentStatus.active, Student.id))).label("active_students"),
+        func.count(case(((Student.joined_date >= month_start) & (Student.joined_date < next_month), Student.id))).label("new_admissions"),
+    )).one()
+    unpaid = pending_students_query().order_by(None).subquery()
+    with_dues = db.execute(select(func.count()).select_from(unpaid)).scalar_one()
+    return {
+        "total_students": totals.total_students,
+        "active_students": totals.active_students,
+        "new_admissions": totals.new_admissions,
+        "students_with_dues": with_dues,
+        "admissions_month": month_start.isoformat(),
+    }
 
 
 @router.get("", response_model=dict)
@@ -691,7 +721,7 @@ def list_student_balances(
 def create_student(
     payload: StudentCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("students")),
 ) -> StudentRead:
     existing = db.execute(select(Student).where(Student.student_code == payload.student_code)).scalar_one_or_none()
     if existing:
@@ -777,7 +807,7 @@ def update_student(
     student_id: uuid.UUID,
     payload: StudentUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("students")),
 ) -> StudentRead:
     student = db.get(Student, student_id)
     if not student:
@@ -816,7 +846,7 @@ def update_student_fee(
     student_id: uuid.UUID,
     payload: StudentFeeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("students")),
 ) -> StudentFeeRead:
     student = db.get(Student, student_id)
     if not student:
@@ -895,4 +925,3 @@ def hard_delete_student(
     db.delete(student)
     db.commit()
     return Response(status_code=204)
-

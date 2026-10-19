@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select, and_, extract
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
 from app.models.attendance import StaffAttendance, StaffClockRecord, StudentAttendance
 from app.models.staff import Staff
@@ -37,7 +37,7 @@ router = APIRouter()
 def bulk_mark_student_attendance(
     payload: BulkStudentAttendanceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("attendance")),
 ) -> list[StudentAttendanceRead]:
     """Mark attendance for multiple students at once for a given date."""
     results = []
@@ -165,7 +165,7 @@ def student_attendance_history(
 def bulk_mark_staff_attendance(
     payload: BulkStaffAttendanceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("attendance")),
 ) -> list[StaffAttendanceRead]:
     """Mark attendance for multiple staff at once."""
     results = []
@@ -274,7 +274,7 @@ def _determine_clock_status(clock_in_time: datetime) -> str:
 def staff_clock_in(
     payload: StaffClockInRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("attendance")),
 ) -> StaffClockRecordRead:
     """Record staff clock-in with timestamp."""
     from app.models.enums import StaffStatus
@@ -321,7 +321,7 @@ def staff_clock_out(
     staff_id: uuid.UUID,
     payload: StaffClockOutRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("attendance")),
 ) -> StaffClockRecordRead:
     """Record staff clock-out with timestamp. Calculates total hours."""
     today = datetime.now(UTC).date()

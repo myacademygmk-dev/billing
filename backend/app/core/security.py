@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
+import uuid
 
 from app.core.config import settings
 
@@ -27,6 +28,20 @@ def create_refresh_token(*, subject: str) -> str:
     expires_delta = timedelta(days=settings.jwt_refresh_token_exp_days)
     expire = datetime.now(UTC) + expires_delta
     to_encode = {"sub": subject, "exp": expire, "type": "refresh"}
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def create_invitation_token(*, subject: str, version: str) -> str:
+    """Create a short-lived capability for initial password setup only."""
+    now = datetime.now(UTC)
+    to_encode = {
+        "sub": subject,
+        "exp": now + timedelta(hours=settings.jwt_invitation_exp_hours),
+        "iat": now,
+        "jti": str(uuid.uuid4()),
+        "type": "invitation",
+        "ver": version,
+    }
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

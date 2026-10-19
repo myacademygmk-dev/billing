@@ -11,6 +11,7 @@ export function Card({ className, square, transparent, ...props }: CardProps) {
   return (
     <div
       className={cn(
+        'min-w-0',
         transparent ? '' : 'glass-panel',
         square ? 'rounded-none' : 'rounded-xl',
         className
@@ -30,7 +31,7 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 export function CardTitle({ className, as: Tag = 'h3', ...props }: HTMLAttributes<HTMLHeadingElement> & { as?: 'h2' | 'h3' | 'h4' }) {
-  return <Tag className={cn('theme-heading text-sm font-semibold sm:text-base', className)} {...props} />;
+  return <Tag className={cn('theme-heading text-balance text-sm font-semibold sm:text-base', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

@@ -11,11 +11,12 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'> & {
 
 export const Input = forwardRef<HTMLInputElement, Props>(
   ({ className, error, prefix, suffix, wrapperClassName, ...props }, ref) => {
+    const errorId = error && (props.id || props.name) ? `${props.id || props.name}-error` : undefined;
     const inputEl = (
       <input
         ref={ref}
         aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? `${props.id || props.name}-error` : undefined}
+        aria-describedby={errorId}
         className={cn(
           'theme-field h-9 w-full rounded-full border px-3.5 text-sm outline-none transition-colors duration-150',
           'focus:border-[var(--field-focus-border)] focus:ring-2 focus:ring-[var(--field-focus-ring)]',
@@ -45,7 +46,7 @@ export const Input = forwardRef<HTMLInputElement, Props>(
           )}
           {error && (
             <p
-              id={`${props.id || props.name}-error`}
+              id={errorId}
               className="mt-1.5 text-xs text-[var(--danger)]"
               role="alert"
             >

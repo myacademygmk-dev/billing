@@ -1,8 +1,10 @@
 'use client';
 
-import { ReactNode, useEffect, useId, useRef } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useId, useRef } from 'react';
 
 import { cn } from '@/components/ui/cn';
+
+const DialogTitleIdContext = createContext<string | null>(null);
 
 export function Dialog({
   open,
@@ -15,6 +17,7 @@ export function Dialog({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<Element | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (open) {
@@ -71,22 +74,25 @@ export function Dialog({
 
   if (!open) return null;
   return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 z-40 animate-fade-in"
-      aria-modal="true"
-      role="dialog"
-      tabIndex={-1}
-    >
+    <DialogTitleIdContext.Provider value={titleId}>
       <div
-        className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-sm transition-opacity"
-        onClick={() => onOpenChange(false)}
-        aria-hidden="true"
-      />
-      <div className="absolute inset-0 overflow-y-auto p-4">
-        <div className="flex min-h-full items-center justify-center py-6">{children}</div>
+        ref={containerRef}
+        className="fixed inset-0 z-40 animate-fade-in"
+        aria-labelledby={titleId}
+        aria-modal="true"
+        role="dialog"
+        tabIndex={-1}
+      >
+        <div
+          className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-sm transition-opacity"
+          onClick={() => onOpenChange(false)}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 overflow-y-auto p-4">
+          <div className="flex min-h-full items-center justify-center py-6">{children}</div>
+        </div>
       </div>
-    </div>
+    </DialogTitleIdContext.Provider>
   );
 }
 
@@ -104,8 +110,10 @@ export function DialogHeader({ className, children }: { className?: string; chil
 
 export function DialogTitle({ className, children, id }: { className?: string; children: ReactNode; id?: string }) {
   const generatedId = useId();
+  const contextId = useContext(DialogTitleIdContext);
+  const titleId = id || contextId || generatedId;
   return (
-    <h2 id={id || generatedId} className={cn('theme-heading text-base font-semibold', className)}>
+    <h2 id={titleId} className={cn('theme-heading text-base font-semibold', className)}>
       {children}
     </h2>
   );

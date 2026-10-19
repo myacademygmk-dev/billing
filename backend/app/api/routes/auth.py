@@ -4,22 +4,33 @@ import logging
 import time
 import uuid
 from collections import defaultdict
+from datetime import UTC, datetime
 from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jwt.exceptions import PyJWTError
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_admin_user
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    create_invitation_token,
+    create_refresh_token,
+    decode_token,
+    hash_password,
+    verify_password,
+)
 from app.models.enums import UserRole
 from app.models.user import ALL_PERMISSIONS, User
 from app.schemas.auth import (
+    InvitationResponse,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    RegisteredUserResponse,
     SetupPasswordRequest,
     TokenResponse,
     UpdateUserPermissionsRequest,
@@ -133,12 +144,12 @@ def list_available_permissions(_: User = Depends(get_current_user)) -> list[str]
     return ALL_PERMISSIONS
 
 
-@router.post("/register", response_model=UserRead, status_code=201)
+@router.post("/register", response_model=RegisteredUserResponse, status_code=201)
 def register_user(
     payload: RegisterRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_user),
-) -> UserRead:
+) -> RegisteredUserResponse:
     """Admin creates a user with username + email + role. No password — user sets it themselves."""
     existing = db.execute(select(User).where(User.username == payload.username)).scalar_one_or_none()
     if existing:
@@ -166,7 +177,11 @@ def register_user(
     db.commit()
     db.refresh(user)
     logger.info("User created: username=%r role=%s by=%s", user.username, user.role, current_user.username)
-    return _user_read(user)
+    return RegisteredUserResponse(
+        **_user_read(user).model_dump(),
+        invitation_token=create_invitation_token(subject=str(user.id), version=user.updated_at.isoformat()),
+        expires_in_seconds=settings.jwt_invitation_exp_hours * 60 * 60,
+    )
 
 
 @router.patch("/users/{user_id}/permissions", response_model=UserRead)
@@ -198,21 +213,58 @@ def update_user_permissions(
 
 @router.post("/setup-password", response_model=dict)
 def setup_password(payload: SetupPasswordRequest, request: Request, db: Session = Depends(get_db)) -> dict:
-    """Public endpoint — user sets their password using their email. Only works if password not already set."""
+    """Set an initial password using an expiring admin-issued invitation."""
     _check_rate_limit(request.client.host if request.client else "unknown")
 
     if len(payload.password) < 6:
         raise HTTPException(status_code=422, detail="Password must be at least 6 characters")
 
-    user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
-    if not user or user.password_hash:
-        # Generic message to prevent user enumeration
-        raise HTTPException(status_code=400, detail="Unable to set password. Account may not exist or password already set.")
+    try:
+        token_data = decode_token(payload.token)
+        if token_data.get("type") != "invitation":
+            raise ValueError("invalid token type")
+        user_id = uuid.UUID(token_data["sub"])
+        invitation_version = datetime.fromisoformat(token_data["ver"])
+    except (PyJWTError, KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Unable to set password. Invitation is invalid or expired.")
 
-    user.password_hash = hash_password(payload.password)
+    # This conditional write is the single-use boundary. Only one concurrent
+    # request can transition the account from pending to password-backed.
+    result = db.execute(
+        update(User)
+        .where(
+            User.id == user_id,
+            User.password_hash == "",
+            User.updated_at == invitation_version,
+        )
+        .values(password_hash=hash_password(payload.password))
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Unable to set password. Invitation is invalid or expired.")
     db.commit()
-    logger.info("Password set for user: username=%r", user.username)
+    logger.info("Initial password set for user id=%s", user_id)
     return {"message": "Password set successfully. You can now log in."}
+
+
+@router.post("/users/{user_id}/invitation", response_model=InvitationResponse)
+def issue_user_invitation(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+) -> InvitationResponse:
+    """Issue a fresh invitation for a still-pending account."""
+    user = db.get(User, user_id)
+    if not user or user.password_hash:
+        raise HTTPException(status_code=400, detail="Unable to issue invitation for this account")
+    user.updated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(user)
+    logger.info("Invitation issued for user id=%s by=%s", user.id, current_user.username)
+    return InvitationResponse(
+        invitation_token=create_invitation_token(subject=str(user.id), version=user.updated_at.isoformat()),
+        expires_in_seconds=settings.jwt_invitation_exp_hours * 60 * 60,
+    )
 
 
 @router.get("/users", response_model=list[UserRead])

@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.enums import PaymentMode
 from app.models.payment import Payment
+from app.models.payment_month_allocation import PaymentMonthAllocation
 from app.models.receipt_sequence import ReceiptSequence
 from app.models.student import Student
+from app.models.student_billing_period import StudentBillingPeriod
 from app.models.user import User
 from app.schemas.payments import PaymentCreate, PaymentRead, PaymentReverseRequest
 from app.api.routes.settings import get_institution_branding
@@ -28,10 +30,10 @@ from app.services.billing import (
     fee_period_label_for_months,
     get_student_billing_overview,
     get_student_monthly_fee,
+    normalize_month,
     payment_period_months,
     pending_amount,
     pending_details,
-    release_payment_periods,
 )
 
 
@@ -91,7 +93,7 @@ def _parse_bill_no(value: str) -> int:
 def create_payment(
     payload: PaymentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("collect")),
 ) -> PaymentRead:
     student = db.execute(select(Student).where(Student.student_code == payload.student_code)).scalar_one_or_none()
     if not student:
@@ -99,7 +101,9 @@ def create_payment(
     if payload.student_id and student.id != payload.student_id:
         raise HTTPException(status_code=409, detail="Student ID and roll number do not match")
 
-    selected_months = sorted({month for month in payload.selected_months})
+    # Calendar month is the billing identity. Canonicalize before deriving the
+    # charge so amount, summary fields, allocations, and receipts cannot diverge.
+    selected_months = sorted({normalize_month(month) for month in payload.selected_months})
     if not selected_months and payload.billing_start_month:
         cycle_months = payment_period_months(student.payment_period)
         selected_months = [add_months(payload.billing_start_month, offset) for offset in range(cycle_months)]
@@ -127,6 +131,10 @@ def create_payment(
         billing_cycle_months=cycle_months,
         paid_at=payload.paid_at or datetime.now(UTC),
         created_by=current_user.id,
+        allocation_history=[
+            PaymentMonthAllocation(student_id=student.id, period_month=month)
+            for month in selected_months
+        ],
     )
     db.add(payment)
     try:
@@ -181,6 +189,7 @@ def list_payments(
                 joinedload(Payment.student).selectinload(Student.fee),
                 joinedload(Payment.student).selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment),
                 selectinload(Payment.billing_periods),
+                selectinload(Payment.allocation_history),
             )
         )
         .unique()
@@ -195,33 +204,62 @@ def reverse_payment(
     payment_id: uuid.UUID,
     payload: PaymentReverseRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin_user),
 ) -> PaymentRead:
-    original = db.get(Payment, payment_id)
+    original = (
+        db.execute(
+            select(Payment)
+            .where(Payment.id == payment_id)
+            .with_for_update(of=Payment)
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
     if not original:
         raise HTTPException(status_code=404, detail="Payment not found")
 
-    # Prevent double reversal
+    if Decimal(original.amount) <= 0:
+        raise HTTPException(status_code=409, detail="Only positive original payments can be reversed")
+
+    if payload.amount is not None:
+        raise HTTPException(
+            status_code=422,
+            detail="Partial reversals are not supported; omit amount to reverse the full payment",
+        )
+
+    # The original-row lock serializes competing reversals on PostgreSQL. The
+    # second request checks again after the first commits and is rejected.
+    reversal_marker = f"REVERSAL of {original.receipt_no}:"
     existing_reversal = db.execute(
-        select(Payment).where(Payment.notes.contains(f"REVERSAL of {original.receipt_no}:"))
+        select(Payment).where(
+            Payment.student_id == original.student_id,
+            Payment.amount < 0,
+            Payment.notes.startswith(reversal_marker),
+        )
     ).scalar_one_or_none()
     if existing_reversal:
         raise HTTPException(status_code=409, detail="This payment has already been reversed")
 
-    if payload.amount is not None and payload.amount == 0:
-        raise HTTPException(status_code=422, detail="amount must be non-zero")
-
-    sign = Decimal("-1") if Decimal(original.amount) > 0 else Decimal("1")
-    reversal_amount = (
-        sign * abs(payload.amount)
-        if payload.amount is not None
-        else Decimal(original.amount) * Decimal("-1")
-    )
-
+    reversal_amount = -Decimal(original.amount)
     receipt_no = _generate_receipt_no(db)
     bill_no = _generate_bill_no(db, original.academic_period)
-    reason_note = f"REVERSAL of {original.receipt_no}: {payload.reason}"
-    notes = reason_note if not original.notes else f"{reason_note} | orig_notes: {original.notes}"
+
+    # Keep the shared lock order aligned with payment creation: receipt
+    # sequence first, then billing periods. This avoids create/reverse
+    # deadlocks when both operations target the same month.
+    allocated_periods = (
+        db.execute(
+            select(StudentBillingPeriod)
+            .where(StudentBillingPeriod.payment_id == original.id)
+            .order_by(StudentBillingPeriod.period_month)
+            .with_for_update(of=StudentBillingPeriod)
+        )
+        .scalars()
+        .all()
+    )
+    # The request reason is capped at 300 characters, keeping this generated
+    # audit note safely within payments.notes VARCHAR(500).
+    notes = f"{reversal_marker} {payload.reason}"
     reversal = Payment(
         receipt_no=receipt_no,
         academic_period=original.academic_period,
@@ -235,10 +273,16 @@ def reverse_payment(
         billing_cycle_months=original.billing_cycle_months,
         paid_at=datetime.now(UTC),
         created_by=current_user.id,
+        allocation_history=[
+            PaymentMonthAllocation(student_id=original.student_id, period_month=month)
+            for month in _payment_months(original)
+        ],
     )
     db.add(reversal)
     try:
-        release_payment_periods(original)
+        for period in allocated_periods:
+            period.payment = None
+            period.paid_at = None
         db.flush()
         db.refresh(reversal)
         response = _payment_read(db, reversal, include_overview=True)
@@ -273,7 +317,7 @@ def download_receipt_pdf(
     student = db.get(Student, payment.student_id)
     overview = get_student_billing_overview(db, student) if student else None
     snapshot = billing_list_snapshot(overview) if overview else None
-    selected_months = [period.period_month for period in payment.billing_periods]
+    selected_months = _payment_months(payment)
     period_label = fee_period_label_for_months(selected_months) or fee_period_label(payment.billing_start_month, payment.billing_cycle_months) or "N/A"
 
     # Build pending string with month details
@@ -311,7 +355,7 @@ def _payment_read(db: Session, payment: Payment, *, include_overview: bool = Fal
     data["student_class"] = payment.student.class_name if payment.student else None
     data["created_by_name"] = payment.creator.username if payment.creator else None
     data["cycle_mode"] = cycle_mode_for_months(payment.billing_cycle_months)
-    selected_months = [period.period_month for period in payment.billing_periods]
+    selected_months = _payment_months(payment)
     data["fee_period_label"] = fee_period_label_for_months(selected_months) or fee_period_label(payment.billing_start_month, payment.billing_cycle_months)
     if include_overview and payment.student:
         overview = get_student_billing_overview(db, payment.student)
@@ -321,3 +365,21 @@ def _payment_read(db: Session, payment: Payment, *, include_overview: bool = Fal
         details = pending_details(overview)
         data["pending_label"] = details["label"] if details["months_count"] > 0 else None
     return PaymentRead.model_validate(data)
+
+
+def _payment_months(payment: Payment) -> list[date]:
+    """Return immutable receipt months, with compatibility for legacy rows."""
+    history = sorted(
+        {allocation.period_month for allocation in payment.allocation_history}
+    )
+    if history:
+        return history
+    current = sorted({period.period_month for period in payment.billing_periods})
+    if current:
+        return current
+    if payment.billing_start_month and payment.billing_cycle_months:
+        return [
+            add_months(payment.billing_start_month, offset)
+            for offset in range(payment.billing_cycle_months)
+        ]
+    return []

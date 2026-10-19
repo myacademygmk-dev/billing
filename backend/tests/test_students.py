@@ -132,3 +132,73 @@ def test_import_students_from_excel(client):
     overview_data = overview.json()
     assert overview_data["batch_start_label"] == "Nov 2026"
     assert overview_data["batch_end_label"] == "Apr 2027"
+
+
+def _student_import_workbook_with_invalid_and_valid_dob() -> bytes:
+    from io import BytesIO
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["S.NO", "R.NO", "NAME", "CLASS", "FEE", "PERIOD", "JOINED DATE", "START", "END", "DOB"])
+    ws.append([1, "DOBBAD", "Invalid DOB", "10-A", 800, "MONTHLY", "2026-05-20", "MAY", "APR", "not-a-date"])
+    ws.append([2, "DOBGOOD", "Valid DOB", "10-A", 800, "MONTHLY", "2026-05-20", "MAY", "APR", "2012-03-04"])
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_non_atomic_import_returns_invalid_dob_row_error_and_keeps_valid_row(client):
+    headers = auth_header(client)
+
+    response = client.post(
+        "/api/students/import?atomic=false",
+        headers=headers,
+        data={"batch": "2026-2027", "batch_start_month": "May"},
+        files={
+            "file": (
+                "students.xlsx",
+                _student_import_workbook_with_invalid_and_valid_dob(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["created"] == 1
+    assert result["fee_updated"] == 1
+    assert result["errors"] == [{"row": 2, "error": "date_of_birth must be a valid date"}]
+
+    invalid = client.get("/api/students?search=DOBBAD", headers=headers)
+    valid = client.get("/api/students?search=DOBGOOD", headers=headers)
+    assert invalid.status_code == 200
+    assert invalid.json()["total"] == 0
+    assert valid.status_code == 200
+    assert valid.json()["total"] == 1
+    assert valid.json()["items"][0]["date_of_birth"] == "2012-03-04"
+
+
+def test_atomic_import_invalid_dob_rolls_back_valid_rows(client):
+    headers = auth_header(client)
+
+    response = client.post(
+        "/api/students/import?atomic=true",
+        headers=headers,
+        data={"batch": "2026-2027", "batch_start_month": "May"},
+        files={
+            "file": (
+                "students.xlsx",
+                _student_import_workbook_with_invalid_and_valid_dob(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "errors": [{"row": 2, "error": "date_of_birth must be a valid date"}]
+    }
+    valid = client.get("/api/students?search=DOBGOOD", headers=headers)
+    assert valid.status_code == 200
+    assert valid.json()["total"] == 0

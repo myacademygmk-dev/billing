@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 
 const DEFAULT_SLIDES = [
   '/images/1920x730_slide1.jpg',
@@ -8,52 +9,29 @@ const DEFAULT_SLIDES = [
 ];
 
 export function HeroSlideshow() {
-  const [slides, setSlides] = useState<string[] | null>(null);
+  const config = useWebsiteConfig();
+  const slides = config.hero_slides && config.hero_slides.length > 0 ? config.hero_slides : DEFAULT_SLIDES;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  useEffect(() => {
-    const fetchSlides = async () => {
-      try {
-        const res = await fetch('/api/backend/public/website-config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.hero_slides && data.hero_slides.length > 0) {
-            setSlides(data.hero_slides);
-          } else {
-            setSlides(DEFAULT_SLIDES);
-          }
-        } else {
-          setSlides(DEFAULT_SLIDES);
-        }
-      } catch {
-        setSlides(DEFAULT_SLIDES);
-      }
-    };
-    fetchSlides();
-  }, []);
-
   const goToSlide = useCallback((index: number) => {
-    if (!slides) return;
     setCurrentIndex((index + slides.length) % slides.length);
   }, [slides]);
 
   const goNext = useCallback(() => {
-    if (!slides) return;
     setCurrentIndex((prev) => (prev + 1) % slides.length);
   }, [slides]);
 
   const goPrev = useCallback(() => {
-    if (!slides) return;
     setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
   }, [slides]);
 
   // Auto-advance
   useEffect(() => {
-    if (!slides || slides.length <= 1) return;
+    if (slides.length <= 1) return;
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % slides.length);
     }, 5000);
@@ -81,13 +59,6 @@ export function HeroSlideshow() {
       }
     }
   };
-
-  // Show nothing until we know which slides to display (prevents flash)
-  if (!slides) {
-    return (
-      <div className="w-full h-[300px] sm:h-[400px] lg:h-[500px] bg-gray-100 animate-pulse" />
-    );
-  }
 
   return (
     <div

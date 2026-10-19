@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.api.deps import require_admin_user
 from app.core.database import get_db
 from app.models.student_creativity import StudentCreativity
 from app.models.user import User
+from app.services.public_content_safety import is_local_public_url
 
 router = APIRouter()
 
@@ -24,6 +25,14 @@ class CreativityCreate(BaseModel):
     description: str | None = None
     is_published: bool = True
     display_order: int = 0
+
+    @field_validator("file_url")
+    @classmethod
+    def validate_file_url(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not is_local_public_url(cleaned):
+            raise ValueError("Use an uploaded file path or local /images/ asset")
+        return cleaned
 
 
 @router.post("/")

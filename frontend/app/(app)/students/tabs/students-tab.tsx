@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Download, Eye, IndianRupee, MoreHorizontal, Pencil, Phone, Plus, Search, Users, X } from 'lucide-react';
+import { Download, Eye, IndianRupee, MoreHorizontal, Pencil, Phone, Plus, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -95,12 +95,20 @@ export default function StudentsTab() {
 
 
   // Main student list query
+  const today = new Date();
+  const admissionsMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const statistics = useQuery({
+    queryKey: ['students', 'statistics', admissionsMonth],
+    queryFn: () => apiFetch<{ total_students: number; active_students: number; new_admissions: number; students_with_dues: number }>(`/students/statistics?month=${admissionsMonth}`),
+  });
+  const statisticValue = (value?: number) => statistics.isLoading ? '...' : statistics.isError ? '-' : value ?? '-';
+
   const query = useQuery({
     queryKey: ['students', debounced, selectedClass, page, status],
     queryFn: () => {
       const params = new URLSearchParams();
       if (debounced) params.set('search', debounced);
-      if (selectedClass) params.set('class_code', selectedClass);
+      if (selectedClass) params.set('class_name', selectedClass);
       if (status !== 'all') params.set('status', status);
       params.set('page', String(page));
       params.set('page_size', String(PAGE_SIZE));
@@ -190,6 +198,7 @@ export default function StudentsTab() {
     setSearch('');
     setDebounced('');
     setSelectedClass('');
+    setSelectedSection('');
     setStatus('active');
     setPage(1);
   }
@@ -202,8 +211,17 @@ export default function StudentsTab() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      <dl className="mb-3 grid shrink-0 grid-cols-2 gap-x-4 gap-y-2 border-b border-[var(--panel-line)] pb-2 sm:grid-cols-4">
+        {[
+          { label: 'Total Students', value: statistics.data?.total_students, color: 'text-[var(--heading)]' },
+          { label: 'Active Students', value: statistics.data?.active_students, color: 'text-emerald-700' },
+          { label: 'New Admissions', value: statistics.data?.new_admissions, color: 'text-[var(--accent)]', detail: today.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) },
+          { label: 'Students With Dues', value: statistics.data?.students_with_dues, color: 'text-amber-700' },
+        ].map((metric) => <div key={metric.label} className="min-w-0"><dt className="text-xs text-[var(--muted)]">{metric.label}{metric.detail && <span className="ml-1 text-[10px]">({metric.detail})</span>}</dt><dd className={`text-xl font-semibold tabular-nums ${metric.color}`}>{statisticValue(metric.value)}</dd></div>)}
+      </dl>
+      {statistics.isError && <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 text-sm text-[var(--danger)]">Student totals could not be loaded.<Button size="sm" variant="outline" onClick={() => statistics.refetch()}>Retry</Button></div>}
       {/* ─── Filter Bar ─── */}
-      <div className="flex flex-col gap-2 sm:gap-3">
+      <div className="flex shrink-0 flex-col gap-2">
         {/* Search + Filters + Actions (single row) */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
@@ -212,13 +230,16 @@ export default function StudentsTab() {
             <Input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search..."
+              placeholder="Name or roll number"
+              aria-label="Search students"
               className="h-8 pl-10 text-sm"
             />
             {search && (
               <button
+                type="button"
                 onClick={() => { setSearch(''); setDebounced(''); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)]"
+                aria-label="Clear student search"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -250,6 +271,7 @@ export default function StudentsTab() {
 
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={clearFilters}
               className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-colors"
             >
@@ -279,8 +301,8 @@ export default function StudentsTab() {
       </div>
 
       {/* ─── Table ─── */}
-      <div className="mt-3 -mx-3 sm:-mx-4 flex-1 min-h-0 overflow-auto">
-        <table className="w-full text-[13px] text-[var(--text)]">
+      <div className="mt-2 -mx-3 flex-1 min-h-0 overflow-auto" aria-label="Student records" role="region" tabIndex={0}>
+        <table className="w-full text-[13px] text-[var(--text)] lg:[&_tbody_td]:py-0.5">
           <thead className="sticky top-0 z-10 bg-[var(--table-head-bg)] backdrop-blur">
             <tr>
               <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-center w-[36px]">
@@ -289,12 +311,13 @@ export default function StudentsTab() {
                   className="h-3.5 w-3.5 rounded accent-[var(--accent)]"
                   checked={!!query.data?.items.length && query.data.items.every((s) => selectedIds.has(s.id))}
                   onChange={toggleSelectAll}
+                  aria-label="Select all visible students"
                 />
               </th>
-              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Roll No</th>
-              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Student</th>
-              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Class</th>
-              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-2 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] w-[100px]">Actions</th>
+              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-[var(--muted)]">Roll No</th>
+              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-[var(--muted)]">Student</th>
+              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-[var(--muted)]">Class</th>
+              <th className="whitespace-nowrap border-b border-[rgba(148,163,184,0.12)] px-2 py-2.5 text-center text-[10px] font-semibold uppercase text-[var(--muted)] w-[100px]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -327,11 +350,12 @@ export default function StudentsTab() {
                       className="h-3.5 w-3.5 rounded accent-[var(--accent)]"
                       checked={selectedIds.has(s.id)}
                       onChange={() => toggleSelect(s.id)}
+                      aria-label={`Select ${s.name}`}
                     />
                   </td>
 
                   {/* Roll No */}
-                  <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-2 whitespace-nowrap font-mono text-[11px] text-[var(--muted)]">
+                  <td className="border-b border-[rgba(148,163,184,0.06)] px-3 py-2 whitespace-nowrap font-mono text-[11px] tabular-nums text-[var(--muted)]">
                     {s.student_code}
                   </td>
 
@@ -358,6 +382,7 @@ export default function StudentsTab() {
                         href={`/students/${s.id}`}
                         className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--muted)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
                         title="View Profile"
+                        aria-label={`View profile for ${s.name}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Link>
@@ -365,6 +390,7 @@ export default function StudentsTab() {
                         href={`/collect?student_id=${s.id}`}
                         className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--muted)] transition-colors hover:bg-[rgba(22,163,74,0.1)] hover:text-[var(--success)]"
                         title="Collect Fee"
+                        aria-label={`Collect fee for ${s.name}`}
                       >
                         <IndianRupee className="h-3.5 w-3.5" />
                       </Link>
@@ -374,6 +400,7 @@ export default function StudentsTab() {
                         rel="noopener noreferrer"
                         className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--muted)] transition-colors hover:bg-[rgba(22,163,74,0.1)] hover:text-green-600"
                         title="WhatsApp"
+                        aria-label={`Open WhatsApp for ${s.name}`}
                       >
                         <Phone className="h-3.5 w-3.5" />
                       </a>
@@ -406,7 +433,7 @@ export default function StudentsTab() {
 
       {/* ─── Pagination ─── */}
       {totalStudents > 0 && (
-        <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-2 border-t border-[var(--panel-line)]">
+        <div className="mt-2 flex shrink-0 flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-2 border-t border-[var(--panel-line)]">
           <span className="text-xs text-[var(--muted)]">
             Showing <span className="font-medium text-[var(--text)]">{showingFrom}–{showingTo}</span> of{' '}
             <span className="font-medium text-[var(--text)]">{totalStudents}</span> students

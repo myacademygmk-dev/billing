@@ -90,7 +90,7 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
             </div>
             <span
               className={`hidden text-xs sm:inline ${
-                isActive ? 'font-medium text-white' : 'text-[#91a1bc]'
+                isActive ? 'font-medium text-[var(--heading)]' : 'text-[var(--muted)]'
               }`}
             >
               {label}

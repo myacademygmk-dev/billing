@@ -2,6 +2,7 @@ from app.models.base import Base
 from app.models.billing_settings import BillingSettings
 from app.models.institution_settings import InstitutionSettings
 from app.models.payment import Payment
+from app.models.payment_month_allocation import PaymentMonthAllocation
 from app.models.receipt_sequence import ReceiptSequence
 from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
@@ -32,6 +33,7 @@ __all__ = [
     "StudentBillingPeriod",
     "ReceiptSequence",
     "Payment",
+    "PaymentMonthAllocation",
     "SavingsEntry",
     "StudentBalanceView",
     "Staff",

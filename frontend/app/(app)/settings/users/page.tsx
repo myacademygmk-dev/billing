@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Trash2, UserPlus } from 'lucide-react';
+import { KeyRound, Shield, Trash2, UserPlus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
+import { InvitationLinkDialog } from '@/components/app/invitation-link-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +20,11 @@ type UserItem = {
   role: 'admin' | 'staff';
   has_password: boolean;
   permissions: string[];
+};
+
+type InvitationResponse = {
+  invitation_token: string;
+  expires_in_seconds: number;
 };
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -42,6 +48,7 @@ export default function UsersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
+  const [invitationLink, setInvitationLink] = useState<string | null>(null);
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
@@ -53,12 +60,22 @@ export default function UsersPage() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: (data: typeof form) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
+    mutationFn: (data: typeof form) => apiFetch<UserItem & InvitationResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: (createdUser) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowRegister(false);
       setForm({ username: '', email: '', role: 'staff' });
-      toast({ title: 'User created. They can set their password at /setup-password' });
+      setInvitationLink(`${window.location.origin}/setup-password#token=${encodeURIComponent(createdUser.invitation_token)}`);
+      toast({ title: 'User created. Share the private invitation link to activate the account.' });
+    },
+    onError: (e) => toast({ title: 'Failed', description: String(e.message || e) }),
+  });
+
+  const invitationMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<InvitationResponse>(`/auth/users/${id}/invitation`, { method: 'POST' }),
+    onSuccess: (invitation) => {
+      setInvitationLink(`${window.location.origin}/setup-password#token=${encodeURIComponent(invitation.invitation_token)}`);
     },
     onError: (e) => toast({ title: 'Failed', description: String(e.message || e) }),
   });
@@ -174,6 +191,18 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
+                          {!user.has_password && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => invitationMutation.mutate(user.id)}
+                              disabled={invitationMutation.isPending}
+                              aria-label={`Create invitation for ${user.username}`}
+                            >
+                              <KeyRound className="mr-1 h-3.5 w-3.5" />
+                              Invite
+                            </Button>
+                          )}
                           {user.role !== 'admin' && (
                             <Button
                               variant="outline"
@@ -216,7 +245,7 @@ export default function UsersPage() {
           </DialogHeader>
           <DialogBody>
             <p className="mb-4 text-sm text-[var(--muted)]">
-              The user will set their own password at <strong>/setup-password</strong> using their email.
+              After creation, copy the private time-limited invitation link and send it to the user.
             </p>
             <div className="grid gap-4">
               <div>
@@ -261,6 +290,8 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InvitationLinkDialog link={invitationLink} onClose={() => setInvitationLink(null)} />
 
       {/* Permissions dialog */}
       <Dialog open={showPermissions} onOpenChange={setShowPermissions}>

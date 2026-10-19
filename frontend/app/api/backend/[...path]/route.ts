@@ -31,6 +31,25 @@ async function forwardRequest(req: NextRequest, token: string, path: string) {
   });
 }
 
+async function forwardPublicRequest(req: NextRequest, path: string) {
+  const url = new URL(req.url);
+  const target = `${backendBaseUrl()}/${path}${url.search}`;
+
+  const headers = new Headers();
+  const contentType = req.headers.get('content-type');
+  if (contentType) headers.set('Content-Type', contentType);
+  const accept = req.headers.get('accept');
+  if (accept) headers.set('Accept', accept);
+
+  const reqBody = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer();
+
+  return fetch(target, {
+    method: req.method,
+    headers,
+    body: reqBody
+  });
+}
+
 async function tryRefreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string } | null> {
   try {
     const res = await fetch(`${backendBaseUrl()}/auth/refresh`, {
@@ -50,8 +69,7 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
 
   // Allow public access to uploaded files and public API (no auth required)
   if (path.startsWith('uploads/files/') || path.startsWith('public/')) {
-    const target = `${backendBaseUrl()}/${path}`;
-    const res = await fetch(target);
+    const res = await forwardPublicRequest(req, path);
     return buildResponse(res);
   }
 

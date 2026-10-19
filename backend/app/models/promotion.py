@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -34,7 +34,10 @@ class PromotionHistory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     old_fee_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     new_fee_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     promoted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
     )
     promoted_by: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False
@@ -64,7 +67,10 @@ class StudentArrears(Base, UUIDPrimaryKeyMixin):
         Uuid(as_uuid=True), ForeignKey("payments.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
     )
 
     # Relationships

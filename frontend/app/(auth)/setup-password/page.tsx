@@ -1,22 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function SetupPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const invitationToken = params.get('token') ?? '';
+    setToken(invitationToken);
+    if (invitationToken) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setMessage('');
+
+    if (!token) {
+      setError('This invitation link is missing or invalid. Ask an administrator for a new invitation.');
+      return;
+    }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -32,7 +46,7 @@ export default function SetupPasswordPage() {
       const res = await fetch('/api/auth/setup-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -48,26 +62,21 @@ export default function SetupPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-gradient)] p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-gradient)] p-4">
+      <Card className="min-w-0 w-full max-w-md">
         <CardHeader>
           <CardTitle>Set Your Password</CardTitle>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Enter your registered email and choose a password to activate your account.
+            Choose a password to activate the account from your invitation.
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--text)]">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-              />
-            </div>
+            {!token && (
+              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                Open the complete invitation link provided by your administrator.
+              </p>
+            )}
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--text)]">Password</label>
               <Input
@@ -97,7 +106,7 @@ export default function SetupPasswordPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={loading || !!message}>
+            <Button type="submit" disabled={!token || loading || !!message}>
               {loading ? 'Setting password...' : 'Set Password'}
             </Button>
           </form>

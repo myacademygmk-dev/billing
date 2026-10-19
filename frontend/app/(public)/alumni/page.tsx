@@ -16,16 +16,7 @@ type AlumniEntry = {
   initials: string;
 };
 
-const NOTABLE_ALUMNI: AlumniEntry[] = [
-  { name: 'Priya Sharma', batch: 'Class of 2010', batchYear: 2010, company: 'Google', role: 'Senior Software Engineer', location: 'Bangalore', initials: 'PS' },
-  { name: 'Rajesh Kumar', batch: 'Class of 2012', batchYear: 2012, company: 'AIIMS Delhi', role: 'Cardiologist', location: 'New Delhi', initials: 'RK' },
-  { name: 'Anita Desai', batch: 'Class of 2008', batchYear: 2008, company: 'Government of Tamil Nadu', role: 'IAS Officer', location: 'Chennai', initials: 'AD' },
-  { name: 'Mohammed Irfan', batch: 'Class of 2015', batchYear: 2015, company: 'LearnSpark (Own Startup)', role: 'Founder & CEO', location: 'Hyderabad', initials: 'MI' },
-  { name: 'Kavitha Rajan', batch: 'Class of 2011', batchYear: 2011, company: 'NASA JPL', role: 'Research Scientist', location: 'California, USA', initials: 'KR' },
-  { name: 'Suresh Babu', batch: 'Class of 2009', batchYear: 2009, company: 'Deloitte', role: 'Chartered Accountant & Partner', location: 'Mumbai', initials: 'SB' },
-  { name: 'Deepa Venkatesh', batch: 'Class of 2013', batchYear: 2013, company: 'Apollo Hospitals', role: 'Pediatric Surgeon', location: 'Chennai', initials: 'DV' },
-  { name: 'Arun Prakash', batch: 'Class of 2014', batchYear: 2014, company: 'Microsoft', role: 'Product Manager', location: 'Pune', initials: 'AP' },
-];
+const NOTABLE_ALUMNI: AlumniEntry[] = [];
 
 // Group alumni by batch year (descending)
 function groupByYear(alumni: AlumniEntry[]): Record<number, AlumniEntry[]> {
@@ -83,7 +74,7 @@ export default function AlumniPage() {
   const sortedYears = Object.keys(grouped).map(Number).sort((a, b) => b - a);
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-dvh">
       {/* Hero */}
       <section className="relative bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] py-8 sm:py-10">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />

@@ -25,4 +25,16 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default function config(phase) {
+  // Next sets PORT before loading server config. Keep concurrent dev servers
+  // and production builds from overwriting one another's generated modules.
+  const port = process.env.PORT || '3000';
+  if (phase === PHASE_DEVELOPMENT_SERVER && !/^\d+$/.test(port)) {
+    throw new Error('PORT must be numeric');
+  }
+  return {
+    ...nextConfig,
+    distDir: phase === PHASE_DEVELOPMENT_SERVER ? `.next-dev-${port}` : '.next',
+  };
+}
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';

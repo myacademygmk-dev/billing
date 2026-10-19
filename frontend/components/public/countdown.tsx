@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 
 interface TimeLeft {
   days: number;
@@ -25,28 +26,14 @@ function calculateTimeLeft(targetDate: string): TimeLeft | null {
 }
 
 export function Countdown() {
-  const [countdownDate, setCountdownDate] = useState<string | null>(null);
-  const [countdownTitle, setCountdownTitle] = useState<string>('');
+  const config = useWebsiteConfig();
+  const countdownDate = config.countdown_date || null;
+  const countdownTitle = config.countdown_title || 'Coming Soon';
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const res = await fetch('/api/backend/public/website-config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.countdown_date) {
-            setCountdownDate(data.countdown_date);
-            setCountdownTitle(data.countdown_title || 'Coming Soon');
-            setTimeLeft(calculateTimeLeft(data.countdown_date));
-          }
-        }
-      } catch {}
-      setLoaded(true);
-    };
-    fetchConfig();
-  }, []);
+    setTimeLeft(countdownDate ? calculateTimeLeft(countdownDate) : null);
+  }, [countdownDate]);
 
   // Update every second
   useEffect(() => {
@@ -60,7 +47,7 @@ export function Countdown() {
   }, [countdownDate]);
 
   // Don't render if no countdown configured or time expired
-  if (!loaded || !countdownDate || !timeLeft) return null;
+  if (!countdownDate || !timeLeft) return null;
 
   const blocks = [
     { value: timeLeft.days, label: 'Days' },

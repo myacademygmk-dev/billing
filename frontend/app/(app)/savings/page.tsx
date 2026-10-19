@@ -8,6 +8,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { AppShell } from '@/components/app/shell';
+import { StudentPicker, type PickedStudent } from '@/components/app/student-picker';
+import { LedgerNavigation } from '@/components/app/ledger-navigation';
+const formatCurrency = (value: string) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value));
 import { RetractSavingsDialog, type SavingsRow } from '@/components/app/retract-savings-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,7 +62,8 @@ type FormValues = z.infer<typeof schema>;
 
 export default function SavingsPage() {
   const { toast } = useToast();
-  const [studentCodeLookup, setStudentCodeLookup] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<PickedStudent | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
   const [balanceSearch, setBalanceSearch] = useState('');
   const [balanceClass, setBalanceClass] = useState('');
   const [debouncedBalanceSearch, setDebouncedBalanceSearch] = useState('');
@@ -81,23 +85,6 @@ export default function SavingsPage() {
       amount: undefined,
       notes: ''
     }
-  });
-  const studentCodeField = form.register('student_code');
-
-  const student = useQuery({
-    queryKey: ['savingsStudentByCode', studentCodeLookup],
-    enabled: Boolean(studentCodeLookup),
-    queryFn: async () => {
-      const data = await apiFetch<{ items: Student[]; total: number }>(
-        `/students?search=${encodeURIComponent(studentCodeLookup)}&page=1&page_size=10`
-      );
-      const exact = data.items.find((item) => item.student_code.toLowerCase() === studentCodeLookup.toLowerCase());
-      if (!exact) throw new Error('Student not found for this roll number');
-      form.setValue('student_id', exact.id);
-      form.setValue('student_code', exact.student_code);
-      return exact;
-    },
-    retry: false
   });
 
   const balances = useQuery({
@@ -129,6 +116,8 @@ export default function SavingsPage() {
     onSuccess: () => {
       toast({ title: 'Savings entry recorded' });
       form.reset({ student_id: '', student_code: '', entry_type: 'plus', amount: undefined, notes: '' });
+      setSelectedStudent(null);
+      setStudentSearch('');
       balances.refetch();
       entries.refetch();
     },
@@ -138,10 +127,11 @@ export default function SavingsPage() {
   return (
     <AppShell
       title="Savings"
-      subtitle="Track student savings separately from fee payments. Choose whether the entry adds to or deducts from savings, and retract mistaken entries when needed."
+      subtitle="Student deposits, withdrawals, and account balances."
     >
+      <LedgerNavigation active="savings" />
       <div className="page-grid">
-        <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
           <Card square>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -152,38 +142,21 @@ export default function SavingsPage() {
             <CardContent>
               <form className="space-y-3" onSubmit={form.handleSubmit((values) => createEntry.mutate(values))}>
                 <div>
-                  <div className="theme-heading mb-2 text-sm font-medium">Student roll no</div>
-                  <div className="flex gap-2">
-                    <Input
-                      className="h-10 rounded-xl"
-                      {...studentCodeField}
-                      placeholder="S001"
-                      onChange={(e) => {
-                        studentCodeField.onChange(e);
-                        form.setValue('student_id', '');
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 rounded-xl px-4"
-                      onClick={() => setStudentCodeLookup(form.getValues('student_code').trim())}
-                    >
-                      Load
-                    </Button>
-                  </div>
-                  {student.isError ? <div className="mt-1 text-xs text-rose-300">Invalid roll number</div> : null}
-                  {student.data ? (
-                    <div className="mt-2 text-sm text-[#91a1bc]">
-                      {student.data.name} ({student.data.student_code})
-                    </div>
-                  ) : null}
+                  <div className="theme-heading mb-2 text-sm font-medium">Student</div>
+                  <StudentPicker value={studentSearch} onChange={(value) => {
+                    setStudentSearch(value); setSelectedStudent(null);
+                    form.setValue('student_id', ''); form.setValue('student_code', '');
+                  }} onSelect={(student) => {
+                    setSelectedStudent(student); setStudentSearch(student.student_code);
+                    form.setValue('student_id', student.id); form.setValue('student_code', student.student_code);
+                  }} />
+                  {selectedStudent && <p className="mt-2 rounded-lg bg-[var(--accent-soft)] p-3 text-sm font-medium text-[var(--heading)]">{selectedStudent.name} / {selectedStudent.student_code}</p>}
                 </div>
                 <div>
                   <div className="theme-heading mb-2 text-sm font-medium">Entry type</div>
                   <select className="theme-select h-10 w-full rounded-xl px-4 text-sm outline-none" {...form.register('entry_type')}>
-                    <option value="plus">Plus</option>
-                    <option value="minus">Minus</option>
+                    <option value="plus">Deposit</option>
+                    <option value="minus">Withdrawal</option>
                   </select>
                 </div>
                 <div>
@@ -207,7 +180,7 @@ export default function SavingsPage() {
                 <Button
                   className="h-10 rounded-xl px-4"
                   type="submit"
-                  disabled={createEntry.isPending || !student.data || student.isFetching}
+                  disabled={createEntry.isPending || !selectedStudent}
                 >
                   {createEntry.isPending ? <Spinner className="mr-2" /> : null}
                   Save Entry
@@ -217,7 +190,7 @@ export default function SavingsPage() {
           </Card>
 
           <Card square>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <CardTitle>Student Savings Balances</CardTitle>
               </div>
@@ -275,7 +248,7 @@ export default function SavingsPage() {
                           <TD>{item.student_code}</TD>
                           <TD className="theme-heading font-semibold">{item.student_name}</TD>
                           <TD className={Number(item.total_savings) < 0 ? 'font-semibold text-rose-300' : 'theme-heading font-semibold'}>
-                            {item.total_savings}
+                            {formatCurrency(item.total_savings)}
                           </TD>
                         </tr>
                       ))
@@ -288,7 +261,7 @@ export default function SavingsPage() {
         </div>
 
         <Card square>
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle>Savings Entries</CardTitle>
             </div>
@@ -339,7 +312,7 @@ export default function SavingsPage() {
                         <TD className="theme-heading font-semibold">{item.student_name ?? '-'}</TD>
                         <TD className="capitalize">{item.mode}</TD>
                         <TD className={Number(item.amount) < 0 ? 'font-semibold text-rose-300' : 'theme-heading font-semibold'}>
-                          {item.amount}
+                          {formatCurrency(item.amount)}
                           {item.is_edited && <span className="ml-2 rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs text-yellow-400">Edited</span>}
                         </TD>
                         <TD className="text-[#91a1bc]">{item.created_by_name ?? '-'}</TD>

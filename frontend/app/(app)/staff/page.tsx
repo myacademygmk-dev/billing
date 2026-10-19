@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Shield, Trash2, UserPlus, Users, UserCog, CalendarCheck } from 'lucide-react';
+import { Plus, Pencil, KeyRound, Shield, Trash2, UserPlus, Users, UserCog, CalendarCheck } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
+import { PageTabs } from '@/components/ui/page-tabs';
+import { MetricTile } from '@/components/ui/app-ux';
+import { InvitationLinkDialog } from '@/components/app/invitation-link-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +47,11 @@ type UserItem = {
   permissions: string[];
 };
 
+type InvitationResponse = {
+  invitation_token: string;
+  expires_in_seconds: number;
+};
+
 const PERMISSION_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
   students: 'Students',
@@ -67,46 +75,12 @@ export default function StaffPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'users' | 'attendance'>('staff');
 
   const tabNav = (
-    <div className="flex items-end">
-      <button
-        onClick={() => setActiveTab('staff')}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
-          activeTab === 'staff'
-            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
-            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
-        }`}
-      >
-        <UserCog className="h-3.5 w-3.5" />
-        Staff
-      </button>
-      <button
-        onClick={() => setActiveTab('attendance')}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
-          activeTab === 'attendance'
-            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
-            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
-        }`}
-      >
-        <CalendarCheck className="h-3.5 w-3.5" />
-        Attendance
-      </button>
-      <button
-        onClick={() => setActiveTab('users')}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
-          activeTab === 'users'
-            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
-            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
-        }`}
-      >
-        <Users className="h-3.5 w-3.5" />
-        User Accounts
-      </button>
-    </div>
+    <PageTabs<'staff' | 'attendance' | 'users'> label="Staff sections" items={[{ id: 'staff', label: 'Staff', icon: UserCog }, { id: 'attendance', label: 'Attendance', icon: CalendarCheck }, { id: 'users', label: 'User Accounts', icon: Users }]} value={activeTab} onValueChange={setActiveTab} />
   );
 
   return (
     <AppShell title="Staff" subtitle="Manage staff records, user accounts, and attendance." action={tabNav}>
-      <div className="border border-[var(--panel-line)] bg-white p-3 sm:p-4">
+      <div className="min-w-0 py-4">
         {activeTab === 'staff' && <StaffTab />}
         {activeTab === 'attendance' && <StaffAttendanceTab />}
         {activeTab === 'users' && <UsersTab />}
@@ -442,6 +416,7 @@ function UsersTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
+  const [invitationLink, setInvitationLink] = useState<string | null>(null);
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
@@ -455,12 +430,22 @@ function UsersTab() {
 
   const registerMutation = useMutation({
     mutationFn: (data: typeof form) =>
-      apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
+      apiFetch<UserItem & InvitationResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: (createdUser) => {
       qc.invalidateQueries({ queryKey: ['users'] });
       setShowRegister(false);
       setForm({ username: '', email: '', role: 'staff' });
-      toast({ title: 'User created', description: 'They can set their password at /setup-password', variant: 'success' });
+      setInvitationLink(`${window.location.origin}/setup-password#token=${encodeURIComponent(createdUser.invitation_token)}`);
+      toast({ title: 'User created', description: 'Share the private invitation link to activate the account.', variant: 'success' });
+    },
+    onError: (e) => toast({ title: 'Failed', description: String(e.message || e), variant: 'error' }),
+  });
+
+  const invitationMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<InvitationResponse>(`/auth/users/${id}/invitation`, { method: 'POST' }),
+    onSuccess: (invitation) => {
+      setInvitationLink(`${window.location.origin}/setup-password#token=${encodeURIComponent(invitation.invitation_token)}`);
     },
     onError: (e) => toast({ title: 'Failed', description: String(e.message || e), variant: 'error' }),
   });
@@ -580,6 +565,18 @@ function UsersTab() {
                       </TD>
                       <TD className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {!user.has_password && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => invitationMutation.mutate(user.id)}
+                              disabled={invitationMutation.isPending}
+                              aria-label={`Create invitation for ${user.username}`}
+                            >
+                              <KeyRound className="mr-1 h-3.5 w-3.5" />
+                              Invite
+                            </Button>
+                          )}
                           {user.role !== 'admin' && (
                             <Button
                               variant="ghost"
@@ -619,7 +616,7 @@ function UsersTab() {
           </DialogHeader>
           <DialogBody>
             <p className="mb-4 text-sm text-[var(--muted)]">
-              The user will set their own password at <strong>/setup-password</strong> using their email.
+              After creation, copy the private time-limited invitation link and send it to the user.
             </p>
             <div className="grid gap-4">
               <div>
@@ -663,6 +660,8 @@ function UsersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InvitationLinkDialog link={invitationLink} onClose={() => setInvitationLink(null)} />
 
       {/* Permissions Dialog */}
       <Dialog open={showPermissions} onOpenChange={setShowPermissions}>
@@ -770,7 +769,7 @@ type ClockAnalytics = {
 function StaffAttendanceTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA');
   const [noteDialog, setNoteDialog] = useState<{ staffId: string; action: 'in' | 'out'; staffName: string } | null>(null);
   const [note, setNote] = useState('');
   const [analyticsMonth, setAnalyticsMonth] = useState(() => {
@@ -779,7 +778,7 @@ function StaffAttendanceTab() {
   });
 
   // Fetch today's clock records
-  const { data: clockRecords, isLoading: loadingRecords } = useQuery<ClockRecord[]>({
+  const { data: clockRecords, isLoading: loadingRecords, isError: clockError, refetch: retryClock } = useQuery<ClockRecord[]>({
     queryKey: ['clockRecords', today],
     queryFn: () => apiFetch(`/attendance/staff/clock-records?date=${today}`),
   });
@@ -845,6 +844,11 @@ function StaffAttendanceTab() {
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MetricTile label="Currently in" value={loadingRecords ? '...' : clockError ? 'Unavailable' : clockedInCount - clockedOutCount} tone="success" />
+        <MetricTile label="Completed today" value={loadingRecords ? '...' : clockError ? 'Unavailable' : clockedOutCount} tone="accent" />
+        <MetricTile label="Not clocked in" value={loadingRecords ? '...' : clockError ? 'Unavailable' : (clockRecords?.length ?? 0) - clockedInCount} tone="warning" />
+      </div>
       {/* ─── Clock In/Out Panel ─── */}
       <Card square transparent>
         <CardHeader>
@@ -864,7 +868,7 @@ function StaffAttendanceTab() {
         <CardContent>
           {loadingRecords ? (
             <div className="flex items-center gap-2 py-8 text-[var(--muted)]"><Spinner /> Loading</div>
-          ) : !clockRecords?.length ? (
+          ) : clockError ? <div role="alert" className="py-5 text-sm text-[var(--danger)]">Clock records could not be loaded. <Button variant="outline" size="sm" onClick={() => retryClock()}>Retry</Button></div> : !clockRecords?.length ? (
             <EmptyState
               icon={<EmptyStateIcon type="staff" />}
               title="No staff found"

@@ -2,11 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Administration surfaces share compact controls and readable table states. */
+.admin-workspace {
+  --font-display: "Segoe UI", system-ui, sans-serif;
+  --table-head-bg: #f3f5f7;
+  --field-border: #d4d9e0;
+  --panel-line: #e7e9ee;
+  --heading: #19232f;
+  --text: #354150;
+  --muted: #657181;
+  --surface-subtle: #f5f7fa;
+  background: #ffffff;
+  letter-spacing: 0;
+}
+.admin-workspace [data-ui="button"] { border-radius: 6px; font-weight: 500; box-shadow: none; }
+.admin-workspace .theme-nav-item { border-radius: 6px; }
+.admin-workspace .section-label { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.admin-workspace main th { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 500; }
+.admin-workspace .theme-field,
+.admin-workspace .theme-select { border-radius: 8px; min-width: 0; }
+.admin-workspace .glass-panel { border-radius: 8px; box-shadow: none; }
+.admin-workspace .page-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.admin-workspace .metric-card { border-radius: 8px; }
+.admin-workspace .metric-card[data-tone="success"] { background: #f3fbf7; border-color: #dcefe4; }
+.admin-workspace .metric-card[data-tone="warning"] { background: #fffbf3; border-color: #f2e8d2; }
+.admin-workspace .metric-card[data-tone="accent"] { background: #f4f8ff; border-color: #dee9fa; }
+.admin-workspace .metric-card[data-tone="danger"] { background: #fff5f5; border-color: #f3dddd; }
+.admin-workspace .page-tabs { flex-shrink: 0; }
+.admin-workspace main [role="dialog"] { border-radius: 8px; }
+.admin-workspace main table thead { background: #f5f7fa; }
+.admin-workspace main table th { color: #526070; }
+.admin-workspace progress { appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: #edf1f5; }
+.admin-workspace progress::-webkit-progress-bar { background: #edf1f5; }
+.admin-workspace progress::-webkit-progress-value { background: #059669; border-radius: 4px; }
+.admin-workspace progress::-moz-progress-bar { background: #059669; border-radius: 4px; }
+.admin-workspace .metric-card::after { content: none; }
+.admin-workspace main h1 { font-size: 20px; line-height: 1.4; }
+.admin-workspace .theme-nav-item-active { box-shadow: inset 3px 0 0 var(--accent); }
+.admin-workspace .theme-field:hover,
+.admin-workspace .theme-select:hover { border-color: #a4afbe; }
+.admin-workspace main table { font-variant-numeric: tabular-nums; }
+.admin-workspace main tbody tr:hover { background-color: var(--surface-subtle); }
+.student-profile h2,
+.student-profile h3 { font-family: var(--font-body); }
+.student-profile { color: #303947; }
+.student-profile .profile-billing-summary > div:nth-child(3) { background: #f0faf6; border-color: #d8eee3; }
+.student-profile .profile-billing-summary > div:nth-child(4) { background: #fffbf2; border-color: #f2e7cb; }
+.student-profile table tbody td { padding-top: 12px; padding-bottom: 12px; }
+.student-profile section > div > p.uppercase { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 400; }
+.admin-workspace main button:focus-visible,
+.admin-workspace main a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.admin-workspace main [class*="text-[#91a1bc]"],
+.admin-workspace main [class*="text-[#7f8da9]"] { color: var(--muted); }
+.admin-workspace main .text-rose-300 { color: #be123c; }
+@media (max-width: 639px) {
+  .admin-workspace main { overflow-wrap: anywhere; }
+  .admin-workspace main .metric-card { padding: 12px; }
+}
+
 /* ══════════════════════════════════════════════════════
    DESIGN TOKENS (CSS Variables)
    ══════════════════════════════════════════════════════ */
 
 :root {
+  --font-display: ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --bg: #f8fafc;
   --bg-soft: #f1f5f9;
   --bg-gradient:
@@ -86,7 +146,7 @@ body {
   background: var(--bg-gradient);
   color: var(--text);
   background-attachment: fixed;
-  transition: background 220ms ease, color 220ms ease;
+  transition: background 150ms ease, color 150ms ease;
 }
 
 h1,
@@ -96,7 +156,14 @@ h4,
 h5,
 h6 {
   font-family: var(--font-display), var(--font-body), sans-serif;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
 }
 
 ::selection {
@@ -244,6 +311,21 @@ h6 {
   background: var(--table-wrap-bg);
   border: 1px solid var(--panel-line);
   border-radius: 0;
+}
+
+.data-text {
+  font-variant-numeric: tabular-nums;
+}
+
+.public-news-label > span {
+  font-size: 0;
+  color: transparent;
+}
+
+.public-news-label > span::after {
+  content: 'Latest News';
+  color: #fcd34d;
+  font-size: 0.75rem;
 }
 
 .theme-chip-neutral {
@@ -460,6 +542,18 @@ main ::-webkit-scrollbar-thumb:hover {
 main * {
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+}
+
+/* Keep public pages scrollable without showing a full-page scrollbar. */
+html:has(.public-site),
+html:has(.public-site) body {
+  scrollbar-width: none;
+}
+
+html:has(.public-site)::-webkit-scrollbar,
+html:has(.public-site) body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ══════════════════════════════════════════════════════

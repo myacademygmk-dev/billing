@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
+import { cn } from './cn';
 
 type CardTone = 'light' | 'dark';
 
 const TONE_CLASSES: Record<CardTone, string> = {
   light: 'bg-white border border-slate-200',
-  dark: 'bg-white/[0.03] border border-white/10',
+  dark: 'bg-slate-900 border border-slate-700',
 };
 
 const TONE_HOVER: Record<CardTone, string> = {
-  light: 'hover:border-slate-300 hover:shadow-md',
-  dark: 'hover:border-white/20 hover:bg-white/[0.05]',
+  light: 'hover:border-indigo-300',
+  dark: 'hover:border-slate-500',
 };
 
 /**
@@ -31,9 +32,9 @@ export function Card({
 }) {
   return (
     <div
-      className={`group relative rounded-xl ${TONE_CLASSES[tone]} shadow-sm transition-all duration-200 ${
+      className={cn(`group relative rounded-md ${TONE_CLASSES[tone]} shadow-sm transition-colors duration-150 ${
         interactive ? TONE_HOVER[tone] : ''
-      } ${className}`}
+      }`, className)}
     >
       {children}
     </div>
@@ -52,7 +53,7 @@ const BADGE_CLASSES: Record<BadgeTone, string> = {
 /** Small uppercase label chip (class, year, batch, date). One flat tone — no rainbow. */
 export function CardBadge({ children, tone = 'neutral' }: { children: ReactNode; tone?: BadgeTone }) {
   return (
-    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${BADGE_CLASSES[tone]}`}>
+    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${BADGE_CLASSES[tone]}`}>
       {children}
     </span>
   );
@@ -78,7 +79,7 @@ const TIER: Record<RankTier, { ribbon: string; chip: string; icon: string; glow:
     ribbon: 'bg-amber-500',
     chip: 'bg-amber-50',
     icon: 'text-amber-600',
-    glow: 'shadow-[0_0_0_4px_rgba(245,158,11,0.16)]',
+    glow: 'ring-1 ring-amber-200',
     dot: '#f59e0b',
     label: () => '1st Place',
   },
@@ -86,7 +87,7 @@ const TIER: Record<RankTier, { ribbon: string; chip: string; icon: string; glow:
     ribbon: 'bg-slate-400',
     chip: 'bg-slate-100',
     icon: 'text-slate-500',
-    glow: 'shadow-[0_0_0_4px_rgba(148,163,184,0.2)]',
+    glow: 'ring-1 ring-slate-200',
     dot: '#94a3b8',
     label: () => '2nd Place',
   },
@@ -94,7 +95,7 @@ const TIER: Record<RankTier, { ribbon: string; chip: string; icon: string; glow:
     ribbon: 'bg-amber-700',
     chip: 'bg-amber-50',
     icon: 'text-amber-800',
-    glow: 'shadow-[0_0_0_4px_rgba(180,83,9,0.16)]',
+    glow: 'ring-1 ring-amber-200',
     dot: '#b45309',
     label: () => '3rd Place',
   },
@@ -102,7 +103,7 @@ const TIER: Record<RankTier, { ribbon: string; chip: string; icon: string; glow:
     ribbon: 'bg-indigo-600',
     chip: 'bg-indigo-50',
     icon: 'text-indigo-600',
-    glow: 'shadow-[0_0_0_4px_rgba(79,70,229,0.14)]',
+    glow: 'ring-1 ring-indigo-200',
     dot: '#4f46e5',
     label: (rank) => String(rank ?? 'Honoree'),
   },
@@ -122,19 +123,11 @@ export function RankRibbon({ rank }: { rank: unknown }) {
   if (!rank) return null;
   const t = TIER[rankTier(rank)];
   return (
-    <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 overflow-hidden">
-      <div
-        className="absolute inset-0 opacity-[0.14]"
-        style={{ backgroundImage: `radial-gradient(${t.dot} 1px, transparent 1px)`, backgroundSize: '9px 9px' }}
-      />
-      <div className={`absolute right-[-30px] top-[14px] flex w-[120px] items-center justify-center gap-1 rotate-45 py-1 text-center text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ${t.ribbon}`}>
+    <div className={`absolute right-4 top-4 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase text-white ${t.ribbon}`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.563.563 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.563.563 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
         </svg>
         {t.label(rank)}
-        {/* Silk sheen */}
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/35 via-transparent to-black/10" />
-      </div>
     </div>
   );
 }
@@ -142,10 +135,10 @@ export function RankRibbon({ rank }: { rank: unknown }) {
 /** Tier-tinted shadow that blooms on card hover — pairs with `rankCardTint`. */
 export function rankHoverGlow(rank: unknown): string {
   const glow: Record<RankTier, string> = {
-    '1': 'hover:shadow-[0_10px_28px_-12px_rgba(245,158,11,0.45)]',
-    '2': 'hover:shadow-[0_10px_28px_-12px_rgba(148,163,184,0.45)]',
-    '3': 'hover:shadow-[0_10px_28px_-12px_rgba(180,83,9,0.4)]',
-    other: 'hover:shadow-[0_10px_28px_-12px_rgba(79,70,229,0.35)]',
+    '1': 'hover:border-amber-300',
+    '2': 'hover:border-slate-300',
+    '3': 'hover:border-amber-300',
+    other: 'hover:border-indigo-300',
   };
   return glow[rankTier(rank)];
 }
@@ -161,12 +154,11 @@ export function RankMedal({ rank, size = 'md' }: { rank: unknown; size?: 'sm' | 
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .982-3.172M12 3.75a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
       </svg>
       {/* Shine sweep — plays once on card hover */}
-      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
     </div>
   );
 }
 
 /** Subtle warm spotlight wash for the #1 card — signals "featured" without gradients elsewhere. */
 export function rankCardTint(rank: unknown): string {
-  return rankTier(rank) === '1' ? 'bg-gradient-to-br from-amber-50/70 via-white to-white' : '';
+  return rankTier(rank) === '1' ? 'bg-amber-50/40' : '';
 }

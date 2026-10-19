@@ -12,28 +12,37 @@ export function ScrollRevealProvider() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Small delay to let new page DOM render
-    const timeout = setTimeout(() => {
-      const targets = document.querySelectorAll('.reveal:not(.revealed), .reveal-left:not(.revealed), .reveal-right:not(.revealed)');
-      if (targets.length === 0) return;
+    const selector = '.reveal:not(.revealed), .reveal-left:not(.revealed), .reveal-right:not(.revealed)';
+    const observed = new WeakSet<Element>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+    );
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('revealed');
-              observer.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
-      );
+    const observeTargets = () => {
+      document.querySelectorAll(selector).forEach((el) => {
+        if (observed.has(el)) return;
+        observed.add(el);
+        observer.observe(el);
+      });
+    };
 
-      targets.forEach((el) => observer.observe(el));
-      return () => observer.disconnect();
-    }, 100);
+    const mutationObserver = new MutationObserver(observeTargets);
+    const timeout = setTimeout(observeTargets, 100);
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      mutationObserver.disconnect();
+      observer.disconnect();
+    };
   }, [pathname]);
 
   return null;

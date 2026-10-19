@@ -11,11 +11,7 @@ interface TeamMember {
   qualification?: string;
 }
 
-const PLACEHOLDER_TEAM: TeamMember[] = [
-  { name: 'Mr. Vasanthakumar V.', role: 'Full Stack Developer', qualification: 'B.Tech IT' },
-  { name: 'Mr. Aravind K.', role: 'System Administrator', qualification: 'B.Sc. CS' },
-  { name: 'Mr. Dinesh R.', role: 'Network & Hardware', qualification: 'Diploma in ECE' },
-];
+const PLACEHOLDER_TEAM: TeamMember[] = [];
 
 function getInitials(name: string) {
   return name
@@ -42,14 +38,14 @@ export function TechnicalTeamSection() {
           }
         }
       } catch {
-        // fallback to placeholder
+        // Keep the section empty when published data is unavailable.
       }
     }
     fetchTeam();
   }, []);
 
   return (
-    <section id="technical-team" className="relative overflow-hidden bg-white py-12 sm:py-14">
+    <section id="tech-support" className="relative scroll-mt-32 overflow-hidden bg-white py-12 sm:py-14">
       <GlowOrb color="bg-teal-200/30" className="-right-16 -bottom-16 h-64 w-64" />
       <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-teal-600 text-center">Tech Support</p>
@@ -59,7 +55,7 @@ export function TechnicalTeamSection() {
         <p className="mt-2 text-center text-sm text-slate-500">The tech team powering our digital infrastructure</p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {team.map((member, i) => (
+          {team.length > 0 && team.map((member, i) => (
             <Card key={member.name + i}>
               <div className="flex items-center gap-4 p-5">
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>

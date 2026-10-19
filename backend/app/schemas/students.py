@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import StudentStatus
 
@@ -133,8 +133,7 @@ class StudentRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentFeeRead(BaseModel):
@@ -143,8 +142,7 @@ class StudentFeeRead(BaseModel):
     last_fee_updated_at: datetime | None
     last_fee_updated_by: uuid.UUID | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentListItem(BaseModel):
@@ -167,8 +165,7 @@ class StudentListItem(BaseModel):
     next_due_label: str | None = None
     next_due_state: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentFeeUpdate(BaseModel):
@@ -183,8 +180,7 @@ class StudentBalanceRead(BaseModel):
     paid_total: Decimal
     pending: Decimal
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentBillingMonthStatus(BaseModel):
