@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class FeeStructureCreate(BaseModel):
@@ -28,15 +28,20 @@ class FeeStructureRead(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FeeDiscountCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     discount_type: str = Field(default="percentage", pattern="^(percentage|fixed)$")
-    value: Decimal
+    value: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     description: str | None = None
+
+    @model_validator(mode="after")
+    def validate_value_for_type(self) -> "FeeDiscountCreate":
+        if self.discount_type == "percentage" and self.value > Decimal("100"):
+            raise ValueError("Percentage discount cannot exceed 100")
+        return self
 
 
 class FeeDiscountRead(BaseModel):
@@ -48,8 +53,7 @@ class FeeDiscountRead(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentDiscountCreate(BaseModel):
@@ -66,5 +70,4 @@ class StudentDiscountRead(BaseModel):
     notes: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

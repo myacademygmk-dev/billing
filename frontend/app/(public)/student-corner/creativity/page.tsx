@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { GlowOrb } from '@/components/ui/glow-orb';
 
 interface CreativityItem {
-  id: number;
+  id: string;
   title: string;
   student_name: string;
   class_name: string;
-  type: 'image' | 'pdf';
+  file_type: 'image' | 'pdf';
   file_url: string;
   created_at: string;
 }
@@ -82,7 +82,7 @@ export default function StudentCreativityPage() {
               {items.map((item) => (
                 <div key={item.id} className="group overflow-hidden rounded-xl bg-white shadow-sm border border-slate-200 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
                   <div className="aspect-[4/3] overflow-hidden bg-slate-100">
-                    {item.type === 'image' ? (
+                    {item.file_type === 'image' ? (
                       <img
                         src={item.file_url}
                         alt={item.title}

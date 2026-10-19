@@ -22,14 +22,14 @@ class InstitutionSettings(Base):
 
     # Website configuration
     marquee_text: Mapped[str | None] = mapped_column(Text, nullable=True)  # pipe-separated announcements
-    stats_students: Mapped[str | None] = mapped_column(String(20), nullable=True, default="200+")
-    stats_staff: Mapped[str | None] = mapped_column(String(20), nullable=True, default="22")
-    stats_years: Mapped[str | None] = mapped_column(String(20), nullable=True, default="15+")
-    stats_standards: Mapped[str | None] = mapped_column(String(20), nullable=True, default="LKG-12")
-    hero_title: Mapped[str | None] = mapped_column(String(200), nullable=True, default="MY ACADEMY")
-    hero_subtitle: Mapped[str | None] = mapped_column(String(300), nullable=True, default="Gain More Knowledge")
+    stats_students: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    stats_staff: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    stats_years: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    stats_standards: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    hero_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    hero_subtitle: Mapped[str | None] = mapped_column(String(300), nullable=True)
     hero_description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    admission_text: Mapped[str | None] = mapped_column(String(200), nullable=True, default="Admissions Open for 2025-2026")
+    admission_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
     alumni_data: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string of alumni details
     faculty_data: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string of faculty details
     facilities_data: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string of facilities

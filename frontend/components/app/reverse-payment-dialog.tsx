@@ -22,9 +22,6 @@ export type PaymentRow = {
 
 const schema = z.object({
   reason: z.string().min(1, 'Please provide a reason for the reversal').max(300),
-  amount: z
-    .union([z.string().length(0), z.coerce.number().refine((v) => v !== 0, 'Amount must be non-zero')])
-    .optional(),
 });
 
 type Values = z.infer<typeof schema>;
@@ -43,20 +40,21 @@ export function ReversePaymentDialog({
   const { toast } = useToast();
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { reason: '', amount: '' },
+    defaultValues: { reason: '' },
   });
 
   // Reset form when payment changes
   useEffect(() => {
-    if (open) form.reset({ reason: '', amount: '' });
+    if (open) form.reset({ reason: '' });
   }, [open, form]);
 
   const reverse = useMutation({
     mutationFn: async (values: Values) => {
       if (!payment) throw new Error('No payment selected');
-      const body: Record<string, unknown> = { reason: values.reason };
-      if (typeof values.amount === 'number') body.amount = values.amount;
-      return apiFetch(`/payments/${payment.id}/reverse`, { method: 'POST', body: JSON.stringify(body) });
+      return apiFetch(`/payments/${payment.id}/reverse`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: values.reason }),
+      });
     },
     onSuccess: () => {
       toast({ title: 'Payment reversed', description: `Receipt ${payment?.receipt_no} has been reversed.`, variant: 'success' });
@@ -83,7 +81,7 @@ export function ReversePaymentDialog({
             <div>
               <DialogTitle>Reverse Payment</DialogTitle>
               <DialogDescription>
-                This will create a negative entry and release the paid months.
+                This reverses the full payment and releases all of its paid months.
               </DialogDescription>
             </div>
           </div>
@@ -117,20 +115,9 @@ export function ReversePaymentDialog({
                 error={form.formState.errors.reason?.message}
               />
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">
-                Partial amount (optional)
-              </label>
-              <Input
-                type="number"
-                placeholder="Leave empty for full reversal"
-                {...form.register('amount')}
-                prefix={<span className="text-sm">₹</span>}
-              />
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                Leave blank to reverse the full amount of {payment ? formatCurrency(payment.amount) : '₹0'}
-              </p>
-            </div>
+            <p className="text-xs text-[var(--muted)]">
+              A correction for the full amount of {payment ? formatCurrency(payment.amount) : '₹0'} will be recorded.
+            </p>
           </form>
         </DialogBody>
         <DialogFooter>

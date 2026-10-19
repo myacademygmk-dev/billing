@@ -3,13 +3,13 @@ import { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/components/ui/cn';
 
 export function Table({ className, ...props }: ComponentPropsWithoutRef<'table'>) {
-  return <table className={cn('w-full text-sm text-[var(--text)]', className)} {...props} />;
+  return <table className={cn('w-full tabular-nums text-sm text-[var(--text)]', className)} {...props} />;
 }
 
 export function THead({ className, ...props }: ComponentPropsWithoutRef<'thead'>) {
   return (
     <thead
-      className={cn('sticky top-0 z-10 bg-[var(--table-head-bg)] backdrop-blur', className)}
+      className={cn('sticky top-0 z-10 bg-[var(--table-head-bg)]', className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ export function TH({ className, ...props }: ComponentPropsWithoutRef<'th'>) {
   return (
     <th
       className={cn(
-        'border-b border-[var(--panel-line)] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)] sm:px-4 sm:py-2.5',
+        'border-b border-[var(--panel-line)] px-3 py-2 text-left text-[11px] font-semibold uppercase text-[var(--muted)] sm:px-4 sm:py-2.5',
         className
       )}
       {...props}

@@ -38,3 +38,8 @@ class Payment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     student: Mapped["Student"] = relationship(back_populates="payments")
     creator: Mapped["User"] = relationship(foreign_keys=[created_by], lazy="joined")
     billing_periods: Mapped[list["StudentBillingPeriod"]] = relationship(back_populates="payment")
+    allocation_history: Mapped[list["PaymentMonthAllocation"]] = relationship(
+        back_populates="payment",
+        cascade="all, delete-orphan",
+        order_by="PaymentMonthAllocation.period_month",
+    )

@@ -55,40 +55,6 @@ def list_content(
     return {"items": [WebContentRead.model_validate(c) for c in items], "total": total}
 
 
-@router.get("/{content_id}", response_model=WebContentRead)
-def get_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> WebContentRead:
-    content = db.execute(select(WebContent).where(WebContent.id == content_id).options(selectinload(WebContent.photos))).scalar_one_or_none()
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
-    return WebContentRead.model_validate(content)
-
-
-@router.patch("/{content_id}", response_model=WebContentRead)
-def update_content(
-    content_id: uuid.UUID,
-    payload: WebContentUpdate,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin_user),
-) -> WebContentRead:
-    content = db.get(WebContent, content_id)
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(content, field, value)
-    db.commit()
-    db.refresh(content)
-    return WebContentRead.model_validate(content)
-
-
-@router.delete("/{content_id}", status_code=204, response_class=Response, response_model=None)
-def delete_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
-    content = db.get(WebContent, content_id)
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
-    db.delete(content)
-    db.commit()
-
-
 # --- Gallery Photos ---
 
 @router.post("/photos", response_model=GalleryPhotoRead, status_code=201)
@@ -120,10 +86,44 @@ def list_photos(
     return {"items": [GalleryPhotoRead.model_validate(p) for p in items], "total": total}
 
 
+@router.get("/{content_id}", response_model=WebContentRead)
+def get_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> WebContentRead:
+    content = db.execute(select(WebContent).where(WebContent.id == content_id).options(selectinload(WebContent.photos))).scalar_one_or_none()
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    return WebContentRead.model_validate(content)
+
+
 @router.delete("/photos/{photo_id}", status_code=204, response_class=Response, response_model=None)
 def delete_photo(photo_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
     photo = db.get(GalleryPhoto, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     db.delete(photo)
+    db.commit()
+
+
+@router.patch("/{content_id}", response_model=WebContentRead)
+def update_content(
+    content_id: uuid.UUID,
+    payload: WebContentUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_user),
+) -> WebContentRead:
+    content = db.get(WebContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(content, field, value)
+    db.commit()
+    db.refresh(content)
+    return WebContentRead.model_validate(content)
+
+
+@router.delete("/{content_id}", status_code=204, response_class=Response, response_model=None)
+def delete_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
+    content = db.get(WebContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    db.delete(content)
     db.commit()

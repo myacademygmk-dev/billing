@@ -1,28 +1,22 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
-from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select, extract
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import case, func, select, extract
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.enums import StudentStatus
 from app.models.payment import Payment
 from app.models.student import Student
-from app.models.student_billing_period import StudentBillingPeriod
 from app.models.user import User
-from app.services.billing import get_student_billing_overview, normalize_month, pending_amount
+from app.services.billing import month_label, normalize_month, payment_period_label
+from app.services.reporting import monthly_students_query, paged_rows, pending_students_query
 
 
 router = APIRouter()
-
-_BILLING_OPTS = [
-    selectinload(Student.fee),
-    selectinload(Student.billing_periods).selectinload(StudentBillingPeriod.payment),
-]
 
 
 @router.get("/summary", response_model=dict)
@@ -61,23 +55,26 @@ def summary(
         .where(Payment.paid_at < next_month_start)
     ).scalar_one()
 
-    students = db.execute(select(Student).options(*_BILLING_OPTS)).scalars().all()
-    paid_students = 0
-    unpaid_students = 0
-    pending_total = Decimal("0")
-    active_students = 0
-    for student in students:
-        if student.status == StudentStatus.active:
-            overview = get_student_billing_overview(db, student)
-            target_month = next((item for item in overview.months if item["month"] == selected_month), None)
-            if target_month is None:
-                continue
-            active_students += 1
-            if target_month["is_paid"]:
-                paid_students += 1
-            else:
-                unpaid_students += 1
-                pending_total += overview.monthly_fee
+    monthly_rows = monthly_students_query(selected_month, "all").where(Student.status == StudentStatus.active).subquery()
+    summary_row = db.execute(
+        select(
+            func.count(monthly_rows.c.student_id).label("active_students"),
+            func.count(monthly_rows.c.payment_id).label("paid_students"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (monthly_rows.c.payment_id.is_(None), monthly_rows.c.monthly_fee),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("pending_total"),
+        )
+    ).one()
+    active_students = summary_row.active_students
+    paid_students = summary_row.paid_students
+    unpaid_students = max(active_students - paid_students, 0)
+    pending_total = summary_row.pending_total
     return {
         "total_collected": str(total_collected),
         "today_total": str(today_total),
@@ -95,40 +92,21 @@ def pending(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
     status: StudentStatus | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=500),
 ) -> list[dict]:
-    stmt = select(Student)
-    if status is not None:
-        stmt = stmt.where(Student.status == status)
-    rows = db.execute(stmt.order_by(Student.student_code).options(*_BILLING_OPTS)).scalars().all()
-
-    student_ids = [s.id for s in rows]
-    paid_totals: dict = {}
-    if student_ids:
-        paid_rows = db.execute(
-            select(Payment.student_id, func.coalesce(func.sum(Payment.amount), 0))
-            .where(Payment.student_id.in_(student_ids))
-            .group_by(Payment.student_id)
-        ).all()
-        paid_totals = {sid: total for sid, total in paid_rows}
-
-    items = []
-    for student in rows:
-        overview = get_student_billing_overview(db, student)
-        pending_value = pending_amount(overview)
-        if pending_value == 0:
-            continue
-        items.append(
-            {
-                "student_id": student.id,
-                "student_code": student.student_code,
-                "name": student.name,
-                "expected_fee": str(overview.monthly_fee),
-                "paid_total": str(paid_totals.get(student.id, 0)),
-                "pending": str(pending_value),
-            }
-        )
-    items.sort(key=lambda item: Decimal(item["pending"]), reverse=True)
-    return items
+    rows = paged_rows(db, pending_students_query(status), page, page_size)
+    return [
+        {
+            "student_id": row["student_id"],
+            "student_code": row["student_code"],
+            "name": row["name"],
+            "expected_fee": str(row["expected_fee"]),
+            "paid_total": str(row["paid_total"]),
+            "pending": str(row["pending"]),
+        }
+        for row in rows
+    ]
 
 
 @router.get("/monthly-students", response_model=list[dict])
@@ -138,45 +116,31 @@ def monthly_students(
     search: str | None = None,
     class_code: str | None = None,
     class_name: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[dict]:
     selected_month = normalize_month(month)
-    stmt = select(Student).where(Student.status == StudentStatus.active).order_by(Student.student_code)
-    if search:
-        s = f"%{search.lower()}%"
-        stmt = stmt.where(
-            func.lower(Student.student_code).like(s) | func.lower(Student.name).like(s) | func.lower(Student.class_name).like(s)
-        )
-    if class_code:
-        stmt = stmt.where(Student.student_code.like(f"{class_code.strip()}%"))
-    if class_name:
-        stmt = stmt.where(Student.class_name == class_name)
-    students = db.execute(stmt.options(*_BILLING_OPTS)).scalars().all()
+    stmt = monthly_students_query(selected_month, payment_state, search, class_code, class_name).where(
+        Student.status == StudentStatus.active
+    )
+    rows = paged_rows(db, stmt, page, page_size)
     items: list[dict] = []
-    for student in students:
-        overview = get_student_billing_overview(db, student)
-        target_month = next((item for item in overview.months if item["month"] == selected_month), None)
-        if target_month is None:
-            continue
-        is_paid = bool(target_month["is_paid"])
-        if payment_state == "paid" and not is_paid:
-            continue
-        if payment_state == "unpaid" and is_paid:
-            continue
+    for row in rows:
+        is_paid = row["payment_id"] is not None
         items.append(
             {
-                "student_id": student.id,
-                "student_code": student.student_code,
-                "name": student.name,
-                "class_name": student.class_name,
-                "section": student.section,
-                "payment_period": overview.cycle_label,
-                "monthly_fee": str(overview.monthly_fee),
+                "student_id": row["student_id"],
+                "student_code": row["student_code"],
+                "name": row["name"],
+                "class_name": row["class_name"],
+                "payment_period": payment_period_label(row["payment_period"]),
+                "monthly_fee": str(row["monthly_fee"]),
                 "month": selected_month.isoformat(),
-                "month_label": target_month["label"],
+                "month_label": month_label(selected_month),
                 "is_paid": is_paid,
-                "receipt_no": target_month["receipt_no"],
+                "receipt_no": row["receipt_no"],
             }
         )
     return items

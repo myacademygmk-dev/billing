@@ -5,6 +5,7 @@ import { CheckCircle2, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
+import { MetricTile } from '@/components/ui/app-ux';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toaster';
@@ -20,16 +21,16 @@ type AttendanceItem = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; short: string; activeClass: string }> = {
-  present: { label: 'Present', short: 'P', activeClass: 'bg-green-500/20 text-green-300 border-green-500/40 shadow-[0_0_6px_rgba(34,197,94,0.15)]' },
-  absent: { label: 'Absent', short: 'A', activeClass: 'bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_6px_rgba(239,68,68,0.15)]' },
-  late: { label: 'Late', short: 'L', activeClass: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40 shadow-[0_0_6px_rgba(234,179,8,0.15)]' },
-  leave: { label: 'Leave', short: 'LV', activeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-[0_0_6px_rgba(59,130,246,0.15)]' },
+  present: { label: 'Present', short: 'P', activeClass: 'bg-emerald-50 text-emerald-800 border-emerald-500' },
+  absent: { label: 'Absent', short: 'A', activeClass: 'bg-rose-50 text-rose-800 border-rose-500' },
+  late: { label: 'Late', short: 'L', activeClass: 'bg-amber-50 text-amber-800 border-amber-500' },
+  leave: { label: 'Leave', short: 'LV', activeClass: 'bg-sky-50 text-sky-800 border-sky-500' },
 };
 
 export default function AttendanceTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [classFilter, setClassFilter] = useState('');
   const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
 
@@ -40,7 +41,7 @@ export default function AttendanceTab() {
 
   const studentAttendance = useQuery<{ items: AttendanceItem[]; total: number; marked: number }>({
     queryKey: ['studentAttendance', selectedDate, classFilter],
-    queryFn: () => apiFetch(`/attendance/students?date=${selectedDate}&class_name=${classFilter}`),
+    queryFn: () => apiFetch(`/attendance/students?date=${selectedDate}&class_name=${encodeURIComponent(classFilter)}`),
     enabled: !!classFilter,
   });
 
@@ -66,8 +67,8 @@ export default function AttendanceTab() {
   function markAllPresent() {
     if (studentAttendance.data) {
       const newStatus: Record<string, string> = {};
-      studentAttendance.data.items.forEach((item) => { newStatus[item.student_id] = 'present'; });
-      setLocalStatus(newStatus);
+      studentAttendance.data.items.forEach((item) => { if (!getStatus(item.student_id, item.status)) newStatus[item.student_id] = 'present'; });
+      setLocalStatus((previous) => ({ ...previous, ...newStatus }));
     }
   }
 
@@ -81,7 +82,10 @@ export default function AttendanceTab() {
 
   const hasChanges = Object.keys(localStatus).length > 0;
   const total = studentAttendance.data?.total ?? 0;
-  const marked = studentAttendance.data?.marked ?? 0;
+  const counts = (studentAttendance.data?.items ?? []).reduce<Record<string, number>>((result, item) => {
+    const status = getStatus(item.student_id, item.status) || 'unmarked';
+    result[status] = (result[status] ?? 0) + 1; return result;
+  }, {});
 
   const dateLabel = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -94,9 +98,11 @@ export default function AttendanceTab() {
     <>
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             type="date"
+            aria-label="Attendance date"
+            disabled={markStudents.isPending}
             className="h-9 w-[155px] rounded-lg text-sm"
             value={selectedDate}
             onChange={(e) => { setSelectedDate(e.target.value); setLocalStatus({}); }}
@@ -104,6 +110,8 @@ export default function AttendanceTab() {
           <select
             className="h-9 w-[130px] rounded-lg border border-[var(--panel-line)] bg-[var(--surface)] px-2 text-sm text-[var(--heading)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             value={classFilter}
+            aria-label="Attendance class"
+            disabled={markStudents.isPending}
             onChange={(e) => { setClassFilter(e.target.value); setLocalStatus({}); }}
           >
             <option value="">Select Class</option>
@@ -113,8 +121,8 @@ export default function AttendanceTab() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={markAllPresent}>
-            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />All Present
+          <Button size="sm" variant="outline" disabled={!studentAttendance.data?.items.length || markStudents.isPending} onClick={markAllPresent}>
+            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Remaining present
           </Button>
           <Button size="sm" onClick={saveAttendance} disabled={markStudents.isPending || !hasChanges}>
             {markStudents.isPending ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
@@ -124,12 +132,17 @@ export default function AttendanceTab() {
       </div>
 
       {/* Info strip */}
-      <div className="mt-3 flex items-center gap-3 text-xs text-[var(--muted)]">
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
         <span className="font-medium text-[var(--heading)] text-sm">{dateLabel}</span>
         <span className="text-[var(--panel-line)]">|</span>
         <span>Total: <strong className="text-[var(--heading)]">{total}</strong></span>
-        <span>Present: <strong className="text-green-400">{marked}</strong></span>
-        <span>Unmarked: <strong className="text-yellow-400">{total - marked}</strong></span>
+        <span>{hasChanges ? `${Object.keys(localStatus).length} unsaved changes` : 'No unsaved changes'}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricTile label="Present" value={counts.present ?? 0} tone="success" />
+        <MetricTile label="Absent" value={counts.absent ?? 0} tone="danger" />
+        <MetricTile label="Late / leave" value={`${counts.late ?? 0} / ${counts.leave ?? 0}`} tone="accent" />
+        <MetricTile label="Unmarked" value={counts.unmarked ?? 0} tone="warning" />
       </div>
 
       {/* Attendance List */}
@@ -142,6 +155,8 @@ export default function AttendanceTab() {
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--muted)]">
             <Spinner /> Loading students...
           </div>
+        ) : studentAttendance.isError ? (
+          <div role="alert" className="py-6 text-sm text-[var(--danger)]">Attendance could not be loaded. <Button variant="outline" size="sm" onClick={() => studentAttendance.refetch()}>Retry</Button></div>
         ) : !studentAttendance.data?.items.length ? (
           <div className="rounded-xl border border-[var(--panel-line)] px-6 py-12 text-center text-sm text-[var(--muted)]">
             No students found for the selected filters.
@@ -154,7 +169,7 @@ export default function AttendanceTab() {
               return (
                 <div
                   key={item.student_id}
-                  className={`flex items-center gap-4 px-4 py-2.5 transition-colors ${
+                  className={`flex flex-wrap items-center gap-4 px-4 py-3 transition-colors ${
                     isModified ? 'bg-[var(--accent)]/[0.04]' : 'hover:bg-[var(--surface-subtle)]'
                   }`}
                 >
@@ -176,10 +191,13 @@ export default function AttendanceTab() {
                         key={statusKey}
                         onClick={() => setStatus(item.student_id, statusKey)}
                         title={config.label}
-                        className={`h-7 w-9 rounded-md border text-[11px] font-bold transition-all ${
+                        aria-label={`${item.student_name}: ${config.label}`}
+                        aria-pressed={current === statusKey}
+                        disabled={markStudents.isPending}
+                        className={`h-10 w-12 rounded-md border text-xs font-bold transition-colors ${
                           current === statusKey
                             ? config.activeClass
-                            : 'border-[var(--panel-line)] text-[var(--muted)] opacity-30 hover:opacity-60'
+                            : 'border-[var(--panel-line)] text-[var(--muted)] hover:bg-[var(--surface-subtle)]'
                         }`}
                       >
                         {config.short}

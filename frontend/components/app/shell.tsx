@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  PiggyBank,
   Settings,
   UserCog,
   UsersRound,
@@ -39,8 +38,7 @@ const nav: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false, permission: 'dashboard', group: 'main' },
   { href: '/students', label: 'Students', icon: UsersRound, adminOnly: false, permission: 'students', group: 'academic' },
   { href: '/academic', label: 'Academics', icon: GraduationCap, adminOnly: false, permission: 'academic', group: 'academic' },
-  { href: '/collect', label: 'Payments', icon: Banknote, adminOnly: false, permission: 'collect', group: 'finance' },
-  { href: '/savings', label: 'Savings', icon: PiggyBank, adminOnly: false, permission: 'savings', group: 'finance' },
+  { href: '/collect', label: 'Payments & Savings', icon: Banknote, adminOnly: false, permission: 'collect', group: 'finance' },
   { href: '/fees', label: 'Fee Structure', icon: CreditCard, adminOnly: false, permission: 'fees', group: 'finance' },
   { href: '/reports', label: 'Reports', icon: BarChart3, adminOnly: false, permission: 'reports', group: 'finance' },
   { href: '/staff', label: 'Staff', icon: UserCog, adminOnly: false, permission: 'staff', group: 'management' },
@@ -79,7 +77,7 @@ function SidebarContent({
             <div className="theme-sidebar-subtitle text-xs">Educational Institutions</div>
           </div>
           {role && (
-            <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--sidebar-muted)]">
+            <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--sidebar-muted)]">
               {role}
             </span>
           )}
@@ -98,6 +96,7 @@ function SidebarContent({
               <div className="grid gap-0.5">
                 {items.map((item) => {
                   const active =
+                    (item.permission === 'collect' && (pathname === '/collect' || pathname === '/savings')) ||
                     pathname === item.href ||
                     (item.href !== '/settings' && pathname?.startsWith(`${item.href}/`));
                   const Icon = item.icon;
@@ -155,6 +154,7 @@ export function AppShell({
   headerAction,
   backHref,
   breadcrumbs,
+  compactHeader = false,
 }: {
   children: ReactNode;
   title: string;
@@ -163,6 +163,7 @@ export function AppShell({
   headerAction?: ReactNode;
   backHref?: string;
   breadcrumbs?: ReactNode;
+  compactHeader?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -181,8 +182,13 @@ export function AppShell({
   const visibleNav = nav.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false;
     if (role === 'admin') return true;
+    if (item.permission === 'collect') return permissions.includes('collect') || permissions.includes('savings');
     return permissions.includes(item.permission);
-  });
+  }).map((item) =>
+    item.permission === 'collect' && role !== 'admin' && !permissions.includes('collect')
+      ? { ...item, href: '/savings' }
+      : item
+  );
 
   // Close sidebar on route change
   useEffect(() => {
@@ -213,17 +219,17 @@ export function AppShell({
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="min-h-screen lg:grid lg:h-screen lg:grid-cols-[250px_minmax(0,1fr)] lg:overflow-hidden">
+    <div className="admin-workspace min-h-dvh lg:grid lg:h-dvh lg:grid-cols-[250px_minmax(0,1fr)] lg:overflow-hidden">
       {/* Skip to content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to content
       </a>
 
       {/* Mobile header bar */}
-      <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-[var(--panel-line)] bg-[var(--sidebar-bg)] px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-[var(--panel-line)] bg-[var(--sidebar-bg)] px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] lg:hidden">
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
@@ -236,7 +242,7 @@ export function AppShell({
           <span className="theme-sidebar-brand font-[var(--font-display)] text-base font-semibold">{title}</span>
         </div>
         {role && (
-          <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--sidebar-muted)]">
+          <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--sidebar-muted)]">
             {role}
           </span>
         )}
@@ -255,7 +261,7 @@ export function AppShell({
             onClick={closeSidebar}
             aria-hidden="true"
           />
-          <aside className="theme-sidebar absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col border-r px-5 py-5 shadow-2xl animate-slide-in-left">
+          <aside className="theme-sidebar absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col border-r px-5 py-5 pt-[calc(1.25rem+env(safe-area-inset-top))] shadow-2xl animate-slide-in-left">
             <div className="mb-2 flex items-center justify-end">
               <button
                 type="button"
@@ -272,15 +278,15 @@ export function AppShell({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="theme-sidebar hidden flex-col border-r px-4 py-4 lg:flex lg:h-screen">
+      <aside className="theme-sidebar hidden flex-col border-r px-4 py-4 lg:flex lg:h-dvh">
         <SidebarContent visibleNav={visibleNav} pathname={pathname} role={role} />
       </aside>
 
       {/* Main content area */}
-      <main id="main-content" className="flex flex-col px-4 py-3 sm:px-5 lg:h-screen lg:overflow-y-auto lg:px-6 lg:py-4">
+      <main id="main-content" className="flex min-w-0 flex-col px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5 lg:h-dvh lg:overflow-y-auto lg:px-6 lg:py-4">
         <div className="mx-auto max-w-7xl w-full flex flex-col flex-1 min-h-0">
           {/* Page header */}
-          <div className={action ? 'mb-0' : 'mb-5'}>
+          <div className={action ? 'mb-0' : compactHeader ? 'mb-3' : 'mb-5'}>
             {breadcrumbs && <div className="mb-1">{breadcrumbs}</div>}
             <div className="flex items-center gap-3">
               {backHref && (
@@ -294,8 +300,8 @@ export function AppShell({
                 </button>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="theme-heading text-2xl font-semibold tracking-[-0.02em]">{title}</h1>
-                {subtitle && <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">{subtitle}</p>}
+                <h1 className={cn('theme-heading text-balance font-semibold', compactHeader ? '!text-base' : 'text-2xl')}>{title}</h1>
+                {subtitle && <p className="mt-0.5 text-pretty text-[13px] text-[var(--text-secondary)]">{subtitle}</p>}
               </div>
               {headerAction && <div className="shrink-0">{headerAction}</div>}
             </div>

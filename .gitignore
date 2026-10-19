@@ -155,6 +155,7 @@ frontend/.env.local
 # Node / Next.js
 node_modules/
 .next/
+.next-dev-*/
 out/
 dist/
 coverage/

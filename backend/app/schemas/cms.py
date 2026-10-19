@@ -3,9 +3,21 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import ContentType
+from app.services.public_content_safety import is_local_public_url
+
+
+def _validate_local_media_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if not is_local_public_url(cleaned):
+        raise ValueError("Use an uploaded file path or local /images/ asset")
+    return cleaned
 
 
 class WebContentCreate(BaseModel):
@@ -23,6 +35,11 @@ class WebContentCreate(BaseModel):
     marks: str | None = None
     year: str | None = None
 
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str | None) -> str | None:
+        return _validate_local_media_url(value)
+
 
 class WebContentUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=300)
@@ -37,6 +54,11 @@ class WebContentUpdate(BaseModel):
     marks: str | None = None
     year: str | None = None
 
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str | None) -> str | None:
+        return _validate_local_media_url(value)
+
 
 class GalleryPhotoRead(BaseModel):
     id: uuid.UUID
@@ -46,8 +68,7 @@ class GalleryPhotoRead(BaseModel):
     display_order: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WebContentRead(BaseModel):
@@ -67,8 +88,7 @@ class WebContentRead(BaseModel):
     photos: list[GalleryPhotoRead] = []
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GalleryPhotoCreate(BaseModel):
@@ -77,3 +97,8 @@ class GalleryPhotoCreate(BaseModel):
     thumbnail_url: str | None = None
     caption: str | None = Field(default=None, max_length=300)
     display_order: int = 0
+
+    @field_validator("url", "thumbnail_url")
+    @classmethod
+    def validate_media_url(cls, value: str | None) -> str | None:
+        return _validate_local_media_url(value)

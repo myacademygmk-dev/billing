@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import get_current_user, require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.exam import Exam, Mark
 from app.models.student import Student
@@ -52,30 +52,13 @@ def list_exams(
     return {"items": [ExamRead.model_validate(e) for e in items], "total": total}
 
 
-@router.get("/{exam_id}", response_model=ExamRead)
-def get_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> ExamRead:
-    exam = db.get(Exam, exam_id)
-    if not exam:
-        raise HTTPException(status_code=404, detail="Exam not found")
-    return ExamRead.model_validate(exam)
-
-
-@router.delete("/{exam_id}", status_code=204, response_class=Response, response_model=None)
-def delete_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
-    exam = db.get(Exam, exam_id)
-    if not exam:
-        raise HTTPException(status_code=404, detail="Exam not found")
-    db.delete(exam)
-    db.commit()
-
-
 # --- Marks ---
 
 @router.post("/marks", response_model=MarkRead, status_code=201)
 def create_mark(
     payload: MarkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("exams")),
 ) -> MarkRead:
     mark = Mark(**payload.model_dump(), entered_by=current_user.id)
     db.add(mark)
@@ -88,7 +71,7 @@ def create_mark(
 def bulk_create_marks(
     payload: BulkMarkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("exams")),
 ) -> list[MarkRead]:
     exam = db.get(Exam, payload.exam_id)
     if not exam:
@@ -125,12 +108,29 @@ def list_marks(
     return {"items": [_mark_read(db, m) for m in marks], "total": len(marks)}
 
 
+@router.get("/{exam_id}", response_model=ExamRead)
+def get_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> ExamRead:
+    exam = db.get(Exam, exam_id)
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    return ExamRead.model_validate(exam)
+
+
 @router.delete("/marks/{mark_id}", status_code=204, response_class=Response, response_model=None)
 def delete_mark(mark_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
     mark = db.get(Mark, mark_id)
     if not mark:
         raise HTTPException(status_code=404, detail="Mark not found")
     db.delete(mark)
+    db.commit()
+
+
+@router.delete("/{exam_id}", status_code=204, response_class=Response, response_model=None)
+def delete_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_admin_user)) -> Response:
+    exam = db.get(Exam, exam_id)
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    db.delete(exam)
     db.commit()
 
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 
 /**
  * Popup banner that shows on page load/refresh.
@@ -9,28 +10,13 @@ import { useEffect, useState } from 'react';
  */
 export function PopupBanner() {
   const [show, setShow] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const config = useWebsiteConfig();
+  const imageUrl = config.popup_banner_url || config.hero_image_url || null;
 
   useEffect(() => {
     if (sessionStorage.getItem('popup_banner_closed')) return;
-
-    const fetchBanner = async () => {
-      try {
-        const res = await fetch('/api/backend/public/website-config');
-        if (res.ok) {
-          const data = await res.json();
-          const url = data.popup_banner_url || data.hero_image_url;
-          if (url) {
-            setImageUrl(url);
-            setShow(true);
-          }
-        }
-      } catch {
-        // No banner to show
-      }
-    };
-    fetchBanner();
-  }, []);
+    if (imageUrl) setShow(true);
+  }, [imageUrl]);
 
   function handleClose() {
     setShow(false);
@@ -41,7 +27,7 @@ export function PopupBanner() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-6 sm:p-10"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:p-10"
       onClick={handleClose}
     >
       {/* Banner image - constrained to fit screen */}

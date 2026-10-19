@@ -7,11 +7,13 @@ type Props = SelectHTMLAttributes<HTMLSelectElement> & {
 };
 
 export const Select = forwardRef<HTMLSelectElement, Props>(({ className, error, children, ...props }, ref) => {
+  const errorId = error && (props.id || props.name) ? `${props.id || props.name}-error` : undefined;
   return (
     <div className="relative">
       <select
         ref={ref}
         aria-invalid={error ? 'true' : undefined}
+        aria-describedby={errorId}
         className={cn(
           'theme-select w-full cursor-pointer appearance-none pr-10 transition-colors duration-150',
           'focus:border-[var(--field-focus-border)] focus:ring-2 focus:ring-[var(--field-focus-ring)]',
@@ -28,7 +30,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(({ className, error, 
         </svg>
       </div>
       {error && (
-        <p className="mt-1.5 text-xs text-[var(--danger)]" role="alert">
+        <p id={errorId} className="mt-1.5 text-xs text-[var(--danger)]" role="alert">
           {error}
         </p>
       )}

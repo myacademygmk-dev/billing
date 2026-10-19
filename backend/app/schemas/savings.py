@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import PaymentMode
 
@@ -24,6 +24,10 @@ class SavingsEntryEdit(BaseModel):
     notes: str | None = Field(default=None, max_length=500)
 
 
+class SavingsEntryRetract(BaseModel):
+    reason: str | None = Field(default=None, max_length=300)
+
+
 class SavingsEntryRead(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
@@ -41,8 +45,7 @@ class SavingsEntryRead(BaseModel):
     is_retraction: bool = False
     is_edited: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentSavingsBalanceRead(BaseModel):
@@ -53,3 +56,4 @@ class StudentSavingsBalanceRead(BaseModel):
     total_deposited: Decimal = Decimal("0")
     total_withdrawn: Decimal = Decimal("0")
     balance: Decimal = Decimal("0")
+    total_savings: Decimal = Decimal("0")

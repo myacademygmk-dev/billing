@@ -7,13 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Banknote, Download, Edit3, FileText, UserRound, Settings2, RotateCcw, ChevronLeft, ChevronRight, GraduationCap, School, CalendarDays, Check, Clock3 } from 'lucide-react';
 
 import { AppShell } from '@/components/app/shell';
 import { PaymentReceiptDialog } from '@/components/app/payment-receipt-dialog';
 import { ReversePaymentDialog, type PaymentRow } from '@/components/app/reverse-payment-dialog';
+import { ProfileField } from '@/components/ui/app-ux';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -90,6 +91,7 @@ type BillingOverview = {
   batch_end_label: string;
   next_unpaid_label: string;
   pending_months: BillingMonth[];
+  months: BillingMonth[];
 };
 
 type Payment = {
@@ -102,6 +104,17 @@ type Payment = {
   fee_period_label?: string | null;
 };
 
+function formatMoney(value: unknown) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount)) return 'Rs. 0';
+  return `Rs. ${amount.toLocaleString('en-IN')}`;
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export default function StudentDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -109,6 +122,7 @@ export default function StudentDetailPage() {
 
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [profileTab, setProfileTab] = useState<'billing' | 'personal' | 'family' | 'enrollment'>('billing');
   const [feeOpen, setFeeOpen] = useState(false);
   const [inactiveOpen, setInactiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -120,6 +134,7 @@ export default function StudentDetailPage() {
   const [reverseOpen, setReverseOpen] = useState(false);
   const [reversePayment, setReversePayment] = useState<PaymentRow | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
 
   const feeSchema = z.object({ expected_fee_amount: z.coerce.number().min(0) });
   const feeForm = useForm<{ expected_fee_amount: number }>({
@@ -297,7 +312,7 @@ export default function StudentDetailPage() {
   }
 
   return (
-    <AppShell title="Student Profile" subtitle="Review fee settings, pending months, and full payment history for this student.">
+    <AppShell title="Student Profile" compactHeader backHref="/students">
       {student.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-[#91a1bc]">
           <Spinner /> Loading
@@ -305,160 +320,135 @@ export default function StudentDetailPage() {
       ) : student.isError ? (
         <div className="text-sm text-rose-300">Student not found</div>
       ) : (
-        <div className="space-y-4">
-          <Card square>
-            <CardHeader>
-              <CardTitle>
-                {student.data?.name} <span className="text-[#7f8da9]">({student.data?.student_code})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between gap-3">
-              <div className="text-sm text-[#91a1bc]">
-                {student.data?.class_name ?? '-'}
-              </div>
-              <Badge className={student.data?.status === 'active' ? 'bg-[rgba(46,216,143,0.16)] text-[#48e69b]' : 'bg-[rgba(151,164,187,0.08)] text-[#9aa8c2]'}>
-                {student.data?.status}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          {/* Profile Details */}
-          <Card square>
-            <CardHeader><CardTitle>Profile Details</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                {/* Basic Info */}
-                <div><span className="text-[var(--muted)]">Roll Number:</span> <span className="font-medium">{student.data?.student_code ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Name:</span> <span className="font-medium">{student.data?.name ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Class:</span> <span className="font-medium">{student.data?.class_name ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">School:</span> <span className="font-medium">{student.data?.school_name ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">D.O.B:</span> <span className="font-medium">{student.data?.date_of_birth ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">D.O.Join:</span> <span className="font-medium">{student.data?.joined_date ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Gender:</span> <span className="font-medium capitalize">{student.data?.gender ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Contact No:</span> <span className="font-medium">{student.data?.contact_no ?? '-'}</span></div>
-
-                {/* Parent Info */}
-                <div><span className="text-[var(--muted)]">Father Name:</span> <span className="font-medium">{student.data?.father_name ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Mother Name:</span> <span className="font-medium">{student.data?.mother_name ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Father Phone:</span> <span className="font-medium">{student.data?.parent_phone ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Mother Phone:</span> <span className="font-medium">{student.data?.parent_phone_2 ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">WhatsApp No:</span> <span className="font-medium">{student.data?.whatsapp_no ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Father Occupation:</span> <span className="font-medium">{student.data?.father_occupation ?? '-'}</span></div>
-                <div><span className="text-[var(--muted)]">Mother Occupation:</span> <span className="font-medium">{student.data?.mother_occupation ?? '-'}</span></div>
-
-                {/* Additional Info */}
-                <div><span className="text-[var(--muted)]">Hobbies:</span> <span className="font-medium">{student.data?.hobbies ?? '-'}</span></div>
-                <div className="sm:col-span-2"><span className="text-[var(--muted)]">Address:</span> <span className="font-medium">{student.data?.address ?? '-'}{student.data?.city ? `, ${student.data.city}` : ''}{student.data?.pincode ? ` - ${student.data.pincode}` : ''}</span></div>
-                <div><span className="text-[var(--muted)]">Email:</span> <span className="font-medium">{student.data?.student_email ?? '-'}</span></div>
-
-                {/* Fee & Status */}
-                <div><span className="text-[var(--muted)]">Monthly Fee:</span> <span className="font-medium">₹{fee.data?.expected_fee_amount ?? '0'}</span></div>
-                <div><span className="text-[var(--muted)]">Status:</span> <span className="font-medium capitalize">{student.data?.status ?? '-'}</span></div>
-
-                {/* Notes */}
-                {student.data?.notes && <div className="sm:col-span-3"><span className="text-[var(--muted)]">Notes:</span> <span className="font-medium">{student.data.notes}</span></div>}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <Card square>
-              <CardHeader>
-                <CardTitle>Monthly Fee</CardTitle>
-              </CardHeader>
-              <CardContent className="text-2xl font-semibold">{fee.data?.expected_fee_amount ?? '0'}</CardContent>
-            </Card>
-            <Card square>
-              <CardHeader>
-                <CardTitle>Cycle Amount</CardTitle>
-              </CardHeader>
-              <CardContent className="text-2xl font-semibold">{overview.data?.payable_amount ?? '0'}</CardContent>
-            </Card>
-            <Card square>
-              <CardHeader>
-                <CardTitle>Paid Total</CardTitle>
-              </CardHeader>
-              <CardContent className="text-2xl font-semibold">{balance.data?.paid_total ?? '0'}</CardContent>
-            </Card>
-            <Card square>
-              <CardHeader>
-                <CardTitle>Next Unpaid</CardTitle>
-              </CardHeader>
-              <CardContent className="text-lg font-semibold">{overview.data?.next_unpaid_label ?? '-'}</CardContent>
-            </Card>
-          </div>
-
-          <Card square>
-            <CardHeader>
-              <CardTitle>Billing Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm text-[#91a1bc]">
-                Current period: {overview.data?.cycle_label} ({overview.data?.cycle_months ?? 0} months)
-              </div>
-              <div className="text-sm text-[#91a1bc]">
-                Batch window: {overview.data?.batch_start_label} - {overview.data?.batch_end_label}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {overview.data?.pending_months.length ? (
-                  overview.data.pending_months.map((month) => (
-                    <Badge key={month.month} className="bg-[rgba(255,177,74,0.14)] text-[#ffbf6e]">
-                      {month.label}
-                    </Badge>
-                  ))
+        <div className="student-profile grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
+          <section aria-label="Student identity" className="grid grid-cols-[minmax(0,1fr)_80px] gap-x-4 gap-y-3 rounded-[8px] border border-[var(--panel-line)] border-t-[3px] border-t-teal-600 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_96px] xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-y-4">
+            <div className="contents">
+              <div className="col-start-2 row-start-1 flex h-28 w-20 items-center justify-center overflow-hidden rounded-[8px] border border-[var(--panel-line)] bg-[#f3f7f8] sm:row-span-2 sm:h-32 sm:w-24 xl:col-start-1 xl:row-span-1 xl:mx-auto xl:h-32 xl:w-24">
+                {student.data?.photo_url && student.data.photo_url !== failedPhotoUrl ? (
+                  <img
+                    src={student.data.photo_url}
+                    alt={`${student.data.name}'s profile photo`}
+                    className="h-full w-full object-contain"
+                    onError={() => setFailedPhotoUrl(student.data?.photo_url ?? null)}
+                  />
                 ) : (
-                  <div className="text-sm text-[#91a1bc]">No pending months in the current billing window.</div>
+                  <div className="flex flex-col items-center gap-2 text-[var(--muted)]" role="img" aria-label="Student photo not added">
+                    <UserRound size={40} strokeWidth={1.25} aria-hidden="true" />
+                    <span className="text-xs font-medium">No photo</span>
+                  </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/collect?student_id=${id}`}>
-              <Button>Collect Payment</Button>
-            </Link>
-            <Button variant="outline" onClick={openEditDialog}>
-              Edit Profile
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                feeForm.setValue('expected_fee_amount', Number(fee.data?.expected_fee_amount ?? 0));
-                setFeeOpen(true);
-              }}
-            >
-              Edit Monthly Fee
-            </Button>
-            {student.data?.status === 'active' ? (
-              <Button variant="destructive" onClick={() => setInactiveOpen(true)}>
-                Mark Inactive
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-50" onClick={() => handleReactivate()}>
-                  Reactivate
-                </Button>
-                <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                  Permanently Delete
-                </Button>
-              </>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => window.location.assign(`/api/backend/export/payments.csv?student_id=${id}`)}
-            >
-              Export Payments CSV
-            </Button>
-          </div>
-
-          <Card square>
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto rounded-[24px] border border-[rgba(151,164,187,0.08)] bg-[rgba(255,255,255,0.02)]">
-                <Table>
-                  <THead>
+              <div className="col-start-1 row-start-1 min-w-0 space-y-3 xl:row-start-2 xl:text-center">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 xl:justify-center"><span className="font-mono text-xs text-[var(--muted)]">{student.data?.student_code}</span><Badge variant={student.data?.status === 'active' ? 'success' : 'default'} className="capitalize">{student.data?.status?.replace('_', ' ')}</Badge></div>
+                <h2 className="break-words text-xl font-semibold text-[var(--heading)]">{student.data?.name}</h2>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[var(--muted)] xl:flex-col xl:items-center">
+                  <span className="inline-flex items-center gap-1.5"><GraduationCap size={14} className="shrink-0" />{student.data?.class_name ? `Class ${student.data.class_name}` : 'No class'}</span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5"><School size={14} className="shrink-0" />{student.data?.school_name ?? 'School not recorded'}</span>
+                </div>
+                <p className="flex items-center gap-1.5 text-xs text-[var(--muted)] xl:justify-center"><CalendarDays size={14} className="shrink-0" />Joined {formatDate(student.data?.joined_date)}</p>
+              </div>
+            </div>
+            <div className="col-span-2 col-start-1 row-start-2 flex flex-wrap items-start gap-2 sm:col-span-1 xl:row-start-3 xl:grid">
+              <Button variant="outline" className="rounded-[8px]" onClick={openEditDialog}><Edit3 size={16} />Edit profile</Button>
+              <Link href={`/collect?student_id=${id}`} className="inline-flex items-center justify-center gap-2 rounded-[6px] bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"><Banknote size={16} />Collect payment</Link>
+            </div>
+            <dl className="hidden border-t border-[var(--panel-line)] pt-3 text-sm xl:col-start-1 xl:row-start-4 xl:grid xl:gap-3">
+              <div><dt className="text-xs text-[var(--muted)]">Admission number</dt><dd className="mt-1 break-words font-medium">{student.data?.admission_no || 'Not recorded'}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">Parent contact</dt><dd className="mt-1 break-words font-medium">{student.data?.parent_phone ? <a href={`tel:${student.data.parent_phone}`} className="text-[var(--accent)] hover:underline">{student.data.parent_phone}</a> : 'Not recorded'}</dd></div>
+            </dl>
+          </section>
+          <div className="min-w-0 space-y-3 xl:col-start-1 xl:row-start-1">
+          <nav aria-label="Student profile sections" className="grid grid-cols-2 border-b border-[var(--panel-line)] sm:flex">
+            {([
+              { key: 'billing', label: 'Billing', icon: Banknote },
+              { key: 'personal', label: 'Personal', icon: UserRound },
+              { key: 'family', label: 'Family & contact', icon: FileText },
+              { key: 'enrollment', label: 'Enrollment', icon: Settings2 },
+            ] as const).map(({ key, label, icon: Icon }) => <button key={key} aria-pressed={profileTab === key} onClick={() => setProfileTab(key)} className={`inline-flex min-h-11 items-center justify-center gap-2 border-b-2 px-3 py-2 text-sm font-medium sm:px-4 ${profileTab === key ? 'border-[var(--accent)] text-[var(--heading)]' : 'border-transparent text-[var(--muted)] hover:bg-[var(--surface-subtle)]'}`}><Icon size={15} className={profileTab === key ? 'text-[var(--accent)]' : ''} />{label}</button>)}
+          </nav>
+          {profileTab === 'enrollment' && <section className="space-y-3">
+            <div><h2 className="text-base font-semibold text-[var(--heading)]">Enrollment record</h2></div>
+            <div className="grid gap-x-8 sm:grid-cols-3">
+              <ProfileField label="Admission number" value={student.data?.admission_no} />
+              <ProfileField label="Joined" value={formatDate(student.data?.joined_date)} />
+              <ProfileField label="Batch" value={student.data?.batch} />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[var(--panel-line)] py-3">
+              <div><h3 className="text-sm font-semibold text-[var(--heading)]">Student status</h3><Badge variant={student.data?.status === 'active' ? 'success' : 'default'} className="mt-2">{student.data?.status}</Badge></div>
+              {student.data?.status === 'active' ? <Button variant="outline" className="rounded-[8px]" onClick={() => setInactiveOpen(true)}>Mark inactive</Button> : <Button variant="outline" className="rounded-[8px]" onClick={() => handleReactivate()}>Reactivate student</Button>}
+            </div>
+            {student.data?.status !== 'active' && <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rose-200 pb-5">
+              <div><h3 className="text-sm font-semibold text-rose-700">Delete student record</h3><p className="mt-1 text-sm text-[var(--muted)]">Permanent removal of this student record.</p></div>
+              <Button variant="destructive" className="rounded-[8px]" onClick={() => setDeleteOpen(true)}>Permanently delete</Button>
+            </div>}
+          </section>}
+          {profileTab === 'personal' && <section className="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ProfileField label="Roll number" value={student.data?.student_code} />
+            <ProfileField label="Admission number" value={student.data?.admission_no} />
+            <ProfileField label="Class" value={student.data?.class_name} />
+            <ProfileField label="School" value={student.data?.school_name} />
+            <ProfileField label="Date of birth" value={formatDate(student.data?.date_of_birth)} />
+            <ProfileField label="Joined" value={formatDate(student.data?.joined_date)} />
+            <ProfileField label="Gender" value={student.data?.gender} />
+            <ProfileField label="Blood group" value={student.data?.blood_group} />
+            <ProfileField label="Hobbies" value={student.data?.hobbies} />
+            <ProfileField label="Notes" value={student.data?.notes} wide />
+          </section>}
+          {profileTab === 'family' && <section className="grid gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ProfileField label="Father" value={student.data?.father_name} />
+            <ProfileField label="Mother" value={student.data?.mother_name} />
+            <ProfileField label="Guardian" value={student.data?.guardian_name} />
+            <ProfileField label="Father phone" value={student.data?.parent_phone} />
+            <ProfileField label="Mother phone" value={student.data?.parent_phone_2} />
+            <ProfileField label="WhatsApp" value={student.data?.whatsapp_no} />
+            <ProfileField label="Father occupation" value={student.data?.father_occupation} />
+            <ProfileField label="Mother occupation" value={student.data?.mother_occupation} />
+            <ProfileField label="Student phone" value={student.data?.contact_no} />
+            <ProfileField label="Student email" value={student.data?.student_email} />
+            <ProfileField label="Emergency contact" value={student.data?.emergency_contact} />
+            <ProfileField label="Emergency phone" value={student.data?.emergency_phone} />
+            <ProfileField label="Address" value={[student.data?.address, student.data?.city, student.data?.pincode].filter(Boolean).join(', ')} wide />
+          </section>}
+          <div className={profileTab === 'billing' ? 'space-y-3' : 'hidden'}>
+            <dl className="profile-billing-summary grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { label: 'Monthly fee', value: fee.isError ? 'Unavailable' : fee.isLoading ? '...' : formatMoney(fee.data?.expected_fee_amount), color: 'text-[var(--heading)]' },
+                { label: 'Cycle amount', value: overview.isError ? 'Unavailable' : overview.isLoading ? '...' : formatMoney(overview.data?.payable_amount), color: 'text-[var(--heading)]' },
+                { label: 'Total paid', value: balance.isError ? 'Unavailable' : balance.isLoading ? '...' : formatMoney(balance.data?.paid_total), color: 'text-emerald-700' },
+                { label: 'Next unpaid', value: overview.isError ? 'Unavailable' : overview.isLoading ? '...' : overview.data?.next_unpaid_label ?? '-', color: 'text-amber-700' },
+              ].map((metric) => <div key={metric.label} className="min-w-0 rounded-[8px] border border-[var(--panel-line)] bg-white px-3 py-3"><dt className="text-xs text-[var(--muted)]">{metric.label}</dt><dd className={`mt-2 break-words text-xl font-semibold tabular-nums ${metric.color}`}>{metric.value}</dd></div>)}
+            </dl>
+            <div className="grid min-w-0 gap-4">
+              <aside className="grid min-w-0 gap-x-6 gap-y-2 border-y border-[var(--panel-line)] py-3 xl:grid-cols-2" aria-label="Billing plan">
+                <div className="flex items-center justify-between gap-3 self-start xl:col-span-2">
+                  <h2 className="text-base font-semibold text-[var(--heading)]">Billing plan</h2>
+                  <Button variant="ghost" size="icon" className="rounded-[8px]" aria-label="Edit monthly fee" title="Edit monthly fee" disabled={!fee.data || fee.isError} onClick={() => { feeForm.setValue('expected_fee_amount', Number(fee.data?.expected_fee_amount ?? 0)); setFeeOpen(true); }}><Edit3 size={16} /></Button>
+                </div>
+                {overview.isLoading ? <div role="status" className="flex items-center gap-2 py-6 text-sm text-[var(--muted)]"><Spinner />Loading billing plan</div> : overview.isError ? <div role="alert" className="py-5 text-sm text-[var(--danger)]">Billing plan unavailable.<Button size="sm" variant="outline" className="mt-2 rounded-[8px]" onClick={() => overview.refetch()}>Retry</Button></div> : <>
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div><dt className="text-xs text-[var(--muted)]">Payment cycle</dt><dd className="mt-1 font-medium text-[var(--heading)]">{overview.data?.cycle_label ?? '-'} / {overview.data?.cycle_months ?? 0} months</dd></div>
+                    <div><dt className="text-xs text-[var(--muted)]">Billing window</dt><dd className="mt-1 font-medium text-[var(--heading)]">{overview.data?.batch_start_label ?? '-'} to {overview.data?.batch_end_label ?? '-'}</dd></div>
+                  </dl>
+                  <div className="min-w-0 xl:col-span-2">
+                    <h3 className="mt-2 flex items-center justify-between gap-2 text-xs font-medium text-[var(--muted)]">Billing periods<span>{overview.data?.pending_months.length ?? 0} unpaid</span></h3>
+                    <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
+                      {(overview.data?.months ?? []).map((month) => <li key={month.month} className={`flex min-w-0 items-center gap-2 rounded-[6px] px-2.5 py-2 ${month.is_paid ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>
+                        {month.is_paid ? <Check size={14} className="shrink-0" aria-hidden="true" /> : <Clock3 size={14} className="shrink-0" aria-hidden="true" />}
+                        <div className="min-w-0"><p className="text-xs font-medium">{month.label}</p><p className="text-[10px]">{month.is_paid ? 'Paid' : 'Unpaid'}</p></div>
+                      </li>)}
+                    </ul>
+                    {!overview.data?.pending_months.length && <p className="mt-3 text-sm text-emerald-700">No pending months in this billing window.</p>}
+                  </div>
+                </>}
+              </aside>
+              <section className="min-w-0" aria-label="Payment history">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                  <div><h2 className="text-base font-semibold text-[var(--heading)]">Payment history</h2><p className="mt-1 text-xs text-[var(--muted)]">{payments.data ? `${payments.data.total} ${payments.data.total === 1 ? 'transaction' : 'transactions'}` : 'Receipts and reversals'}</p></div>
+                  <Button variant="outline" size="sm" className="rounded-[8px]" onClick={() => window.location.assign(`/api/backend/export/payments.csv?student_id=${id}`)}><Download size={15} />Export CSV</Button>
+                </div>
+              <div className="overflow-x-auto border-y border-[var(--panel-line)]">
+                <Table className="[&_th]:!normal-case [&_th]:!text-xs [&_th]:!font-medium">
+                  <THead className="bg-[var(--surface-subtle)]">
                     <tr>
                       <TH>Receipt</TH>
                       <TH>Fee Period</TH>
@@ -466,7 +456,7 @@ export default function StudentDetailPage() {
                       <TH>Mode</TH>
                       <TH>Amount</TH>
                       <TH>Notes</TH>
-                      <TH></TH>
+                      <TH className="text-right">Actions</TH>
                     </tr>
                   </THead>
                   <TBody>
@@ -489,33 +479,39 @@ export default function StudentDetailPage() {
                         <tr key={p.id}>
                           <TD>{p.receipt_no}</TD>
                           <TD>{p.fee_period_label ?? '-'}</TD>
-                          <TD>{new Date(p.paid_at).toLocaleString()}</TD>
+                          <TD>{formatDate(p.paid_at)}</TD>
                           <TD>{p.mode}</TD>
-                          <TD className={Number(p.amount) < 0 ? 'font-semibold text-rose-300' : 'font-semibold text-white'}>{p.amount}</TD>
+                          <TD className={Number(p.amount) < 0 ? 'font-semibold text-rose-300' : 'font-semibold text-[var(--heading)]'}>{formatMoney(p.amount)}</TD>
                           <TD className="max-w-[320px] truncate" title={p.notes ?? ''}>
                             {p.notes ?? ''}
                           </TD>
                           <TD>
-                            <div className="flex gap-2">
+                            <div className="flex justify-end gap-1">
                               <Button
                                 size="sm"
-                                variant="outline"
+                                variant="ghost"
+                                className="rounded-[6px]"
+                                aria-label={`View receipt ${p.receipt_no}`}
+                                title="View receipt"
                                 onClick={() => {
                                   setReceiptPaymentId(p.id);
                                   setReceiptOpen(true);
                                 }}
                               >
-                                Receipt
+                                <FileText size={16} />
                               </Button>
                               <Button
                                 size="sm"
-                                variant="outline"
+                                variant="ghost"
+                                className="rounded-[6px]"
+                                aria-label={`Reverse payment ${p.receipt_no}`}
+                                title="Reverse payment"
                                 onClick={() => {
                                   setReversePayment({ id: p.id, receipt_no: p.receipt_no, amount: p.amount, mode: p.mode });
                                   setReverseOpen(true);
                                 }}
                               >
-                                Reverse
+                                <RotateCcw size={16} />
                               </Button>
                             </div>
                           </TD>
@@ -537,21 +533,24 @@ export default function StudentDetailPage() {
                   Page {page} / {paymentTotalPages}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Prev
+                  <Button variant="outline" size="sm" className="rounded-[6px]" aria-label="Previous payment page" title="Previous page" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft size={16} />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    className="rounded-[6px]"
+                    aria-label="Next payment page"
+                    title="Next page"
                     disabled={page >= paymentTotalPages}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Next
+                    <ChevronRight size={16} />
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              </section>
+            </div>
 
           <Dialog open={feeOpen} onOpenChange={setFeeOpen}>
             <DialogContent>
@@ -565,7 +564,7 @@ export default function StudentDetailPage() {
                     <input
                       type="number"
                       step="0.01"
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="h-10 w-full rounded-[8px] border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       {...feeForm.register('expected_fee_amount')}
                     />
                     {feeForm.formState.errors.expected_fee_amount ? (
@@ -774,6 +773,8 @@ export default function StudentDetailPage() {
               overview.refetch();
             }}
           />
+          </div>
+          </div>
         </div>
       )}
     </AppShell>

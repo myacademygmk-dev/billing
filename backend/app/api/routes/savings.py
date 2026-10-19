@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import get_current_user, require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
@@ -18,6 +18,7 @@ from app.schemas.savings import (
     SavingsEntryCreate,
     SavingsEntryEdit,
     SavingsEntryRead,
+    SavingsEntryRetract,
     StudentSavingsBalanceRead,
 )
 
@@ -29,7 +30,7 @@ router = APIRouter()
 def create_savings_entry(
     payload: SavingsEntryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("savings")),
 ) -> SavingsEntryRead:
     if payload.amount == 0:
         raise HTTPException(status_code=422, detail="amount must be non-zero")
@@ -157,6 +158,7 @@ def list_student_savings_balances(
                     total_deposited=deposited,
                     total_withdrawn=withdrawn,
                     balance=balance,
+                    total_savings=balance,
                 )
             )
     return {"items": items, "total": len(items)}
@@ -178,9 +180,9 @@ def delete_savings_entry(
 @router.post("/{entry_id}/retract", response_model=SavingsEntryRead, status_code=201)
 def retract_savings_entry(
     entry_id: uuid.UUID,
-    payload: dict,
+    payload: SavingsEntryRetract,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("savings")),
 ) -> SavingsEntryRead:
     """Create a counter-entry that negates the original entry."""
     original = db.get(SavingsEntry, entry_id)
@@ -194,7 +196,7 @@ def retract_savings_entry(
     if existing:
         raise HTTPException(status_code=409, detail="This entry has already been retracted")
 
-    reason = payload.get("reason", "")
+    reason = (payload.reason or "").strip()
     retraction = SavingsEntry(
         student_id=original.student_id,
         amount=-original.amount,

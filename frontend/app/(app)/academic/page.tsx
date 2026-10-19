@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { StudentPicker } from '@/components/app/student-picker';
+import { ClassMarksDialog } from '@/components/app/class-marks-dialog';
 import { BookOpen, GraduationCap, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/app/shell';
+import { PageTabs } from '@/components/ui/page-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,53 +29,41 @@ type MarkItem = { id: string; student_name?: string | null; subject_name?: strin
 
 export default function AcademicPage() {
   const [activeTab, setActiveTab] = useState<'academic' | 'exams'>('academic');
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const years = useQuery<AcademicYear[]>({ queryKey: ['academicYears'], queryFn: () => apiFetch('/academic/years') });
+  useEffect(() => {
+    if (!selectedYear && years.data?.length) setSelectedYear((years.data.find((year) => year.is_current) ?? years.data[0]).id);
+  }, [years.data, selectedYear]);
 
   const tabNav = (
-    <div className="flex items-end">
-      <button
-        onClick={() => setActiveTab('academic')}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
-          activeTab === 'academic'
-            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
-            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
-        }`}
-      >
-        <GraduationCap className="h-3.5 w-3.5" />
-        Years & Classes
-      </button>
-      <button
-        onClick={() => setActiveTab('exams')}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border border-b-0 transition-colors ${
-          activeTab === 'exams'
-            ? 'bg-white text-[var(--heading)] border-[var(--panel-line)] relative z-10 -mb-px'
-            : 'bg-[#f1f5f9] text-[var(--muted)] border-[var(--panel-line)] hover:text-[var(--heading)] hover:bg-[#f8fafc]'
-        }`}
-      >
-        <BookOpen className="h-3.5 w-3.5" />
-        Exams & Marks
-      </button>
-    </div>
+    <PageTabs<'academic' | 'exams'> label="Academic sections" items={[{ id: 'academic', label: 'Years & Classes', icon: GraduationCap }, { id: 'exams', label: 'Exams & Marks', icon: BookOpen }]} value={activeTab} onValueChange={setActiveTab} />
   );
 
   return (
     <AppShell title="Academics" subtitle="Manage academic structure, classes, subjects, and exams." action={tabNav}>
-      <div className="flex-1 min-h-0 border border-[var(--panel-line)] bg-white overflow-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[var(--panel-line)] bg-[var(--surface-subtle)] px-4 py-3">
+        <Select aria-label="Academic year" className="w-full sm:w-56" value={selectedYear ?? ''} onChange={(event) => setSelectedYear(event.target.value)}>
+          <option value="">Select academic year</option>
+          {years.data?.map((year) => <option key={year.id} value={year.id}>{year.name}{year.is_current ? ' (current)' : ''}</option>)}
+        </Select>
+        <div className="flex gap-4 text-sm font-medium text-[var(--accent)]"><Link href="/fees">Fee structures</Link><Link href="/settings">Year rollover</Link></div>
+      </div>
+      <div className="flex-1 min-h-0 bg-white overflow-auto">
         <div className="p-3 sm:p-4">
-          {activeTab === 'academic' && <AcademicTab />}
-          {activeTab === 'exams' && <ExamsTab />}
+          {activeTab === 'academic' && <AcademicTab selectedYear={selectedYear} setSelectedYear={setSelectedYear} />}
+          {activeTab === 'exams' && <ExamsTab key={selectedYear} yearId={selectedYear} />}
         </div>
       </div>
     </AppShell>
   );
 }
 
-function AcademicTab() {
+function AcademicTab({ selectedYear, setSelectedYear }: { selectedYear: string | null; setSelectedYear: (id: string) => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showAddYear, setShowAddYear] = useState(false);
   const [showAddClass, setShowAddClass] = useState(false);
   const [showAddSubject, setShowAddSubject] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [yearForm, setYearForm] = useState({ name: '', start_date: '', end_date: '', is_current: false });
   const [classForm, setClassForm] = useState({ class_name: '', section: '' });
@@ -85,8 +77,8 @@ function AcademicTab() {
   });
 
   const createYear = useMutation({
-    mutationFn: (data: Record<string, unknown>) => apiFetch('/academic/years', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['academicYears'] }); setShowAddYear(false); setYearForm({ name: '', start_date: '', end_date: '', is_current: false }); toast({ title: 'Academic year created', variant: 'success' }); },
+    mutationFn: (data: Record<string, unknown>) => apiFetch<AcademicYear>('/academic/years', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: (year) => { qc.invalidateQueries({ queryKey: ['academicYears'] }); setSelectedYear(year.id); setShowAddYear(false); setYearForm({ name: '', start_date: '', end_date: '', is_current: false }); toast({ title: 'Academic year created', variant: 'success' }); },
     onError: (e) => toast({ title: 'Failed', description: String(e.message || e), variant: 'error' }),
   });
 
@@ -185,7 +177,7 @@ function AcademicTab() {
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddYear(false)}>Cancel</Button>
-            <Button onClick={() => createYear.mutate(yearForm)} disabled={!yearForm.name || !yearForm.start_date || !yearForm.end_date} loading={createYear.isPending}>Create</Button>
+            <Button onClick={() => createYear.mutate(yearForm)} disabled={!yearForm.name.trim() || !yearForm.start_date || !yearForm.end_date || yearForm.end_date < yearForm.start_date} loading={createYear.isPending}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -228,17 +220,22 @@ function AcademicTab() {
   );
 }
 
-function ExamsTab() {
+function ExamsTab({ yearId }: { yearId: string | null }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showAddExam, setShowAddExam] = useState(false);
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [showAddMark, setShowAddMark] = useState(false);
+  const [showClassMarks, setShowClassMarks] = useState(false);
   const [examForm, setExamForm] = useState({ name: '', exam_type: 'quarterly', start_date: '', end_date: '' });
   const [markForm, setMarkForm] = useState({ student_id: '', subject_id: '', marks_obtained: '', max_marks: '100' });
+  const [studentSearch, setStudentSearch] = useState('');
+  const [markClass, setMarkClass] = useState('');
+  const classes = useQuery<ClassSection[]>({ queryKey: ['classesForYear', yearId], queryFn: () => apiFetch(`/academic/classes?academic_year_id=${yearId}`), enabled: !!yearId });
+  const subjects = classes.data?.find((item) => item.id === markClass)?.subjects ?? [];
 
   const years = useQuery<AcademicYear[]>({ queryKey: ['academicYears'], queryFn: () => apiFetch('/academic/years') });
-  const currentYear = years.data?.find((y) => y.is_current) ?? years.data?.[0];
+  const currentYear = years.data?.find((y) => y.id === yearId);
 
   const exams = useQuery<{ items: Exam[]; total: number }>({
     queryKey: ['exams', currentYear?.id],
@@ -271,7 +268,7 @@ function ExamsTab() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle as="h4">Exams {currentYear ? `(${currentYear.name})` : ''}</CardTitle>
-              <Button size="sm" onClick={() => setShowAddExam(true)}><Plus className="mr-1 h-3.5 w-3.5" />New Exam</Button>
+              <Button size="sm" disabled={!currentYear} onClick={() => setShowAddExam(true)}><Plus className="mr-1 h-3.5 w-3.5" />New Exam</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -300,7 +297,7 @@ function ExamsTab() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle as="h4">Marks</CardTitle>
-                <Button size="sm" onClick={() => setShowAddMark(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add Mark</Button>
+                <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => setShowAddMark(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add Mark</Button><Button size="sm" disabled={!classes.data?.length} onClick={() => setShowClassMarks(true)}>Enter class marks</Button></div>
               </div>
             </CardHeader>
             <CardContent className="px-0 sm:px-0">
@@ -359,8 +356,9 @@ function ExamsTab() {
           <DialogHeader><DialogTitle>Record Mark</DialogTitle></DialogHeader>
           <DialogBody>
             <div className="grid gap-4">
-              <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Student ID *</label><Input placeholder="Student UUID" value={markForm.student_id} onChange={(e) => setMarkForm({ ...markForm, student_id: e.target.value })} /></div>
-              <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Subject ID *</label><Input placeholder="Subject UUID" value={markForm.subject_id} onChange={(e) => setMarkForm({ ...markForm, subject_id: e.target.value })} /></div>
+              <div><label className="mb-1.5 block text-sm font-medium">Class</label><Select aria-label="Marks class" value={markClass} onChange={(event) => { setMarkClass(event.target.value); setStudentSearch(''); setMarkForm({ student_id: '', subject_id: '', marks_obtained: '', max_marks: '100' }); }}><option value="">Select class</option>{classes.data?.map((item) => <option key={item.id} value={item.id}>{item.class_name} {item.section}</option>)}</Select></div>
+              {markClass && <div><label className="mb-1.5 block text-sm font-medium">Student</label><StudentPicker value={studentSearch} className={classes.data?.find((item) => item.id === markClass)?.class_name} onChange={(value) => { setStudentSearch(value); setMarkForm({ ...markForm, student_id: '' }); }} onSelect={(student) => { setStudentSearch(`${student.name} (${student.student_code})`); setMarkForm({ ...markForm, student_id: student.id }); }} /></div>}
+              <div><label className="mb-1.5 block text-sm font-medium">Subject</label><Select aria-label="Marks subject" disabled={!markClass} value={markForm.subject_id} onChange={(event) => { const subject = subjects.find((item) => item.id === event.target.value); setMarkForm({ ...markForm, subject_id: event.target.value, max_marks: String(subject?.max_marks ?? 100) }); }}><option value="">Select subject</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</Select></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Marks *</label><Input type="number" placeholder="85" value={markForm.marks_obtained} onChange={(e) => setMarkForm({ ...markForm, marks_obtained: e.target.value })} /></div>
                 <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Max Marks</label><Input type="number" value={markForm.max_marks} onChange={(e) => setMarkForm({ ...markForm, max_marks: e.target.value })} /></div>
@@ -369,10 +367,11 @@ function ExamsTab() {
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddMark(false)}>Cancel</Button>
-            <Button onClick={() => createMark.mutate({ exam_id: selectedExam, ...markForm, marks_obtained: Number(markForm.marks_obtained), max_marks: Number(markForm.max_marks) })} disabled={!markForm.student_id || !markForm.marks_obtained} loading={createMark.isPending}>Save</Button>
+            <Button onClick={() => createMark.mutate({ exam_id: selectedExam, ...markForm, marks_obtained: Number(markForm.marks_obtained), max_marks: Number(markForm.max_marks) })} disabled={!markForm.student_id || !markForm.subject_id || markForm.marks_obtained === '' || !Number.isFinite(Number(markForm.marks_obtained)) || Number(markForm.marks_obtained) < 0 || Number(markForm.max_marks) <= 0 || Number(markForm.marks_obtained) > Number(markForm.max_marks)} loading={createMark.isPending}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {showClassMarks && selectedExam && <ClassMarksDialog examId={selectedExam} classes={classes.data ?? []} onClose={() => setShowClassMarks(false)} />}
     </>
   );
 }

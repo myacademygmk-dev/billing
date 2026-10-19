@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AttendanceEntry(BaseModel):
@@ -28,8 +28,7 @@ class StudentAttendanceRead(BaseModel):
     remarks: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StaffAttendanceEntry(BaseModel):
@@ -52,8 +51,7 @@ class StaffAttendanceRead(BaseModel):
     remarks: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AttendanceSummary(BaseModel):
@@ -91,8 +89,7 @@ class StaffClockRecordRead(BaseModel):
     recorded_by: uuid.UUID
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StaffClockAnalytics(BaseModel):

@@ -1,46 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 
 export function Marquee() {
-  const [announcements, setAnnouncements] = useState<string[] | null>(null);
+  const { announcements = [] } = useWebsiteConfig();
 
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const res = await fetch('/api/backend/public/website-config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.announcements && data.announcements.length > 0) {
-            setAnnouncements(data.announcements);
-          } else {
-            setAnnouncements([]);
-          }
-        } else {
-          setAnnouncements([]);
-        }
-      } catch {
-        setAnnouncements([]);
-      }
-    };
-    fetchAnnouncements();
-  }, []);
+  if (announcements.length === 0) return null;
 
-  if (!announcements || announcements.length === 0) return null;
-
-  const text = announcements.join('\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 ◆ \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0');
+  const text = announcements.join('\u00A0\u00A0\u00A0 | \u00A0\u00A0\u00A0');
 
   return (
-    <div className="bg-[#1e1b4b] shadow-sm overflow-hidden flex items-center">
+    <div className="overflow-hidden border-b border-amber-200/70 bg-[#fff7d6] shadow-sm">
+      <div className="mx-auto flex min-h-10 max-w-none items-stretch overflow-hidden px-0">
       {/* Static label */}
-      <div className="shrink-0 bg-white px-4 py-2 flex items-center">
-        <span className="text-sm font-bold text-[#1e1b4b] whitespace-nowrap">📢 Latest News:</span>
+      <div className="flex shrink-0 items-center border-r border-amber-300 bg-amber-400 px-3 sm:px-5">
+        <span className="whitespace-nowrap text-xs font-extrabold uppercase tracking-wide text-slate-950 sm:text-sm">Latest News</span>
       </div>
       {/* Scrolling text */}
-      <div className="overflow-hidden flex-1">
-        <div className="py-2 whitespace-nowrap animate-marquee">
-          <span className="text-sm font-medium tracking-wide text-yellow-400 px-4">{text}</span>
+      <div className="min-w-0 flex-1 overflow-hidden bg-[#1e1b4b]">
+          <div className="animate-marquee whitespace-nowrap py-2">
+          <span className="px-5 text-sm font-semibold text-amber-200">{text}</span>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -4,40 +4,66 @@ import { ScrollRevealProvider } from '@/components/ui/scroll-reveal-provider';
 import { PublicNav } from '@/components/public/nav';
 import { Marquee } from '@/components/public/marquee';
 import { PopupBanner } from '@/components/public/popup-banner';
+import { WebsiteConfigProvider, type WebsiteConfig } from '@/components/public/website-config-context';
 
-export default function PublicLayout({ children }: { children: ReactNode }) {
+async function getWebsiteConfig(): Promise<WebsiteConfig> {
+  const base = process.env.BACKEND_API_BASE_URL ?? 'http://localhost:8000/api';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(`${base}/public/website-config`, {
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    });
+    return res.ok ? await res.json() : {};
+  } catch {
+    return {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export default async function PublicLayout({ children }: { children: ReactNode }) {
+  const config = await getWebsiteConfig();
+  const institution = config.institution ?? {};
+  const email = institution.email || 'myacademy2009@gmail.com';
+  const phone = institution.phone || '044-4356 8296';
+  const registrationNo = institution.registration_no || 'RegNo: 469/2016';
+  const topBarText = config.top_bar_text || 'Since 2009';
+
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Popup Banner */}
-      <PopupBanner />
-      {/* Top bar */}
-      <div className="hidden bg-[#0f172a] sm:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 text-sm sm:px-6">
-          <div className="flex items-center gap-5">
-            <span className="text-gray-300">✉ myacademy2009@gmail.com</span>
-            <span className="text-gray-300">✆ 044-4356 8296</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <span className="font-bold text-yellow-400">RegNo: 469/2016</span>
-            <span className="font-medium text-gray-300">Since 2009</span>
+    <WebsiteConfigProvider config={config}>
+      <div className="public-site min-h-dvh overflow-x-clip bg-white text-gray-900">
+        {/* Popup Banner */}
+        <PopupBanner />
+        {/* Top bar */}
+        <div className="hidden bg-[#0f172a] sm:block">
+          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center gap-4 px-4 py-1.5 text-xs sm:px-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="truncate text-gray-300">Email: {email}</span>
+              <span className="whitespace-nowrap text-gray-300">Phone: {phone}</span>
+            </div>
+          <div className="flex min-w-0 items-center justify-end gap-4">
+            <span className="truncate text-[11px] font-semibold uppercase text-yellow-400">{topBarText}</span>
+            <span className="truncate text-[11px] font-semibold text-yellow-400">{registrationNo}</span>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-        <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Link href="/" className="flex items-center gap-3 group">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+        <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="group flex items-center gap-3">
             <img
               src="/images/logo.jpeg"
               alt="MY Academy Logo"
-              className="h-12 w-12 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14"
+              className="size-10 object-contain sm:size-11"
             />
             <div>
-              <div className="text-2xl font-extrabold tracking-tight text-indigo-600 sm:text-[1.7rem]">
+              <div className="text-lg font-extrabold text-slate-900 sm:text-xl">
                 MY ACADEMY
               </div>
-              <div className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-500 sm:block">
+              <div className="hidden text-[10px] font-semibold uppercase text-indigo-600 sm:block">
                 Gain More Knowledge
               </div>
             </div>
@@ -47,7 +73,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <PublicNav />
             <Link
               href="/login"
-              className="hidden rounded-lg bg-yellow-400 px-5 py-2.5 text-sm font-bold text-gray-900 shadow-md transition-all duration-300 hover:bg-yellow-300 hover:scale-105 hover:shadow-lg lg:block"
+              className="hidden rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 xl:block"
             >
               Staff Login
             </Link>
@@ -67,7 +93,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       {/* Footer */}
       <footer className="relative bg-[#0f172a] pt-1 text-white">
         {/* Gradient accent line at top */}
-        <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-500 to-yellow-400" />
+        <div className="h-1 w-full bg-indigo-600" />
 
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
@@ -89,7 +115,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                   <a
                     key={social}
                     href="#"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-gray-400 transition-all duration-200 hover:bg-indigo-600 hover:text-white"
+                    className="flex size-9 items-center justify-center rounded-md border border-white/10 text-gray-400 transition-colors duration-150 hover:border-indigo-400 hover:text-white"
                   >
                     <span className="text-xs font-bold uppercase">{social[0]}</span>
                   </a>
@@ -105,6 +131,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                 <div><Link href="/achievements" className="transition hover:text-white hover:translate-x-1 inline-block">Achievements</Link></div>
                 <div><Link href="/gallery" className="transition hover:text-white hover:translate-x-1 inline-block">Gallery</Link></div>
                 <div><Link href="/news" className="transition hover:text-white hover:translate-x-1 inline-block">News & Events</Link></div>
+                <div><Link href="/timetable" className="transition hover:text-white hover:translate-x-1 inline-block">Timetable</Link></div>
+                <div><Link href="/publications" className="transition hover:text-white hover:translate-x-1 inline-block">Publications</Link></div>
+                <div><Link href="/payment-terms" className="transition hover:text-white hover:translate-x-1 inline-block">Payment Terms</Link></div>
                 <div><Link href="/contact" className="transition hover:text-white hover:translate-x-1 inline-block">Contact Us</Link></div>
               </div>
             </div>
@@ -150,5 +179,6 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </div>
       </footer>
     </div>
+    </WebsiteConfigProvider>
   );
 }

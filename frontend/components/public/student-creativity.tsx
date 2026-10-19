@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 
 interface CreativityItem {
-  id: number;
+  id: string;
   title?: string;
-  image_url: string;
+  file_url: string;
+  file_type?: string;
   student_name?: string;
 }
 
@@ -56,14 +57,14 @@ export function StudentCreativity() {
           </div>
         ) : (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((item, i) => (
+            {items.filter((item) => item.file_url && (item.file_type ?? 'image') === 'image').map((item, i) => (
               <div
                 key={item.id}
                 className={`group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 reveal reveal-delay-${(i % 4) + 1}`}
               >
                 <div className="aspect-square overflow-hidden">
                   <img
-                    src={item.image_url}
+                    src={item.file_url}
                     alt={item.title || `Student artwork ${i + 1}`}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />

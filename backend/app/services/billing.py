@@ -4,19 +4,21 @@ import re
 from calendar import month_abbr, month_name
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.billing_settings import BillingSettings
 from app.models.enums import PaymentCycle
+from app.models.fee_structure import FeeDiscount, StudentDiscount
 from app.models.payment import Payment
 from app.models.student import Student
 from app.models.student_billing_period import StudentBillingPeriod
 from app.models.student_fee import StudentFee
 
 _BATCH_RE = re.compile(r"^\s*(\d{4})\s*-\s*(\d{4})\s*$")
+_CURRENCY_QUANTUM = Decimal("0.01")
 
 
 def normalize_month(value: date) -> date:
@@ -113,13 +115,50 @@ def get_billing_settings(db: Session) -> BillingSettings:
     return settings
 
 
+def discounted_monthly_fee(
+    gross_fee: Decimal,
+    discounts: list[tuple[str, Decimal]],
+) -> Decimal:
+    """Apply recurring student discounts to a gross monthly fee.
+
+    Percentage discounts are additive and each is calculated against the gross
+    fee. Fixed discounts are then subtracted. The final payable amount is
+    rounded once and cannot fall below zero.
+    """
+    gross = Decimal(gross_fee)
+    percentage_total = sum(
+        (Decimal(value) for discount_type, value in discounts if discount_type == "percentage"),
+        Decimal("0"),
+    )
+    fixed_total = sum(
+        (Decimal(value) for discount_type, value in discounts if discount_type == "fixed"),
+        Decimal("0"),
+    )
+    payable = gross - (gross * percentage_total / Decimal("100")) - fixed_total
+    return max(payable, Decimal("0")).quantize(_CURRENCY_QUANTUM, rounding=ROUND_HALF_UP)
+
+
 def get_student_monthly_fee(db: Session, student_id) -> Decimal:
     fee = db.get(StudentFee, student_id)
     if not fee:
         fee = StudentFee(student_id=student_id, expected_fee_amount=Decimal("0"))
         db.add(fee)
         db.flush()
-    return Decimal(fee.expected_fee_amount)
+    # An inactive template is unavailable for new assignments, but existing
+    # assignments remain valid until explicitly removed from the student.
+    assigned_discount_ids = (
+        select(StudentDiscount.discount_id)
+        .where(StudentDiscount.student_id == student_id)
+        .distinct()
+        .subquery()
+    )
+    assigned_discounts = (
+        db.execute(
+            select(FeeDiscount.discount_type, FeeDiscount.value)
+            .join(assigned_discount_ids, assigned_discount_ids.c.discount_id == FeeDiscount.id)
+        ).all()
+    )
+    return discounted_monthly_fee(Decimal(fee.expected_fee_amount), list(assigned_discounts))
 
 
 @dataclass
@@ -329,7 +368,7 @@ def billing_list_snapshot(overview: BillingOverview) -> BillingListSnapshot:
     batch_start = overview.months[0]["month"]
     first_pending = pending_months[0]
     month_offset = ((first_pending.year - batch_start.year) * 12) + (first_pending.month - batch_start.month)
-    carry_forward_count = month_offset % overview.cycle_months
+    carry_forward_count = (overview.cycle_months - (month_offset % overview.cycle_months)) % overview.cycle_months
     if carry_forward_count > 0:
         due_months = pending_months[:carry_forward_count]
         next_due_state = "pending"

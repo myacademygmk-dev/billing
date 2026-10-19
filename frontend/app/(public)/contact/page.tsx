@@ -22,6 +22,7 @@ interface Testimonial {
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Testimonials state
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -30,6 +31,7 @@ export default function ContactPage() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackError, setFeedbackError] = useState('');
 
   useEffect(() => {
     async function fetchTestimonials() {
@@ -49,6 +51,7 @@ export default function ContactPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setSubmitError('');
     const form = e.currentTarget;
     const data = {
       student_name: (form.elements.namedItem('student_name') as HTMLInputElement).value,
@@ -60,20 +63,26 @@ export default function ContactPage() {
       source: 'website',
     };
     try {
-      const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
-      const res = await fetch(`${base}/public/enquiry`, {
+      const res = await fetch('/api/backend/public/enquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (res.ok) setSubmitted(true);
-    } catch {}
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || 'Unable to submit enquiry right now.');
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Unable to submit enquiry right now.');
+    }
     setLoading(false);
   }
 
   async function handleFeedback(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFeedbackLoading(true);
+    setFeedbackError('');
     const form = e.currentTarget;
     const data = {
       name: (form.elements.namedItem('feedback_name') as HTMLInputElement).value,
@@ -87,8 +96,14 @@ export default function ContactPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (res.ok) setFeedbackSubmitted(true);
-    } catch {}
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || 'Unable to submit feedback right now.');
+      }
+      setFeedbackSubmitted(true);
+    } catch (err) {
+      setFeedbackError(err instanceof Error ? err.message : 'Unable to submit feedback right now.');
+    }
     setFeedbackLoading(false);
   }
 
@@ -154,6 +169,11 @@ export default function ContactPage() {
                         <option>CBSE</option>
                       </select>
                       <textarea name="message" placeholder="Message (optional)" rows={4} className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition resize-none" />
+                      {submitError && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                          {submitError}
+                        </div>
+                      )}
                       <button type="submit" disabled={loading} className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/25 active:scale-[0.99] disabled:opacity-50">
                         {loading ? 'Submitting...' : 'Submit Enquiry'}
                       </button>
@@ -333,6 +353,12 @@ export default function ContactPage() {
                     rows={4}
                     className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 transition resize-none"
                   />
+
+                  {feedbackError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                      {feedbackError}
+                    </div>
+                  )}
 
                   <button
                     type="submit"

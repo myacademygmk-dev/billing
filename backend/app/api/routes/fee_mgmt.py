@@ -125,6 +125,16 @@ def assign_discount_to_student(
     discount = db.get(FeeDiscount, payload.discount_id)
     if not discount:
         raise HTTPException(status_code=404, detail="Discount not found")
+    if not discount.is_active:
+        raise HTTPException(status_code=409, detail="Inactive discount cannot be assigned")
+    duplicate = db.execute(
+        select(StudentDiscount.id).where(
+            StudentDiscount.student_id == payload.student_id,
+            StudentDiscount.discount_id == payload.discount_id,
+        )
+    ).scalar_one_or_none()
+    if duplicate:
+        raise HTTPException(status_code=409, detail="Discount is already assigned to this student")
     sd = StudentDiscount(**payload.model_dump(), applied_by=current_user.id)
     db.add(sd)
     db.commit()

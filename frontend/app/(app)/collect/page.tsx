@@ -9,6 +9,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { AlertCircle, CreditCard, Search } from 'lucide-react';
 
+import { StudentPicker } from '@/components/app/student-picker';
+import { LedgerNavigation } from '@/components/app/ledger-navigation';
 import { AppShell } from '@/components/app/shell';
 import { Receipt, type ReceiptData } from '@/components/app/receipt';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +23,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toaster';
 import { apiFetch } from '@/lib/api';
-import { debounce } from '@/lib/debounce';
 import { cn } from '@/components/ui/cn';
 
 type Student = {
@@ -101,22 +102,7 @@ function CollectPageInner() {
 
   // Autocomplete search
   const [searchQuery, setSearchQuery] = useState(rollNoFromQuery);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const debounceFn = useMemo(() => debounce((v: string) => setDebouncedSearch(v), 300), []);
-  useEffect(() => {
-    debounceFn(searchQuery);
-  }, [searchQuery, debounceFn]);
-
-  const suggestions = useQuery({
-    queryKey: ['studentSearch', debouncedSearch],
-    enabled: debouncedSearch.trim().length >= 2 && showSuggestions,
-    queryFn: () =>
-      apiFetch<{ items: SearchResult[]; total: number }>(
-        `/students/balances?search=${encodeURIComponent(debouncedSearch)}&status=active&page=1&page_size=6`
-      ),
-  });
+  const [searchEdited, setSearchEdited] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -147,24 +133,22 @@ function CollectPageInner() {
       );
       const exact = data.items.find((item) => item.student_code.toLowerCase() === studentCodeLookup.toLowerCase());
       if (!exact) throw new Error('Student not found for this roll number');
-      form.setValue('student_id', exact.id);
-      form.setValue('student_code', exact.student_code);
       return exact;
     },
   });
   const studentById = useQuery({
     queryKey: ['studentById', studentId],
-    enabled: Boolean(studentId) && !Boolean(studentCodeLookup),
-    queryFn: async () => {
-      const data = await apiFetch<Student>(`/students/${studentId}`);
-      form.setValue('student_id', data.id);
-      form.setValue('student_code', data.student_code);
-      setStudentCodeLookup(data.student_code);
-      setSearchQuery(data.student_code);
-      return data;
-    },
+    enabled: Boolean(studentId) && !studentCodeLookup && !searchEdited,
+    queryFn: () => apiFetch<Student>(`/students/${studentId}`),
   });
-  const selectedStudent = student.data ?? studentById.data;
+  const selectedStudent = studentCodeLookup ? student.data : (!searchEdited ? studentById.data : undefined);
+  useEffect(() => {
+    if (selectedStudent) {
+      form.setValue('student_id', selectedStudent.id);
+      form.setValue('student_code', selectedStudent.student_code);
+      setSearchQuery(selectedStudent.student_code);
+    }
+  }, [selectedStudent, form]);
   const isStudentLoading = student.isLoading || studentById.isLoading;
   const isStudentError = student.isError || studentById.isError;
 
@@ -231,17 +215,9 @@ function CollectPageInner() {
     });
   }
 
-  function selectStudent(result: SearchResult) {
-    setStudentCodeLookup(result.student_code);
-    setSearchQuery(result.student_code);
-    form.setValue('student_code', result.student_code);
-    form.setValue('student_id', result.id);
-    setShowSuggestions(false);
-  }
-
   function handlePaymentSubmit(values: FormValues) {
-    // Show confirmation dialog before processing payment
-    setPendingPayment(values);
+    if (!selectedStudent || !selectedMonths.length || overview.isError || overview.isFetching) return;
+    setPendingPayment({ ...values, student_id: selectedStudent.id, student_code: selectedStudent.student_code });
     setConfirmOpen(true);
   }
 
@@ -285,6 +261,7 @@ function CollectPageInner() {
         ) : undefined
       }
     >
+      <LedgerNavigation active="payments" />
       {receipt ? (
         <div className="max-w-xl">
           <Receipt
@@ -296,14 +273,14 @@ function CollectPageInner() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          {/* Left: Student Billing */}
-          <Card>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+          {/* Student Billing */}
+          <Card className="order-2">
             <CardHeader>
               <CardTitle>Student Billing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {studentCodeLookup ? (
+              {(studentCodeLookup || selectedStudent) ? (
                 isStudentLoading || overview.isLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-16 w-full rounded-xl" />
@@ -394,8 +371,8 @@ function CollectPageInner() {
             </CardContent>
           </Card>
 
-          {/* Right: Payment Form */}
-          <Card>
+          {/* Payment Form */}
+          <Card className="order-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-[var(--accent)]" />
@@ -409,60 +386,14 @@ function CollectPageInner() {
                   <label className="mb-2 block text-sm font-medium text-[var(--heading)]">
                     Search Student
                   </label>
-                  <div className="relative">
-                    <Input
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        form.setValue('student_code', e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                      placeholder="Type name or roll number..."
-                      prefix={<Search size={16} />}
-                    />
-                    {/* Autocomplete dropdown */}
-                    {showSuggestions && debouncedSearch.trim().length >= 2 && (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-[var(--panel-line)] bg-[var(--panel-strong)] shadow-lg">
-                        {suggestions.isLoading ? (
-                          <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--muted)]">
-                            <Spinner size="sm" /> Searching...
-                          </div>
-                        ) : !suggestions.data?.items.length ? (
-                          <div className="px-4 py-3 text-sm text-[var(--muted)]">No students found</div>
-                        ) : (
-                          suggestions.data.items.map((result) => (
-                            <button
-                              key={result.id}
-                              type="button"
-                              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[var(--surface-subtle)]"
-                              onMouseDown={() => selectStudent(result)}
-                            >
-                              <div className="min-w-0">
-                                <div className="font-medium text-[var(--heading)]">{result.name}</div>
-                                <div className="text-xs text-[var(--muted)]">{result.student_code}</div>
-                              </div>
-                              {parseFloat(result.pending) > 0 && (
-                                <Badge variant="warning">{formatCurrency(result.pending)} due</Badge>
-                              )}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {!showSuggestions && searchQuery && !studentCodeLookup && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setStudentCodeLookup(searchQuery.trim())}
-                    >
-                      Load Student
-                    </Button>
-                  )}
+                  <StudentPicker value={searchQuery} onChange={(value) => {
+                    setSearchEdited(true); setSearchQuery(value); setStudentCodeLookup('');
+                    form.setValue('student_id', ''); form.setValue('student_code', '');
+                    setSelectedMonths([]);
+                  }} onSelect={(student) => {
+                    setSearchQuery(student.student_code); setStudentCodeLookup(student.student_code);
+                    form.setValue('student_id', student.id); form.setValue('student_code', student.student_code);
+                  }} />
                   {isStudentError && (
                     <p className="mt-1.5 text-xs text-[var(--danger)]">Student not found for this roll number</p>
                   )}

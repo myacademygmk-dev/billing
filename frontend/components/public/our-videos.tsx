@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 
 function getYouTubeEmbedUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
     let videoId = '';
-    if (parsed.hostname.includes('youtube.com')) {
+    if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(hostname)) {
       videoId = parsed.searchParams.get('v') || '';
-    } else if (parsed.hostname.includes('youtu.be')) {
+    } else if (['youtu.be', 'www.youtu.be'].includes(hostname)) {
       videoId = parsed.pathname.slice(1);
     }
-    if (videoId) {
+    if (/^[A-Za-z0-9_-]{6,}$/.test(videoId)) {
       return `https://www.youtube.com/embed/${videoId}`;
     }
   } catch {}
@@ -19,31 +20,10 @@ function getYouTubeEmbedUrl(url: string): string | null {
 }
 
 export function OurVideos() {
-  const [videos, setVideos] = useState<string[] | null>(null);
+  const { videos: configuredVideos = [] } = useWebsiteConfig();
+  const videos = configuredVideos.slice(0, 3);
 
-  useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        const res = await fetch('/api/backend/public/website-config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.videos && data.videos.length > 0) {
-            setVideos(data.videos.slice(0, 3));
-          } else {
-            setVideos([]);
-          }
-        } else {
-          setVideos([]);
-        }
-      } catch {
-        setVideos([]);
-      }
-    };
-    fetchVideos();
-  }, []);
-
-  // Don't render section if no videos
-  if (videos !== null && videos.length === 0) return null;
+  if (videos.length === 0) return null;
 
   return (
     <section className="relative overflow-hidden py-14 bg-white">
@@ -56,15 +36,7 @@ export function OurVideos() {
           <p className="mt-2 text-sm text-gray-500 max-w-lg mx-auto">Watch our students in action and get a glimpse of life at MY Academy.</p>
         </div>
 
-        {videos === null ? (
-          /* Loading state */
-          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="aspect-video rounded-xl bg-gray-100 animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {videos.map((url, i) => {
               const embedUrl = getYouTubeEmbedUrl(url);
               if (!embedUrl) return null;
@@ -82,8 +54,7 @@ export function OurVideos() {
                 </div>
               );
             })}
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );

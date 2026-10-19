@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardBadge, RankRibbon, rankTier, rankCardTint, rankHoverGlow } from '@/components/ui/public-card';
-import { AchievementMedal } from '@/components/ui/achievement-medal';
+import { Card } from '@/components/ui/public-card';
+import { AchievementCard } from '@/components/public/achievement-card';
 import { GlowOrb } from '@/components/ui/glow-orb';
 
 interface Achievement {
@@ -185,22 +185,22 @@ export default function AchievementsPage() {
                       <div className="border-t border-slate-100 px-6 py-5 space-y-6">
                         {/* Year Toppers */}
                         {categories.toppers.length > 0 && (
-                          <CategorySection title="🏆 Year Toppers" achievements={categories.toppers} />
+                          <CategorySection title="Year Toppers" achievements={categories.toppers} />
                         )}
 
                         {/* Centum Students */}
                         {categories.centum.length > 0 && (
-                          <CategorySection title="💯 Centum Students" achievements={categories.centum} />
+                          <CategorySection title="Centum Students" achievements={categories.centum} />
                         )}
 
                         {/* Best Students */}
                         {categories.bestStudents.length > 0 && (
-                          <CategorySection title="⭐ Best Students" achievements={categories.bestStudents} />
+                          <CategorySection title="Best Students" achievements={categories.bestStudents} />
                         )}
 
                         {/* Other */}
                         {categories.other.length > 0 && (
-                          <CategorySection title="🎓 Other Achievements" achievements={categories.other} />
+                          <CategorySection title="Other Achievements" achievements={categories.other} />
                         )}
                       </div>
                     )}
@@ -218,35 +218,9 @@ export default function AchievementsPage() {
 function CategorySection({ title, achievements }: { title: string; achievements: Achievement[] }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold text-slate-700 mb-3">{title}</h4>
+      <h4 className="mb-3 inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-bold text-white">{title}</h4>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {achievements.map((a, i) => {
-          const isWinner = rankTier(a.rank) === '1';
-          return (
-            <Card
-              key={a.id}
-              className={`overflow-hidden transition-transform hover:-translate-y-0.5 ${rankCardTint(a.rank)} ${rankHoverGlow(a.rank)} ${isWinner ? 'ring-1 ring-amber-200' : ''}`}
-            >
-              <RankRibbon rank={a.rank} />
-              <div className="flex items-start gap-3 p-4 pb-3">
-                <AchievementMedal rank={a.rank} marks={a.marks} size="sm" />
-                <div className="min-w-0 pt-0.5">
-                  <h3 className="text-[15px] font-semibold text-slate-900 leading-tight truncate pr-6">{a.student_name}</h3>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {a.class_name && <CardBadge tone="accent">{a.class_name}</CardBadge>}
-                    {a.year && <CardBadge tone="neutral">{a.year}</CardBadge>}
-                  </div>
-                </div>
-              </div>
-              {a.marks && (
-                <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Marks Obtained</p>
-                  <p className={`text-sm font-bold tabular-nums ${isWinner ? 'text-amber-600' : 'text-slate-900'}`}>{a.marks}</p>
-                </div>
-              )}
-            </Card>
-          );
-        })}
+        {achievements.map((a) => <AchievementCard key={a.id} achievement={a} />)}
       </div>
     </div>
   );

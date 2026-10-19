@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AcademicYearCreate(BaseModel):
@@ -21,8 +21,7 @@ class AcademicYearRead(BaseModel):
     is_current: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubjectRead(BaseModel):
@@ -31,8 +30,7 @@ class SubjectRead(BaseModel):
     code: str | None = None
     max_marks: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ClassSectionCreate(BaseModel):
@@ -51,8 +49,7 @@ class ClassSectionRead(BaseModel):
     subjects: list[SubjectRead] = []
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubjectCreate(BaseModel):

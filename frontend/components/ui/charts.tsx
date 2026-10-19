@@ -10,36 +10,26 @@ type BarChartProps = {
 };
 
 export function BarChart({ data, height = 200 }: BarChartProps) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-
-  // Reserve space for the value label on top and the axis label at bottom
-  const labelTopHeight = 18;
-  const labelBottomHeight = 18;
-  const barAreaHeight = height - labelTopHeight - labelBottomHeight;
-
+  const max = Math.max(...data.map((d) => d.value), 0);
+  const min = Math.min(...data.map((d) => d.value), 0);
+  const range = max - min || 1;
+  const plotHeight = Math.max(80, height - 36);
+  const zero = max / range * plotHeight;
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex items-end gap-2 min-w-[300px]" style={{ height: height + labelTopHeight + labelBottomHeight }}>
+    <div className="w-full overflow-x-auto" role="region" aria-label="Monthly revenue chart" tabIndex={0}>
+      <div className="relative flex gap-3 pt-5" style={{ minWidth: Math.max(280, data.length * 52), height: plotHeight + 66 }}>
+        {[0, 0.5, 1].map((fraction) => <div key={fraction} aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[var(--panel-line)]" style={{ top: 20 + fraction * plotHeight }} />)}
         {data.map((item, i) => {
-          const barHeight = (item.value / max) * barAreaHeight;
+          const y = (max - item.value) / range * plotHeight;
+          const barHeight = Math.abs(y - zero);
           return (
-            <div key={i} className="flex flex-col items-center justify-end flex-1" style={{ height: '100%' }}>
-              <span className="text-[10px] font-semibold text-[var(--heading)] shrink-0" style={{ height: labelTopHeight, lineHeight: `${labelTopHeight}px` }}>
-                {item.value > 0 ? (item.value >= 1000 ? `${(item.value / 1000).toFixed(1)}k` : item.value) : ''}
-              </span>
-              <div className="flex-1 flex items-end w-full justify-center">
-                <div
-                  className="w-full max-w-[48px] rounded-t-md transition-all duration-500 ease-out"
-                  style={{
-                    height: barHeight,
-                    backgroundColor: item.color || 'var(--accent)',
-                    minHeight: item.value > 0 ? 4 : 0,
-                  }}
-                />
+            <div key={i} className="relative min-w-0 flex-1 text-center" title={`${item.label}: ${item.value.toLocaleString('en-IN')}`}>
+              <div className="relative mx-auto w-full max-w-[40px]" style={{ height: plotHeight }}>
+                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-[var(--heading)]" style={{ top: Math.min(y, zero) - 19 }}>{Math.abs(item.value) >= 1000 ? `${(item.value / 1000).toFixed(1)}k` : item.value}</span>
+                <div className="absolute w-full rounded-[4px]" style={{ top: Math.min(y, zero), height: barHeight, backgroundColor: item.color || 'var(--accent)' }} />
               </div>
-              <span className="text-[9px] text-[var(--muted)] text-center leading-tight shrink-0 mt-1" style={{ height: labelBottomHeight }}>
-                {item.label}
-              </span>
+              <p className="mt-3 text-[11px] leading-tight text-[var(--muted)]">{item.label}</p>
+              <span className="sr-only">{item.value.toLocaleString('en-IN')}</span>
             </div>
           );
         })}
