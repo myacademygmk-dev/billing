@@ -31,11 +31,12 @@ export function FacultySection() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/backend/public/website-config');
+        const res = await fetch('/api/backend/public/website-config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.faculty) && data.faculty.length > 0) setStaff(data.faculty);
-          if (Array.isArray(data.former_staff) && data.former_staff.length > 0) setFormerStaff(data.former_staff);
+          const normalize = (member: StaffMember & { image?: string; role?: string }) => ({ ...member, photo_url: member.photo_url || member.image, designation: member.designation || member.role || '' });
+          if (Array.isArray(data.faculty)) setStaff(data.faculty.map(normalize));
+          if (Array.isArray(data.former_staff)) setFormerStaff(data.former_staff.map(normalize));
         }
       } catch {
         // Keep the section empty when published data is unavailable.

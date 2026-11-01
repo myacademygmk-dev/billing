@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useWebsiteConfig } from './website-config-context';
 
 interface StatItemProps {
-  value: number;
-  suffix?: string;
+  value: string;
   label: string;
   icon: ReactNode;
   delay: number;
@@ -12,31 +12,39 @@ interface StatItemProps {
   accent: string;
 }
 
-function StatItem({ value, suffix = '', label, icon, delay, iconBg, accent }: StatItemProps) {
+function StatItem({ value, label, icon, delay, iconBg, accent }: StatItemProps) {
+  const numeric = value.match(/^(\d+)(\+?)$/);
+  const isNumeric = numeric !== null;
+  const target = numeric ? Number(numeric[1]) : 0;
   const [count, setCount] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isNumeric || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      setCount(target);
+      return;
+    }
+    let frame = 0;
+    let started = false;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasAnimated) {
-            setHasAnimated(true);
+          if (entry.isIntersecting && !started) {
+            started = true;
             const startTime = performance.now();
             const duration = 900;
             const step = (currentTime: number) => {
               const elapsed = currentTime - startTime;
               const progress = Math.min(elapsed / duration, 1);
               const eased = 1 - Math.pow(1 - progress, 3);
-              setCount(Math.floor(eased * value));
+              setCount(Math.floor(eased * target));
               if (progress < 1) {
-                requestAnimationFrame(step);
+                frame = requestAnimationFrame(step);
               } else {
-                setCount(value);
+                setCount(target);
               }
             };
-            requestAnimationFrame(step);
+            frame = requestAnimationFrame(step);
           }
         });
       },
@@ -46,15 +54,18 @@ function StatItem({ value, suffix = '', label, icon, delay, iconBg, accent }: St
     if (ref.current) {
       observer.observe(ref.current);
     }
-    return () => observer.disconnect();
-  }, [hasAnimated, value]);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [value, target, isNumeric]);
 
-  const displayValue = suffix === 'LKG-12' ? 'LKG-12' : `${count}${value > 0 && suffix ? suffix : ''}`;
+  const displayValue = numeric && count !== target ? `${count}${numeric[2]}` : value;
 
   return (
     <div
       ref={ref}
-      className="flex h-16 items-center gap-2.5 border-b border-slate-200 px-4 py-0 last:border-b-0 md:h-[72px] md:border-b-0 md:border-r md:last:border-r-0 [&:nth-child(odd)]:border-r [&:nth-child(-n+2)]:border-b [&:nth-child(n+3)]:border-b-0 md:[&:nth-child(odd)]:border-r-0 md:[&:nth-child(-n+2)]:border-b-0"
+      className="flex min-h-16 items-center gap-2.5 border-slate-200 px-4 py-3 border-b last:border-b-0 last:col-span-2 md:last:col-span-1 md:min-h-[72px] md:border-b-0 md:border-r md:last:border-r-0"
       style={{ transitionDelay: `${delay * 100}ms` }}
     >
       <div className={`flex size-[30px] shrink-0 items-center justify-center rounded-lg ${iconBg} ${accent}`}>
@@ -95,13 +106,6 @@ const ICONS = {
   ),
 };
 
-const STATS = [
-  { value: 15, suffix: '+', label: 'Years of Excellence', icon: ICONS.years, iconBg: 'bg-indigo-50', accent: 'text-indigo-700' },
-  { value: 200, suffix: '+', label: 'Students', icon: ICONS.students, iconBg: 'bg-emerald-50', accent: 'text-emerald-700' },
-  { value: 22, suffix: '', label: 'Expert Educators', icon: ICONS.staff, iconBg: 'bg-amber-50', accent: 'text-amber-700' },
-  { value: 0, suffix: 'LKG-12', label: 'Grade Levels', icon: ICONS.standards, iconBg: 'bg-rose-50', accent: 'text-rose-700' },
-];
-
 /**
  * A single "stats shelf" that overlaps the hero below it — the standard way
  * to visually anchor a stat bar to the section above instead of leaving it
@@ -109,12 +113,20 @@ const STATS = [
  * mobile, becomes one bordered bar with dividers from sm+.
  */
 export function CountUpStats() {
+  const { stats = {} } = useWebsiteConfig();
+  const items = [
+    { value: stats.years, label: 'Years of Excellence', icon: ICONS.years, iconBg: 'bg-indigo-50', accent: 'text-indigo-700' },
+    { value: stats.students, label: 'Students', icon: ICONS.students, iconBg: 'bg-emerald-50', accent: 'text-emerald-700' },
+    { value: stats.staff, label: 'Expert Educators', icon: ICONS.staff, iconBg: 'bg-amber-50', accent: 'text-amber-700' },
+    { value: stats.standards, label: 'Grade Levels', icon: ICONS.standards, iconBg: 'bg-rose-50', accent: 'text-rose-700' },
+    { value: stats.alumni, label: 'Alumni', icon: ICONS.students, iconBg: 'bg-violet-50', accent: 'text-violet-700' },
+  ];
   return (
     <section className="relative z-10 -mt-5 px-0 sm:-mt-7">
-      <div className="mx-auto h-[128px] w-[calc(100%-32px)] overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-sm md:h-[72px] md:w-[calc(100%-32px)] lg:w-[min(900px,calc(100%-48px))]">
-        <div className="grid h-full grid-cols-2 md:grid-cols-4">
-          {STATS.map((stat, i) => (
-            <StatItem key={stat.label} value={stat.value} suffix={stat.suffix} label={stat.label} icon={stat.icon} delay={i} iconBg={stat.iconBg} accent={stat.accent} />
+      <div className="mx-auto w-[calc(100%-32px)] overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-sm lg:w-[min(1100px,calc(100%-48px))]">
+        <div className="grid grid-cols-2 md:grid-cols-5">
+          {items.map((stat, i) => (
+            <StatItem {...stat} key={`${stat.label}:${stat.value}`} value={stat.value?.trim() || '—'} delay={i} />
           ))}
         </div>
       </div>

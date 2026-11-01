@@ -30,11 +30,11 @@ export function TechnicalTeamSection() {
   useEffect(() => {
     async function fetchTeam() {
       try {
-        const res = await fetch('/api/backend/public/website-config');
+        const res = await fetch('/api/backend/public/website-config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.technical_team && Array.isArray(data.technical_team) && data.technical_team.length > 0) {
-            setTeam(data.technical_team);
+            setTeam(data.technical_team.map((member: TeamMember & { image?: string }) => ({ ...member, photo_url: member.photo_url || member.image })));
           }
         }
       } catch {

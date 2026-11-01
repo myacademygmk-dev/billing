@@ -4,6 +4,7 @@ import { CountUpStats } from '@/components/public/count-up-stats';
 import { OurVideos } from '@/components/public/our-videos';
 import { StudentCreativity } from '@/components/public/student-creativity';
 import { Countdown } from '@/components/public/countdown';
+import { FacilitiesSection } from './about/facilities-section';
 import { Card } from '@/components/ui/public-card';
 import { AchievementCard } from '@/components/public/achievement-card';
 
@@ -187,44 +188,7 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════
           FACILITIES — Dark Section
           ═══════════════════════════════════════════════ */}
-      <section className="relative py-14 bg-[#0f172a] overflow-hidden">
-        {/* Geometric pattern */}
-        <div className="absolute inset-0 opacity-[0.03]">
-          <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="facilities-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="20" cy="20" r="1" fill="white" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#facilities-pattern)" />
-          </svg>
-        </div>
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="text-center reveal">
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-teal-400">Infrastructure</div>
-            <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">Our Facilities</h2>
-            <p className="mt-3 text-gray-400 max-w-lg mx-auto">World-class infrastructure to support holistic learning and development.</p>
-          </div>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              'CCTV Surveillance', '24/7 Exam Coaching', 'Book Bank & Library',
-              'Smart Classes', 'Morning Classes', 'Career Guidance',
-              'Weekly Assessments', 'Exam Notes', 'Parent Meetings',
-              'Savings Program', 'Alumni Network', 'Mineral Water',
-            ].map((f, i) => (
-              <Card key={f} tone="dark" interactive={false} className={`reveal reveal-delay-${(i % 3) + 1}`}>
-                <div className="flex items-center gap-3 px-5 py-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  <span className="text-sm font-medium text-slate-300">{f}</span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FacilitiesSection />
 
       {/* ═══════════════════════════════════════════════
           ACHIEVEMENTS
@@ -313,7 +277,7 @@ export default async function HomePage() {
                   {/* Image */}
                   <div className={`${i === 0 ? 'aspect-[16/8]' : 'hidden'} bg-slate-100 overflow-hidden`}>
                     {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <img src={item.image_url} alt={item.title} className="h-full w-full bg-slate-100 object-contain" />
                     ) : (
                       <img src={`/images/360x220_img${7 + (i % 3)}.jpg`} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     )}

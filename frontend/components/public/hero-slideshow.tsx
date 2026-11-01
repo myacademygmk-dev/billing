@@ -62,7 +62,7 @@ export function HeroSlideshow() {
 
   return (
     <div
-      className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden group"
+      className="relative w-full aspect-[1920/730] bg-slate-100 overflow-hidden group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
@@ -75,7 +75,7 @@ export function HeroSlideshow() {
           key={src}
           src={src}
           alt={`Slide ${i + 1}`}
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out"
+          className="absolute inset-0 w-full h-full object-contain transition-opacity duration-1000 ease-in-out"
           style={{ opacity: i === currentIndex ? 1 : 0 }}
         />
       ))}

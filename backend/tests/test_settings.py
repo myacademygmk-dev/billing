@@ -1,4 +1,49 @@
 from .conftest import auth_header
+import json
+
+
+def test_multiple_countdowns_limit_and_public_roundtrip(client):
+    headers = auth_header(client)
+    events = [{'title': f'Event {i}', 'date': '2030-12-01T10:30:00+05:30'} for i in range(4)]
+    response = client.patch('/api/settings/institution', headers=headers, json={'countdowns': events})
+    assert response.status_code == 200
+    assert response.json()['countdowns'] == events
+    assert client.get('/api/public/website-config').json()['countdowns'] == events
+    assert client.patch('/api/settings/institution', headers=headers, json={'countdowns': events + [events[0]]}).status_code == 422
+    assert client.get('/api/public/website-config').json()['countdowns'] == events
+    for event in [{'title': ' ', 'date': events[0]['date']}, {'title': 'Bad date', 'date': 'invalid'}, {'title': 'No timezone', 'date': '2030-12-01T10:30'}]:
+        assert client.patch('/api/settings/institution', headers=headers, json={'countdowns': [event]}).status_code == 422
+    assert client.patch('/api/settings/institution', headers=headers, json={'countdowns': []}).status_code == 200
+    assert client.get('/api/public/website-config').json()['countdowns'] == []
+
+
+def test_website_collections_edit_and_clear(client):
+    headers = auth_header(client)
+    entry = {'name': 'Library', 'description': 'Books for all classes', 'photo_url': '/images/library.jpg'}
+    payload = {field: json.dumps([entry]) for field in ['facilities_data', 'faculty_data', 'alumni_data', 'management_team', 'technical_team', 'former_staff']}
+    response = client.patch('/api/settings/institution', headers=headers, json=payload)
+    assert response.status_code == 200
+    public = client.get('/api/public/website-config').json()
+    for field in ['facilities', 'faculty', 'alumni', 'management_team', 'technical_team', 'former_staff']:
+        assert public[field] == [entry]
+    assert client.patch('/api/settings/institution', headers=headers, json={'facilities_data': '[]'}).status_code == 200
+    assert client.get('/api/public/website-config').json()['facilities'] == []
+
+
+def test_homepage_stats_follow_saved_settings(client):
+    headers = auth_header(client)
+    stats = {'students': '1,250+', 'staff': '0', 'years': '17+',
+             'standards': 'LKG-12', 'alumni': '500+'}
+    payload = {f'stats_{key}': value for key, value in stats.items()}
+    saved = client.patch('/api/settings/institution', headers=headers, json=payload)
+    assert saved.status_code == 200
+    for key, value in payload.items():
+        assert saved.json()[key] == value
+        assert client.get('/api/settings/institution', headers=headers).json()[key] == value
+    assert client.get('/api/public/website-config').json()['stats'] == stats
+    updated = client.patch('/api/settings/institution', headers=headers, json={'stats_alumni': '650'})
+    assert updated.status_code == 200
+    assert client.get('/api/public/website-config').json()['stats']['alumni'] == '650'
 
 
 def test_settings_normalize_proxy_upload_paths(client):

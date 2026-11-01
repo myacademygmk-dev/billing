@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String, Text, Uuid, ForeignKey
+from sqlalchemy import DateTime, String, Text, Uuid, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -26,6 +26,7 @@ class InstitutionSettings(Base):
     stats_staff: Mapped[str | None] = mapped_column(String(20), nullable=True)
     stats_years: Mapped[str | None] = mapped_column(String(20), nullable=True)
     stats_standards: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    stats_alumni: Mapped[str | None] = mapped_column(String(20), nullable=True)
     hero_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     hero_subtitle: Mapped[str | None] = mapped_column(String(300), nullable=True)
     hero_description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -38,6 +39,7 @@ class InstitutionSettings(Base):
     videos: Mapped[str | None] = mapped_column(Text, nullable=True)  # pipe-separated YouTube URLs
     countdown_date: Mapped[str | None] = mapped_column(String(50), nullable=True)  # ISO date for countdown
     countdown_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    countdowns: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     top_bar_text: Mapped[str | None] = mapped_column(String(500), nullable=True)  # custom top bar text
     management_team: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     technical_team: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array

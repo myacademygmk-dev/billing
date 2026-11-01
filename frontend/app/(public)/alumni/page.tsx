@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useWebsiteConfig } from '@/components/public/website-config-context';
 import { Card, CardBadge } from '@/components/ui/public-card';
 import { GlowOrb } from '@/components/ui/glow-orb';
 
@@ -14,9 +15,8 @@ type AlumniEntry = {
   role: string;
   location: string;
   initials: string;
+  photo_url?: string;
 };
-
-const NOTABLE_ALUMNI: AlumniEntry[] = [];
 
 // Group alumni by batch year (descending)
 function groupByYear(alumni: AlumniEntry[]): Record<number, AlumniEntry[]> {
@@ -29,6 +29,15 @@ function groupByYear(alumni: AlumniEntry[]): Record<number, AlumniEntry[]> {
 }
 
 export default function AlumniPage() {
+  const config = useWebsiteConfig();
+  const alumniEntries: AlumniEntry[] = (config.alumni ?? []).map((entry) => ({
+    name: String(entry.name || ''),
+    batchYear: Number(entry.batchYear || entry.batch_year) || 0,
+    batch: String(entry.batch || entry.batchYear || entry.batch_year || ''),
+    role: String(entry.role || ''), company: String(entry.company || ''), location: String(entry.location || ''),
+    initials: String(entry.name || '').split(' ').map((part) => part[0]).slice(0, 2).join(''),
+    photo_url: String(entry.photo_url || entry.image || ''),
+  })).filter((entry) => entry.name);
   const [formData, setFormData] = useState({
     name: '',
     batch_year: '',
@@ -70,7 +79,7 @@ export default function AlumniPage() {
     }
   }
 
-  const grouped = groupByYear(NOTABLE_ALUMNI);
+  const grouped = groupByYear(alumniEntries);
   const sortedYears = Object.keys(grouped).map(Number).sort((a, b) => b - a);
 
   return (
@@ -110,7 +119,7 @@ export default function AlumniPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-sm font-bold text-white shadow-md">
                     {`'${String(year).slice(2)}`}
                   </div>
-                  <h3 className="text-xl font-bold text-slate-800">Class of {year}</h3>
+                  <h3 className="text-xl font-bold text-slate-800">{year ? `Class of ${year}` : 'Alumni community'}</h3>
                   <div className="h-px flex-1 bg-gradient-to-r from-indigo-200 to-transparent" />
                 </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -119,7 +128,7 @@ export default function AlumniPage() {
                       <div className="p-6">
                         <div className="flex items-center gap-4">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
-                            {alumni.initials}
+                            {alumni.photo_url ? <img src={alumni.photo_url} alt={alumni.name} className="h-full w-full rounded-full object-contain" /> : alumni.initials}
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-base font-semibold text-slate-900 truncate">{alumni.name}</h4>

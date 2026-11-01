@@ -66,7 +66,7 @@ export function StudentCreativity() {
                   <img
                     src={item.file_url}
                     alt={item.title || `Student artwork ${i + 1}`}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="h-full w-full bg-slate-100 object-contain"
                   />
                 </div>
                 {(item.title || item.student_name) && (

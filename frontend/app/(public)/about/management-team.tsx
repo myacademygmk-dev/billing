@@ -30,11 +30,11 @@ export function ManagementTeamSection() {
   useEffect(() => {
     async function fetchTeam() {
       try {
-        const res = await fetch('/api/backend/public/website-config');
+        const res = await fetch('/api/backend/public/website-config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.management_team && Array.isArray(data.management_team) && data.management_team.length > 0) {
-            setTeam(data.management_team);
+            setTeam(data.management_team.map((member: TeamMember & { image?: string }) => ({ ...member, photo_url: member.photo_url || member.image })));
           }
         }
       } catch {

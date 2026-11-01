@@ -45,7 +45,8 @@ async function forwardPublicRequest(req: NextRequest, path: string) {
   return fetch(target, {
     method: req.method,
     headers,
-    body: reqBody
+    body: reqBody,
+    cache: 'no-store',
   });
 }
 

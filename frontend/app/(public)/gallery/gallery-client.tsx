@@ -50,7 +50,7 @@ export default function GalleryClient({ albums }: { albums: Album[] }) {
                   className={`reveal reveal-delay-${(i % 6) + 1} group relative aspect-square overflow-hidden rounded-2xl bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:ring-offset-2`}
                   aria-label={photo.caption ? `View photo: ${photo.caption}` : 'View photo'}
                 >
-                  <img src={photo.url} alt={photo.caption ?? ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={photo.url} alt={photo.caption ?? ''} className="h-full w-full bg-slate-100 object-contain" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#4f46e5]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {photo.caption && (
                     <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
