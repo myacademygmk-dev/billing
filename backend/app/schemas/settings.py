@@ -19,6 +19,8 @@ def _clean_optional(value: str | None) -> str | None:
 
 def _validate_local_url(value: str | None) -> str | None:
     cleaned = _clean_optional(value)
+    if cleaned and cleaned.startswith("/api/backend/uploads/files/"):
+        cleaned = cleaned.replace("/api/backend/uploads/files/", "/api/uploads/files/", 1)
     if cleaned and not is_local_public_url(cleaned):
         raise ValueError("Use an uploaded file path or local /images/ asset")
     return cleaned
@@ -28,10 +30,12 @@ def _validate_local_url_list(value: str | None) -> str | None:
     cleaned = _clean_optional(value)
     if cleaned is None:
         return None
-    parts = [part.strip() for part in cleaned.split("|") if part.strip()]
-    invalid = [part for part in parts if not is_local_public_url(part)]
-    if invalid:
-        raise ValueError("Hero slides must use uploaded file paths or local /images/ assets")
+    parts = []
+    for index, part in enumerate((part.strip() for part in cleaned.split("|") if part.strip()), 1):
+        try:
+            parts.append(_validate_local_url(part))
+        except ValueError:
+            raise ValueError(f"Hero slide {index} has an unsupported image URL. Remove or re-upload that slide; use an uploaded file path or local /images/ asset.")
     return "|".join(parts)
 
 

@@ -23,6 +23,9 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [{ source: '/api/uploads/:path*', destination: '/api/backend/uploads/:path*' }];
+  },
 };
 
 export default function config(phase) {

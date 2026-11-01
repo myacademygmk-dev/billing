@@ -4,6 +4,8 @@ import time
 import uuid as uuid_mod
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -34,6 +36,26 @@ def create_app() -> FastAPI:
         request_id = getattr(request.state, "request_id", "unknown")
         logger.error("Unhandled error [%s]: %s", request_id, str(exc), exc_info=True)
         return JSONResponse(status_code=500, content={"detail": "Internal server error", "request_id": request_id})
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        request_id = getattr(request.state, "request_id", "unknown")
+        issues = [
+            {
+                "field": ".".join(str(part) for part in error.get("loc", ())),
+                "message": error.get("msg", "Invalid value"),
+                "type": error.get("type", "validation_error"),
+            }
+            for error in exc.errors()
+        ]
+        logger.warning(
+            "Request validation failed [%s] %s %s: %s",
+            request_id,
+            request.method,
+            request.url.path,
+            issues,
+        )
+        return await request_validation_exception_handler(request, exc)
 
     @app.middleware("http")
     async def request_middleware(request: Request, call_next):
