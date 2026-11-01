@@ -12,7 +12,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toaster';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 
 type ContentItem = {
   id: string;
@@ -273,7 +273,7 @@ export default function CmsPage() {
                           const res = await fetch('/api/backend/uploads', { method: 'POST', body: fd, credentials: 'include' });
                           if (!res.ok) throw new Error('Upload failed');
                           const data = await res.json();
-                          const url = (data.url || '').replace('/api/uploads', '/api/backend/uploads');
+                          const url = data.url || '';
                           setForm({ ...form, image_url: url });
                         } catch { toast({ title: 'Upload failed' }); }
                         e.target.value = '';
@@ -364,7 +364,7 @@ export default function CmsPage() {
                         const res = await fetch('/api/backend/uploads', { method: 'POST', body: fd, credentials: 'include' });
                         if (!res.ok) throw new Error('Upload failed');
                         const data = await res.json();
-                        const url = (data.url || '').replace('/api/uploads', '/api/backend/uploads');
+                        const url = data.url || '';
                         setPhotoForm({ ...photoForm, url });
                       } catch { toast({ title: 'Upload failed' }); }
                       e.target.value = '';
@@ -434,7 +434,7 @@ function CreativityPanel() {
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       const rawUrl: string = data.url || data.file_url || '';
-      const url = rawUrl.startsWith('/api/uploads') ? rawUrl.replace('/api/uploads', '/api/backend/uploads') : rawUrl;
+      const url = rawUrl;
       setForm((prev) => ({ ...prev, file_url: url }));
     } catch (err: any) {
       toast({ title: 'Upload failed', description: err.message });
@@ -727,9 +727,9 @@ function WebsiteSettingsPanel() {
       setHeroTitle(settings.data.hero_title || '');
       setHeroSubtitle(settings.data.hero_subtitle || '');
       setAdmissionText(settings.data.admission_text || '');
-      setPopupBannerUrl(settings.data.popup_banner_url || '');
+      setPopupBannerUrl(canonicalUploadUrl(settings.data.popup_banner_url || ''));
       const slides = settings.data.hero_slides
-        ? settings.data.hero_slides.split('|').map((s: string) => s.trim()).filter(Boolean)
+        ? settings.data.hero_slides.split('|').map((s: string) => canonicalUploadUrl(s.trim())).filter(Boolean)
         : [];
       setHeroSlides(slides);
       // New fields
@@ -754,10 +754,7 @@ function WebsiteSettingsPanel() {
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       const rawUrl: string = data.url || data.file_url || '';
-      const url = rawUrl.startsWith('/api/uploads')
-        ? rawUrl.replace('/api/uploads', '/api/backend/uploads')
-        : rawUrl;
-      return url;
+      return canonicalUploadUrl(rawUrl);
     } catch (e: any) {
       toast({ title: 'Upload failed', description: e.message });
       return null;
@@ -802,8 +799,8 @@ function WebsiteSettingsPanel() {
           hero_title: heroTitle,
           hero_subtitle: heroSubtitle,
           admission_text: admissionText,
-          popup_banner_url: popupBannerUrl || null,
-          hero_slides: heroSlides.length > 0 ? heroSlides.join('|') : null,
+          popup_banner_url: canonicalUploadUrl(popupBannerUrl.trim()) || null,
+          hero_slides: heroSlides.length > 0 ? heroSlides.map((url) => canonicalUploadUrl(url.trim())).join('|') : null,
           // New fields
           videos: videos || null,
           countdown_date: countdownDate || null,
@@ -815,7 +812,15 @@ function WebsiteSettingsPanel() {
       });
       toast({ title: 'Website settings saved' });
     } catch (e: any) {
-      toast({ title: 'Failed to save', description: String(e.message || e) });
+      const detail = e instanceof ApiError ? (e.data as { detail?: unknown } | undefined)?.detail : undefined;
+      const issues = Array.isArray(detail)
+        ? detail.map((issue) => {
+            const item = issue as { loc?: (string | number)[]; msg?: string };
+            const field = item.loc?.filter((part) => part !== 'body').join('.') || 'Website settings';
+            return field + ': ' + (item.msg || 'Invalid value');
+          }).join('; ')
+        : typeof detail === 'string' ? detail : String(e.message || e);
+      toast({ title: 'Failed to save', description: issues });
     }
     setSaving(false);
   }
@@ -1014,4 +1019,8 @@ function WebsiteSettingsPanel() {
       </div>
     </div>
   );
+}
+
+function canonicalUploadUrl(value: string): string {
+  return value.replace(/^\/api\/backend\/uploads\//, '/api/uploads/');
 }

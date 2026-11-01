@@ -1,6 +1,27 @@
 from .conftest import auth_header
 
 
+def test_settings_normalize_proxy_upload_paths(client):
+    headers = auth_header(client)
+    response = client.patch('/api/settings/institution', headers=headers, json={
+        'hero_slides': '/images/banner.jpg| /api/backend/uploads/files/new.jpg |/api/uploads/files/old.jpg',
+        'popup_banner_url': '/api/backend/uploads/files/popup.jpg',
+    })
+    assert response.status_code == 200
+    assert response.json()['hero_slides'] == '/images/banner.jpg|/api/uploads/files/new.jpg|/api/uploads/files/old.jpg'
+    assert response.json()['popup_banner_url'] == '/api/uploads/files/popup.jpg'
+    assert client.get('/api/settings/institution', headers=headers).json()['hero_slides'] == response.json()['hero_slides']
+
+
+def test_invalid_slide_reports_its_position_without_saving(client):
+    headers = auth_header(client)
+    response = client.patch('/api/settings/institution', headers=headers, json={
+        'hero_slides': '/images/banner.jpg|https://example.com/remote.jpg',
+    })
+    assert response.status_code == 422
+    assert 'Hero slide 2' in response.json()['detail'][0]['msg']
+
+
 def test_expense_rows_include_created_at(client):
     headers = auth_header(client)
     saved = client.put("/api/expenses/monthly", json={"month": "2026-04-01", "items": [{"title": "Internet", "amount": 850, "notes": "April bill"}]}, headers=headers)
