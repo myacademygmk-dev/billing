@@ -153,7 +153,7 @@ export function PublicNav() {
                 aria-controls={`desktop-menu-${item.label.replace(/\s+/g, '-').toLowerCase()}`}
                 onClick={() => setActiveDropdown(activeDropdown === item.label ? null : item.label)}
                 className={cn(
-                  'relative flex h-16 items-center gap-1 px-3 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30',
+                  'relative flex h-16 items-center gap-1 whitespace-nowrap px-2 text-sm font-semibold text-slate-800 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30',
                   isDropdownActive(pathname, item) && 'font-semibold text-slate-950',
                 )}
               >
@@ -176,7 +176,7 @@ export function PublicNav() {
               <Link
                 href={item.href}
                 className={cn(
-                  'relative flex h-16 items-center gap-1 px-3 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30',
+                  'relative flex h-16 items-center gap-1 whitespace-nowrap px-2 text-sm font-semibold text-slate-800 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30',
                   isDropdownActive(pathname, item) && 'font-semibold text-slate-950',
                 )}
               >
@@ -199,7 +199,7 @@ export function PublicNav() {
                       className={`flex items-center px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                         isActive(pathname, child.href)
                           ? 'bg-indigo-50 text-indigo-700'
-                          : 'text-gray-600 hover:bg-slate-50 hover:text-indigo-600'
+                          : 'text-slate-800 hover:bg-slate-50 hover:text-indigo-600'
                       }`}
                     >
                       {child.label}

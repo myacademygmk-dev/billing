@@ -127,6 +127,7 @@ def public_institution(db: Session = Depends(get_db)) -> dict:
             "staff": inst.stats_staff,
             "years": inst.stats_years,
             "standards": inst.stats_standards,
+            "alumni": inst.stats_alumni,
         },
         "hero": {
             "title": inst.hero_title,
@@ -164,6 +165,7 @@ def public_website_config(db: Session = Depends(get_db)) -> dict:
             "staff": inst.stats_staff,
             "years": inst.stats_years,
             "standards": inst.stats_standards,
+            "alumni": inst.stats_alumni,
         },
         "hero": {
             "title": inst.hero_title,
@@ -179,6 +181,7 @@ def public_website_config(db: Session = Depends(get_db)) -> dict:
         "videos": pipe_list(inst.videos, youtube_only=True),
         "countdown_date": inst.countdown_date,
         "countdown_title": inst.countdown_title,
+        "countdowns": inst.countdowns,
         "top_bar_text": inst.top_bar_text,
         "management_team": _parse_json_field(inst.management_team, db),
         "technical_team": _parse_json_field(inst.technical_team, db),

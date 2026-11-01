@@ -13,6 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toaster';
 import { ApiError, apiFetch } from '@/lib/api';
+import { WebsiteCollectionEditor } from '@/components/website-collection-editor';
+import { DEFAULT_FACILITIES } from '@/lib/website-defaults';
+import { WebsiteCountdownEditor, localCountdownDate, type CountdownDraft } from '@/components/website-countdown-editor';
+import { uploadWebsiteFile } from '@/lib/website-upload';
 
 type ContentItem = {
   id: string;
@@ -268,14 +272,11 @@ export default function CmsPage() {
                       <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const fd = new FormData(); fd.append('file', file);
                         try {
-                          const res = await fetch('/api/backend/uploads', { method: 'POST', body: fd, credentials: 'include' });
-                          if (!res.ok) throw new Error('Upload failed');
-                          const data = await res.json();
+                          const data = await uploadWebsiteFile(file);
                           const url = data.url || '';
                           setForm({ ...form, image_url: url });
-                        } catch { toast({ title: 'Upload failed' }); }
+                        } catch (error) { toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Please try again.' }); }
                         e.target.value = '';
                       }} />
                       <div className="text-center">
@@ -351,7 +352,7 @@ export default function CmsPage() {
                 <label className="mb-1 block text-xs font-medium text-[var(--muted)]">Photo *</label>
                 {photoForm.url ? (
                   <div className="relative inline-block">
-                    <img src={photoForm.url} alt="Preview" className="h-32 w-full rounded-lg object-cover" />
+                    <img src={photoForm.url} alt="Preview" className="h-32 w-full rounded-lg object-contain" />
                     <button onClick={() => setPhotoForm({ ...photoForm, url: '' })} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">×</button>
                   </div>
                 ) : (
@@ -359,14 +360,11 @@ export default function CmsPage() {
                     <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      const fd = new FormData(); fd.append('file', file);
                       try {
-                        const res = await fetch('/api/backend/uploads', { method: 'POST', body: fd, credentials: 'include' });
-                        if (!res.ok) throw new Error('Upload failed');
-                        const data = await res.json();
+                        const data = await uploadWebsiteFile(file);
                         const url = data.url || '';
                         setPhotoForm({ ...photoForm, url });
-                      } catch { toast({ title: 'Upload failed' }); }
+                      } catch (error) { toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Please try again.' }); }
                       e.target.value = '';
                     }} />
                     <div className="text-center">
@@ -428,12 +426,8 @@ function CreativityPanel() {
     if (!file) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/backend/uploads', { method: 'POST', body: formData, credentials: 'include' });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      const rawUrl: string = data.url || data.file_url || '';
+      const data = await uploadWebsiteFile(file);
+      const rawUrl: string = data.url || '';
       const url = rawUrl;
       setForm((prev) => ({ ...prev, file_url: url }));
     } catch (err: any) {
@@ -698,6 +692,7 @@ function WebsiteSettingsPanel() {
   const [statsStaff, setStatsStaff] = useState('');
   const [statsYears, setStatsYears] = useState('');
   const [statsStandards, setStatsStandards] = useState('');
+  const [statsAlumni, setStatsAlumni] = useState('');
   const [heroTitle, setHeroTitle] = useState('');
   const [heroSubtitle, setHeroSubtitle] = useState('');
   const [admissionText, setAdmissionText] = useState('');
@@ -706,14 +701,19 @@ function WebsiteSettingsPanel() {
   const [uploading, setUploading] = useState<string | null>(null);
   // New fields
   const [videos, setVideos] = useState('');
-  const [countdownDate, setCountdownDate] = useState('');
-  const [countdownTitle, setCountdownTitle] = useState('');
+  const [countdowns, setCountdowns] = useState<CountdownDraft[]>([]);
+  const [facilities, setFacilities] = useState('');
+  const [faculty, setFaculty] = useState('');
+  const [alumni, setAlumni] = useState('');
+  const [pendingUploads, setPendingUploads] = useState(0);
+  const onBusyChange = (busy: boolean) => setPendingUploads((count) => count + (busy ? 1 : -1));
   const [managementTeam, setManagementTeam] = useState('');
   const [technicalTeam, setTechnicalTeam] = useState('');
   const [formerStaff, setFormerStaff] = useState('');
 
   const settings = useQuery<Record<string, any>>({
     queryKey: ['institutionSettings'],
+    refetchOnWindowFocus: false,
     queryFn: () => apiFetch('/settings/institution'),
   });
 
@@ -724,6 +724,7 @@ function WebsiteSettingsPanel() {
       setStatsStaff(settings.data.stats_staff || '');
       setStatsYears(settings.data.stats_years || '');
       setStatsStandards(settings.data.stats_standards || '');
+      setStatsAlumni(settings.data.stats_alumni || '');
       setHeroTitle(settings.data.hero_title || '');
       setHeroSubtitle(settings.data.hero_subtitle || '');
       setAdmissionText(settings.data.admission_text || '');
@@ -734,26 +735,21 @@ function WebsiteSettingsPanel() {
       setHeroSlides(slides);
       // New fields
       setVideos(settings.data.videos || '');
-      setCountdownDate(settings.data.countdown_date || '');
-      setCountdownTitle(settings.data.countdown_title || '');
+      const events = settings.data.countdowns ?? (settings.data.countdown_date ? [{ title: settings.data.countdown_title || 'Coming Soon', date: settings.data.countdown_date }] : []);
+      setCountdowns(events.map((event: CountdownDraft) => ({ ...event, date: localCountdownDate(event.date) })));
+      setFacilities(settings.data.facilities_data || JSON.stringify(DEFAULT_FACILITIES));
+      setFaculty(settings.data.faculty_data || '');
+      setAlumni(settings.data.alumni_data || '');
       setManagementTeam(settings.data.management_team || '');
       setTechnicalTeam(settings.data.technical_team || '');
       setFormerStaff(settings.data.former_staff || '');
     }
   }, [settings.data]);
 
-  async function uploadFile(file: File, target: 'popup' | 'slide'): Promise<string | null> {
-    const formData = new FormData();
-    formData.append('file', file);
+  async function uploadFile(file: File): Promise<string | null> {
     try {
-      const res = await fetch('/api/backend/uploads', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      const rawUrl: string = data.url || data.file_url || '';
+      const data = await uploadWebsiteFile(file);
+      const rawUrl: string = data.url || '';
       return canonicalUploadUrl(rawUrl);
     } catch (e: any) {
       toast({ title: 'Upload failed', description: e.message });
@@ -765,7 +761,7 @@ function WebsiteSettingsPanel() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading('slide');
-    const url = await uploadFile(file, 'slide');
+    const url = await uploadFile(file);
     if (url) setHeroSlides((prev) => [...prev, url]);
     setUploading(null);
     e.target.value = '';
@@ -775,7 +771,7 @@ function WebsiteSettingsPanel() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading('popup');
-    const url = await uploadFile(file, 'popup');
+    const url = await uploadFile(file);
     if (url) setPopupBannerUrl(url);
     setUploading(null);
     e.target.value = '';
@@ -786,6 +782,10 @@ function WebsiteSettingsPanel() {
   }
 
   async function handleSave() {
+    if (countdowns.some((event) => !event.title.trim() || !event.date || !Number.isFinite(new Date(event.date).getTime()))) {
+      toast({ title: 'Complete each countdown title, date and time before saving.' });
+      return;
+    }
     setSaving(true);
     try {
       await apiFetch('/settings/institution', {
@@ -796,6 +796,7 @@ function WebsiteSettingsPanel() {
           stats_staff: statsStaff,
           stats_years: statsYears,
           stats_standards: statsStandards,
+          stats_alumni: statsAlumni,
           hero_title: heroTitle,
           hero_subtitle: heroSubtitle,
           admission_text: admissionText,
@@ -803,8 +804,12 @@ function WebsiteSettingsPanel() {
           hero_slides: heroSlides.length > 0 ? heroSlides.map((url) => canonicalUploadUrl(url.trim())).join('|') : null,
           // New fields
           videos: videos || null,
-          countdown_date: countdownDate || null,
-          countdown_title: countdownTitle || null,
+          countdowns: countdowns.map((event) => ({ title: event.title.trim(), date: new Date(event.date).toISOString() })),
+          countdown_date: null,
+          countdown_title: null,
+          facilities_data: facilities || null,
+          faculty_data: faculty || null,
+          alumni_data: alumni || null,
           management_team: managementTeam || null,
           technical_team: technicalTeam || null,
           former_staff: formerStaff || null,
@@ -872,6 +877,10 @@ function WebsiteSettingsPanel() {
               <label className="text-[11px] text-[var(--muted)]">Standards</label>
               <Input className="mt-1" value={statsStandards} onChange={(e) => setStatsStandards(e.target.value)} placeholder="LKG-12" />
             </div>
+            <div>
+              <label htmlFor="stats-alumni" className="text-[11px] text-[var(--muted)]">Alumni</label>
+              <Input id="stats-alumni" className="mt-1" value={statsAlumni} maxLength={20} onChange={(e) => setStatsAlumni(e.target.value)} placeholder="e.g. 500+" />
+            </div>
           </div>
         </div>
 
@@ -884,11 +893,11 @@ function WebsiteSettingsPanel() {
         {/* Hero Slides - Upload */}
         <div>
           <label className="text-sm font-semibold text-[var(--heading)]">Hero Slideshow Images</label>
-          <p className="text-[11px] text-[var(--muted)] mt-0.5">Upload images for the homepage banner slideshow</p>
+          <p className="text-[11px] text-[var(--muted)] mt-0.5">Large JPG, PNG and WebP images are compressed automatically. The full image stays visible without cropping. Use a wide image (about 1920 × 730) to fill the banner; other shapes have space around them.</p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {heroSlides.map((url, i) => (
               <div key={i} className="relative group rounded-lg border border-[var(--field-border)] overflow-hidden">
-                <img src={url} alt={`Slide ${i + 1}`} className="w-full h-24 object-cover" />
+                <img src={url} alt={`Slide ${i + 1}`} className="w-full aspect-[1920/730] bg-slate-100 object-contain" />
                 <button
                   onClick={() => removeSlide(i)}
                   className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -899,7 +908,7 @@ function WebsiteSettingsPanel() {
             ))}
             {/* Upload button */}
             <label className="flex h-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-[var(--field-border)] hover:border-[var(--accent)] hover:bg-[var(--surface-subtle)] transition-colors">
-              <input type="file" accept="image/*" className="hidden" onChange={handleSlideUpload} disabled={uploading === 'slide'} />
+              <input type="file" accept="image/*" className="hidden" onChange={handleSlideUpload} disabled={uploading !== null || saving} />
               {uploading === 'slide' ? (
                 <Spinner className="h-5 w-5" />
               ) : (
@@ -928,7 +937,7 @@ function WebsiteSettingsPanel() {
             </div>
           ) : (
             <label className="mt-3 flex h-24 w-48 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-[var(--field-border)] hover:border-[var(--accent)] hover:bg-[var(--surface-subtle)] transition-colors">
-              <input type="file" accept="image/*" className="hidden" onChange={handlePopupUpload} disabled={uploading === 'popup'} />
+              <input type="file" accept="image/*" className="hidden" onChange={handlePopupUpload} disabled={uploading !== null || saving} />
               {uploading === 'popup' ? (
                 <Spinner className="h-5 w-5" />
               ) : (
@@ -954,66 +963,21 @@ function WebsiteSettingsPanel() {
           />
         </div>
 
-        {/* Countdown */}
-        <div>
-          <label className="text-sm font-semibold text-[var(--heading)]">Countdown Timer</label>
-          <p className="text-[11px] text-[var(--muted)] mt-0.5">Shows a countdown timer on the website for an upcoming event</p>
-          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-[11px] text-[var(--muted)]">Countdown Title</label>
-              <Input className="mt-1" value={countdownTitle} onChange={(e) => setCountdownTitle(e.target.value)} placeholder="e.g. Annual Day Starts In" />
-            </div>
-            <div>
-              <label className="text-[11px] text-[var(--muted)]">Countdown Date</label>
-              <Input type="date" className="mt-1" value={countdownDate} onChange={(e) => setCountdownDate(e.target.value)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Management Team */}
-        <div>
-          <label className="text-sm font-semibold text-[var(--heading)]">Management Team</label>
-          <p className="text-[11px] text-[var(--muted)] mt-0.5">JSON array of team members, e.g. [{`{"name":"...", "role":"...", "image":"..."}`}]</p>
-          <textarea
-            className="mt-2 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2.5 text-sm text-[var(--heading)] focus:border-[var(--accent)] focus:outline-none font-mono"
-            rows={4}
-            placeholder='[{"name": "Mr. Rajesh", "role": "Chairman", "image": ""}]'
-            value={managementTeam}
-            onChange={(e) => setManagementTeam(e.target.value)}
-          />
-        </div>
-
-        {/* Technical Team */}
-        <div>
-          <label className="text-sm font-semibold text-[var(--heading)]">Technical Team</label>
-          <p className="text-[11px] text-[var(--muted)] mt-0.5">JSON array of team members, e.g. [{`{"name":"...", "role":"...", "image":"..."}`}]</p>
-          <textarea
-            className="mt-2 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2.5 text-sm text-[var(--heading)] focus:border-[var(--accent)] focus:outline-none font-mono"
-            rows={4}
-            placeholder='[{"name": "Ms. Priya", "role": "IT Head", "image": ""}]'
-            value={technicalTeam}
-            onChange={(e) => setTechnicalTeam(e.target.value)}
-          />
-        </div>
-
-        {/* Former Staff */}
-        <div>
-          <label className="text-sm font-semibold text-[var(--heading)]">Former Staff</label>
-          <p className="text-[11px] text-[var(--muted)] mt-0.5">JSON array of former staff, e.g. [{`{"name":"...", "role":"...", "years":"..."}`}]</p>
-          <textarea
-            className="mt-2 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2.5 text-sm text-[var(--heading)] focus:border-[var(--accent)] focus:outline-none font-mono"
-            rows={4}
-            placeholder='[{"name": "Mr. Kumar", "role": "Principal", "years": "2005-2020"}]'
-            value={formerStaff}
-            onChange={(e) => setFormerStaff(e.target.value)}
-          />
-        </div>
+        <WebsiteCountdownEditor value={countdowns} onChange={setCountdowns} disabled={saving} />
+        {[
+          { title: 'Facilities', value: facilities, onChange: setFacilities, fields: [{ key: 'name', label: 'Facility name' }, { key: 'description', label: 'Description' }] },
+          { title: 'Management Team', value: managementTeam, onChange: setManagementTeam, fields: [{ key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }, { key: 'qualification', label: 'Qualification' }] },
+          { title: 'Technical Team', value: technicalTeam, onChange: setTechnicalTeam, fields: [{ key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }, { key: 'qualification', label: 'Qualification' }] },
+          { title: 'Faculty', value: faculty, onChange: setFaculty, fields: [{ key: 'name', label: 'Name' }, { key: 'designation', label: 'Designation' }, { key: 'qualification', label: 'Qualification' }] },
+          { title: 'Former Staff', value: formerStaff, onChange: setFormerStaff, fields: [{ key: 'name', label: 'Name' }, { key: 'designation', label: 'Designation' }, { key: 'years', label: 'Years of service' }] },
+          { title: 'Alumni', value: alumni, onChange: setAlumni, fields: [{ key: 'name', label: 'Name' }, { key: 'batchYear', label: 'Batch year' }, { key: 'batch', label: 'Batch label' }, { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'location', label: 'Location' }] },
+        ].map((section) => <WebsiteCollectionEditor key={section.title} {...section} onBusyChange={onBusyChange} disabled={saving || pendingUploads > 0} />)}
 
       </div>
 
       {/* Fixed Save footer */}
       <div className="flex-shrink-0 border-t border-[var(--panel-line)] bg-[var(--panel-bg)] px-5 py-3 rounded-b-xl">
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || uploading !== null || pendingUploads > 0}>
           {saving ? <><Spinner className="mr-1.5 h-3.5 w-3.5" /> Saving...</> : 'Save Website Settings'}
         </Button>
       </div>

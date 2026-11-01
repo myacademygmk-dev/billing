@@ -3,6 +3,16 @@
 import { ReactNode, createContext, useContext } from 'react';
 
 export type WebsiteConfig = {
+  countdowns?: { title: string; date: string }[] | null;
+  facilities?: { name?: string; title?: string; description?: string; photo_url?: string; image?: string }[] | null;
+  alumni?: Record<string, string | number>[] | null;
+  stats?: {
+    students?: string | null;
+    staff?: string | null;
+    years?: string | null;
+    standards?: string | null;
+    alumni?: string | null;
+  };
   institution?: {
     registration_no?: string | null;
     phone?: string | null;

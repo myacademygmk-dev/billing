@@ -76,8 +76,8 @@ def _validate_nested_public_json(value: str | None) -> str | None:
                 if "video" in key_text or "youtube" in key_text:
                     if not pipe_list(child, youtube_only=True):
                         raise ValueError("Video fields must be valid YouTube URLs")
-                elif not is_local_public_url(child.strip()):
-                    raise ValueError("Media fields must use uploaded file paths or local /images/ assets")
+                else:
+                    item[key] = _validate_local_url(child)
             else:
                 validate_item(child)
 
@@ -96,6 +96,29 @@ class BillingSettingsUpdate(BaseModel):
     cycle_mode: PaymentCycle
 
 
+class WebsiteCountdown(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    date: str
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError('Enter a countdown title')
+        return value.strip()
+
+    @field_validator('date')
+    @classmethod
+    def validate_date(cls, value: str) -> str:
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except ValueError:
+            raise ValueError('Enter a valid countdown date and time')
+        if parsed.tzinfo is None:
+            raise ValueError('Countdown date must include a timezone')
+        return parsed.isoformat()
+
+
 class InstitutionSettingsRead(BaseModel):
     name: str
     tagline: str
@@ -108,6 +131,7 @@ class InstitutionSettingsRead(BaseModel):
     stats_staff: str | None = None
     stats_years: str | None = None
     stats_standards: str | None = None
+    stats_alumni: str | None = None
     hero_title: str | None = None
     hero_subtitle: str | None = None
     hero_description: str | None = None
@@ -120,6 +144,7 @@ class InstitutionSettingsRead(BaseModel):
     videos: str | None = None
     countdown_date: str | None = None
     countdown_title: str | None = None
+    countdowns: list[WebsiteCountdown] | None = None
     top_bar_text: str | None = None
     management_team: str | None = None
     technical_team: str | None = None
@@ -140,6 +165,7 @@ class InstitutionSettingsUpdate(BaseModel):
     stats_staff: str | None = Field(default=None, max_length=20)
     stats_years: str | None = Field(default=None, max_length=20)
     stats_standards: str | None = Field(default=None, max_length=20)
+    stats_alumni: str | None = Field(default=None, max_length=20)
     hero_title: str | None = Field(default=None, max_length=200)
     hero_subtitle: str | None = Field(default=None, max_length=300)
     hero_description: str | None = Field(default=None)
@@ -152,6 +178,7 @@ class InstitutionSettingsUpdate(BaseModel):
     videos: str | None = Field(default=None)
     countdown_date: str | None = Field(default=None, max_length=50)
     countdown_title: str | None = Field(default=None, max_length=200)
+    countdowns: list[WebsiteCountdown] | None = Field(default=None, max_length=4)
     top_bar_text: str | None = Field(default=None, max_length=500)
     management_team: str | None = Field(default=None)
     technical_team: str | None = Field(default=None)
