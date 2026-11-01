@@ -8,7 +8,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.staff import SalaryRecord, Staff
 from app.models.user import User
@@ -36,7 +36,7 @@ def create_staff(
 @router.get("", response_model=dict)
 def list_staff(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("staff")),
     search: str | None = None,
     status: str | None = None,
     page: int = Query(1, ge=1),
@@ -54,7 +54,7 @@ def list_staff(
 
 
 @router.get("/{staff_id}", response_model=StaffRead)
-def get_staff(staff_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> StaffRead:
+def get_staff(staff_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_permission("staff"))) -> StaffRead:
     staff = db.get(Staff, staff_id)
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")

@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user, require_permission
+from app.api.deps import require_admin_user, require_any_permission, require_permission
 from app.core.database import get_db
 from app.models.payment import Payment
 from app.models.student import Student
@@ -559,7 +559,7 @@ async def import_students_from_excel(
 @router.get("/classes", response_model=list[str])
 def list_student_classes(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions", "attendance")),
 ) -> list[str]:
     """Return distinct class names from students table."""
     rows = db.execute(
@@ -574,7 +574,7 @@ def list_student_classes(
 @router.get("/statistics", response_model=dict)
 def student_statistics(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
     month: date | None = None,
 ) -> dict:
     month_start = (month or datetime.now(UTC).date()).replace(day=1)
@@ -598,7 +598,7 @@ def student_statistics(
 @router.get("", response_model=dict)
 def list_students(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
     search: str | None = None,
     class_code: str | None = None,
     status: StudentStatus | None = None,
@@ -637,7 +637,7 @@ def list_students(
 @router.get("/balances", response_model=dict)
 def list_student_balances(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
     search: str | None = None,
     class_code: str | None = None,
     status: StudentStatus | None = None,
@@ -771,7 +771,7 @@ def create_student(
 def get_student(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
 ) -> StudentRead:
     student = db.get(Student, student_id)
     if not student:
@@ -783,7 +783,7 @@ def get_student(
 def get_student_balance(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
 ) -> StudentBalanceRead:
     student = db.get(Student, student_id)
     if not student:
@@ -870,7 +870,7 @@ def update_student_fee(
 def get_student_fee(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
 ) -> StudentFeeRead:
     fee = db.get(StudentFee, student_id)
     if not fee:
@@ -885,7 +885,7 @@ def get_student_fee(
 def get_student_billing_overview_route(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("students", "collect", "savings", "reports", "transactions")),
 ) -> StudentBillingOverviewRead:
     student = db.get(Student, student_id)
     if not student:

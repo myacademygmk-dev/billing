@@ -12,7 +12,7 @@ from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import and_, or_, select, func
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_permission, require_admin_user
 from app.core.database import get_db
 from app.models.enums import StudentStatus
 from app.models.student import Student
@@ -601,7 +601,7 @@ def _render_tc_pdf(student: Student, branding: InstitutionBranding) -> bytes:
 def get_whatsapp_fee_reminder(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("students")),
 ) -> dict:
     """Generate WhatsApp deep link for fee reminder."""
     from app.services.whatsapp import whatsapp_fee_reminder_message, whatsapp_deep_link
@@ -631,7 +631,7 @@ def get_whatsapp_fee_reminder(
 @router.get("/birthdays")
 def get_upcoming_birthdays(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("students")),
     days: int = Query(7, ge=1, le=30),
 ) -> dict:
     """Get students with birthdays in the next N days."""

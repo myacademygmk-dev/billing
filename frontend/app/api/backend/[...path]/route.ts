@@ -11,7 +11,7 @@ function backendBaseUrl() {
   ).replace(/\/+$/, '');
 }
 
-async function forwardRequest(req: NextRequest, token: string, path: string) {
+async function forwardRequest(req: NextRequest, token: string, path: string, body: ArrayBuffer | undefined) {
   const url = new URL(req.url);
   const target = `${backendBaseUrl()}/${path}${url.search}`;
 
@@ -22,12 +22,11 @@ async function forwardRequest(req: NextRequest, token: string, path: string) {
   const accept = req.headers.get('accept');
   if (accept) headers.set('Accept', accept);
 
-  const reqBody = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer();
-
   return fetch(target, {
     method: req.method,
     headers,
-    body: reqBody
+    body,
+    cache: 'no-store',
   });
 }
 
@@ -74,18 +73,19 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
   }
 
   const token = cookies().get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 });
-
-  let res = await forwardRequest(req, token, path);
+  const refreshToken = cookies().get('refresh_token')?.value;
+  if (!token && !refreshToken) return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 });
+  // Request streams are single-use. Preserve the bytes for a refresh retry.
+  const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer();
+  let res = token ? await forwardRequest(req, token, path, body) : new Response(null, { status: 401 });
 
   // If access token expired, attempt silent refresh
   if (res.status === 401) {
-    const refreshToken = cookies().get('refresh_token')?.value;
     if (refreshToken) {
       const newTokens = await tryRefreshToken(refreshToken);
       if (newTokens) {
         // Retry the original request with the new access token
-        res = await forwardRequest(req, newTokens.access_token, path);
+        res = await forwardRequest(req, newTokens.access_token, path, body);
 
         // Build response and set new cookies
         const out = await buildResponse(res);

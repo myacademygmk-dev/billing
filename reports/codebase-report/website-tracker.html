@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Website Changes And Vulnerability Tracker</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #5b6678;
+      --border: #d8dee8;
+      --danger: #b42318;
+      --warning: #b54708;
+      --accent: #2563eb;
+      --code: #101828;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 36px 0 14px;
+      font-size: 1.35rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.05rem;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .issue { border-left: 4px solid var(--danger); }
+    .watch { border-left: 4px solid var(--warning); }
+    .note { border-left: 4px solid var(--accent); }
+
+    .status {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+
+    .high {
+      color: var(--danger);
+      background: #fff3f0;
+      border-color: #fecdca;
+    }
+
+    .medium {
+      color: var(--warning);
+      background: #fffaeb;
+      border-color: #fedf89;
+    }
+
+    .low {
+      color: var(--accent);
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    ul {
+      margin: 10px 0 16px;
+      padding-left: 22px;
+    }
+
+    li { margin: 6px 0; }
+
+    code {
+      font-family: "Cascadia Code", Consolas, "SFMono-Regular", monospace;
+      background: #eef2f7;
+      border: 1px solid #dde3ec;
+      border-radius: 5px;
+      padding: 1px 5px;
+      color: var(--code);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 22px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #eef2f7;
+      font-size: 0.9rem;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Website Changes And Vulnerability Tracker</h1>
+      <p class="subtitle">Updated: 2026-08-23</p>
+      <p class="subtitle">Public website scope only: pages, CMS content, gallery, alumni, enquiries, uploads used by website content, and public API exposure.</p>
+    </header>
+
+    <section>
+      <h2>Website Scope</h2>
+      <div class="grid">
+        <article class="card note">
+          <h3>Public Pages</h3>
+          <p><code>frontend/app/(public)/</code> contains home, about, admissions, classes, faculty, facilities, achievements, gallery, news, alumni, contact, and student-corner pages.</p>
+        </article>
+        <article class="card note">
+          <h3>Public Components</h3>
+          <p><code>frontend/components/public/</code> contains navbar, marquee, hero slideshow, popup banner, counters, videos, countdown, and student creativity UI.</p>
+        </article>
+        <article class="card note">
+          <h3>Public APIs</h3>
+          <p><code>backend/app/api/routes/public.py</code> exposes institution config, news, events, achievements, gallery, circulars, enquiry submission, creativity, and testimonial data.</p>
+        </article>
+        <article class="card note">
+          <h3>Website Uploads</h3>
+          <p><code>backend/app/api/routes/uploads.py</code> handles CMS image/PDF uploads and serves files used by website content.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Open Website Changes</h2>
+      <article class="card issue">
+        <h3>1. Website Feature Parity Is Partial</h3>
+        <p>The public website still needs richer school-site content beyond the core pages. Remaining gaps include video gallery depth, student sections, management content, academics content, class timetable display, quick links, social links, contact details in the header, payment terms, and publications.</p>
+        <p><span class="status medium">Medium</span></p>
+      </article>
+
+      <article class="card issue">
+        <h3>2. Homepage Needs Content Blocks From Existing Pages</h3>
+        <p>Achievements, gallery photos, latest dated news/events, admissions callouts, and student highlights should be surfaced on the homepage so users do not need to discover everything through navigation.</p>
+        <p><span class="status medium">Medium</span></p>
+      </article>
+
+      <article class="card issue">
+        <h3>3. Public Form Validation Needs Hardening</h3>
+        <p>Public enquiry and alumni forms need stronger semantic validation, duplicate/spam handling, rate limiting verification, and clear error states. These forms are public entry points and should be treated as abuse-prone.</p>
+        <p><span class="status high">High</span></p>
+      </article>
+
+      <article class="card issue">
+        <h3>4. Website Workflow Tests Are Missing</h3>
+        <p>Add tests for public navigation, enquiry submission, alumni registration, gallery rendering, CMS-driven homepage data, and failure states when public APIs are unavailable.</p>
+        <p><span class="status medium">Medium</span></p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Website Vulnerability Watch</h2>
+      <div class="grid">
+        <article class="card issue">
+          <h3>Public Form Abuse</h3>
+          <p>Risk: enquiry and alumni endpoints can receive spam or repeated submissions. Track rate limiting, duplicate detection, field length limits, and server-side validation for every public form.</p>
+        </article>
+        <article class="card issue">
+          <h3>Stored Content Injection</h3>
+          <p>Risk: CMS-managed text, captions, announcements, testimonials, alumni data, and embedded links can become stored XSS if rendered unsafely. Track all places where CMS strings or JSON fields reach public pages.</p>
+        </article>
+        <article class="card issue">
+          <h3>Upload Safety</h3>
+          <p>Risk: website images/PDFs are public files. Track size limits, MIME/extension matching, allowed file types, generated filenames, database-backed serving, and path containment.</p>
+        </article>
+        <article class="card watch">
+          <h3>External Video Links</h3>
+          <p>Risk: video URLs from website config can point to unexpected domains or embed untrusted content. Track allowlisting for YouTube URLs and frontend handling for invalid links.</p>
+        </article>
+        <article class="card watch">
+          <h3>Public Data Exposure</h3>
+          <p>Risk: public APIs should only return publishable website data. Track response fields for student creativity, testimonials, alumni content, gallery, and institution config to avoid leaking internal IDs or private data.</p>
+        </article>
+        <article class="card watch">
+          <h3>SEO And Metadata Gaps</h3>
+          <p>Risk: missing metadata is not a security bug, but it affects website quality. Track page titles, descriptions, canonical URLs, Open Graph data, and image alt text for public pages.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tracking Backlog</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Item</th>
+            <th>Area</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>P1</td><td>Verify public form rate limiting and duplicate/spam protection</td><td>Security</td></tr>
+          <tr><td>P1</td><td>Audit CMS-rendered text and JSON fields for stored XSS risk</td><td>Security</td></tr>
+          <tr><td>P1</td><td>Re-check upload serving and upload validation with negative tests</td><td>Security</td></tr>
+          <tr><td>P2</td><td>Add website workflow tests for public pages and public forms</td><td>Testing</td></tr>
+          <tr><td>P2</td><td>Add homepage blocks for achievements, gallery, news/events, and admissions</td><td>Content</td></tr>
+          <tr><td>P2</td><td>Add richer student, management, academics, timetable, and publications sections</td><td>Content</td></tr>
+          <tr><td>P3</td><td>Add social links, header contact details, quick links, and payment terms page</td><td>Navigation</td></tr>
+          <tr><td>P3</td><td>Improve public SEO metadata, Open Graph data, and image alt text</td><td>SEO</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <p>Maintained as a standalone website-only tracker under <code>reports/codebase-report/</code>.</p>
+    </footer>
+  </main>
+</body>
+</html>

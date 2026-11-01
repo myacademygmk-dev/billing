@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_admin_user, require_any_permission
 from app.core.database import get_db
 from app.models.expense_entry import ExpenseEntry
 from app.models.payment import Payment
@@ -31,7 +31,7 @@ def _month_label(value: date) -> str:
 def get_monthly_expenses(
     month: date = Query(...),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("expenses", "reports")),
 ) -> ExpenseMonthlyRead:
     normalized_month = _normalize_month(month)
     billed_rows = (

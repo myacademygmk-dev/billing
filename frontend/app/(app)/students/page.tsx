@@ -27,7 +27,7 @@ export default function StudentsPage() {
   const TABS = [
     { id: 'students', label: 'Students', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-  ].filter((tab) => isAdmin || tab.id === 'students' || permissions.includes(tab.id));
+  ].filter((tab) => isAdmin || permissions.includes(tab.id));
 
   // Compute effective tab — if active tab is not visible, fall back to first
   const effectiveTab = TABS.find((t) => t.id === activeTab) ? activeTab : (TABS[0]?.id ?? 'students');
@@ -44,7 +44,7 @@ export default function StudentsPage() {
     >
       <div className="flex flex-col flex-1 min-h-0 bg-white overflow-hidden">
         <div className="flex flex-col flex-1 min-h-0 p-3">
-          {effectiveTab === 'students' && <StudentsTab />}
+          {effectiveTab === 'students' && TABS.some((tab) => tab.id === 'students') && <StudentsTab />}
           {effectiveTab === 'attendance' && <AttendanceTab />}
         </div>
       </div>

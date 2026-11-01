@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing Codebase Report</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #5b6678;
+      --border: #d8dee8;
+      --accent: #2563eb;
+      --danger: #b42318;
+      --warning: #b54708;
+      --success: #067647;
+      --code: #101828;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2.5rem;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 36px 0 14px;
+      font-size: 1.35rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.05rem;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .status {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+
+    .fail {
+      color: var(--danger);
+      background: #fff3f0;
+      border-color: #fecdca;
+    }
+
+    .warn {
+      color: var(--warning);
+      background: #fffaeb;
+      border-color: #fedf89;
+    }
+
+    .ok {
+      color: var(--success);
+      background: #ecfdf3;
+      border-color: #abefc6;
+    }
+
+    ul, ol {
+      margin: 10px 0 16px;
+      padding-left: 22px;
+    }
+
+    li { margin: 6px 0; }
+
+    code, pre {
+      font-family: "Cascadia Code", Consolas, "SFMono-Regular", monospace;
+    }
+
+    code {
+      background: #eef2f7;
+      border: 1px solid #dde3ec;
+      border-radius: 5px;
+      padding: 1px 5px;
+      color: var(--code);
+    }
+
+    pre {
+      overflow: auto;
+      background: #101828;
+      color: #f8fafc;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 22px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #eef2f7;
+      font-size: 0.9rem;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    .issue { border-left: 4px solid var(--danger); }
+    .note { border-left: 4px solid var(--accent); }
+
+    .audit-finding { padding: 8px 0 16px; border-bottom: 1px solid var(--border); }
+    .audit-finding h3 { margin-top: 18px; }
+    .audit-nav { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 20px 0; }
+    .refs { font-size: 0.85rem; overflow-wrap: anywhere; }
+    .table-scroll { max-width: 100%; overflow-x: auto; }
+    .table-scroll table { min-width: 650px; }
+    a { color: #174ea6; text-underline-offset: 3px; }
+    a:hover { color: #12386f; }
+    a:focus-visible, summary:focus-visible, .table-scroll:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+    p, li, code { overflow-wrap: anywhere; }
+    summary { cursor: pointer; font-weight: 700; padding: 18px 0; }
+    @media (max-width: 600px) { .page { padding: 24px 16px 40px; } h1 { font-size: 2rem; } }
+
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Billing Codebase Report</h1>
+      <p class="subtitle">Updated: 2026-09-06; audit checks begun 2026-09-05</p>
+      <p class="subtitle">Open issue tracker for the school/institute billing and management system.</p>
+    </header>
+
+
+    <section id="current-audit" aria-labelledby="audit-heading">
+      <h2 id="audit-heading">Functionality, UI and Performance Audit</h2>
+      <p><strong>Report-first scope:</strong> Findings below describe the current working tree. Application code and database records were not changed by this audit. Existing unrelated changes were preserved.</p>
+      <p><strong>Priority:</strong> P0 = security or billing integrity; P1 = broken required workflow; P2 = usability, performance or testing; P3 = optional polish.</p>
+      <p><strong>22 tracked findings:</strong> 18 fixed; remaining open items are 1 P0, 1 P1 and 2 P2. Runtime reproductions used an explicitly isolated in-memory SQLite database. Source-confirmed findings describe inspected code paths, not completed browser journeys. No production latency or load measurement was performed.</p>
+      <nav class="audit-nav" aria-label="Audit sections"><a href="#verification">Checks</a><a href="#coverage">Coverage</a><a href="#auth-01">Findings</a><a href="#fix-order">Recommended Fix Order</a><a href="#previous-report">Previous Report</a></nav>
+      <h3 id="verification">Checks Executed</h3>
+      <div class="table-scroll" role="region" aria-label="Verification results" tabindex="0">
+        <table>
+          <thead><tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Limits</th></tr></thead>
+          <tbody>
+            <tr><td>Backend: <code>.venv\Scripts\python.exe -m pytest</code></td><td>112 passed, 2 skipped</td><td>Local SQLite tests; PostgreSQL-only races skipped in this full run.</td></tr>
+            <tr><td>Frontend: <code>npm.cmd test</code></td><td>16 passed across 7 files</td><td>No complete browser billing workflows.</td></tr>
+            <tr><td>Frontend: <code>npm.cmd run lint</code></td><td>Exit 0; warnings remain</td><td>Existing image and hook warnings are still present; no new nav ref warning remains.</td></tr>
+            <tr><td>Frontend: <code>npm.cmd run build</code></td><td>Exit 0</td><td>Backend <code>ECONNREFUSED</code> occurred during prerender. Build success does not verify live integration.</td></tr>
+            <tr><td>Backend: <code>alembic heads</code></td><td>Single head: <code>0025_website_features</code></td><td>No upgrade/downgrade was executed.</td></tr>
+            <tr><td>Isolated API probes</td><td>Account claim, refresh bearer, month double charge, reversal corruption, rollover arrears and route shadowing reproduced</td><td>Temporary in-memory data only; concurrency not exercised.</td></tr>
+            <tr><td>Browser / responsive verification</td><td id="browser-result">Home, login and gallery: 390x844, 768x1024 and 1440x900; no horizontal page overflow in nine checks. Desktop and mobile navigation keyboard defects reproduced.</td><td id="browser-limit">Public fallback content only; backend unavailable. Authenticated journeys and production-size performance remain unverified. <a href="screenshots/home-390.png">Mobile home</a>, <a href="screenshots/login-768.png">tablet login</a>, <a href="screenshots/gallery-1440.png">desktop gallery</a>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Report verification:</strong> All 22 finding entries, internal anchors and linked source paths checked. Independent review found no critical or important report issues. Report screenshots captured at 390x844, 768x1024 and 1440x900; mobile text inspected for readability. <a href="screenshots/report-390.png">Mobile report</a>, <a href="screenshots/report-768.png">tablet report</a>, <a href="screenshots/report-1440.png">desktop report</a>.</p>
+      <h3 id="coverage">Coverage and Limits</h3>
+      <div class="table-scroll" role="region" aria-label="Audit coverage" tabindex="0">
+        <table>
+          <thead><tr><th scope="col">Area</th><th scope="col">Inspection / evidence</th><th scope="col">Remaining verification</th></tr></thead>
+          <tbody>
+            <tr><td>Authentication / permissions</td><td>Login, setup, refresh, route dependencies and proxy inspected; setup and token misuse reproduced.</td><td>Role-by-role read/write authorization matrix and live sessions.</td></tr>
+            <tr><td>Students / fees / collection / receipts</td><td>Student, fee, payment and billing paths inspected; payment edge cases reproduced.</td><td>End-to-end student CRUD, physical receipt output and concurrent PostgreSQL collection.</td></tr>
+            <tr><td>Imports / rollover</td><td>Spreadsheet parsing and promotion logic inspected; lost arrears reproduced.</td><td>Malformed workbook execution and representative real-world imports.</td></tr>
+            <tr><td>Reports / exports / expenses / savings</td><td>Report and expense contracts inspected; existing reports and savings tests included in backend suite.</td><td>Browser edits, large exports, reconciliation and concurrent expense updates.</td></tr>
+            <tr><td>Academic / exams / attendance / staff</td><td>Routes inspected; marks-list routing error reproduced.</td><td>Marks entry, report cards, clock-in/out and salary workflows in a live backend.</td></tr>
+            <tr><td>CMS / public website</td><td>Navigation, gallery, reveal animation, config loading and query states inspected; CMS photo-list route failure reproduced.</td><td>Published-content, public-form and upload journeys with live data.</td></tr>
+            <tr><td>Deployment / reliability</td><td>Existing tests, lint, build and migration-head inspection completed.</td><td>Migration execution, database restore, production data volume and deployment checks.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>This is a broad audit, not certification that every function works. No confirmed issue is inferred solely from an older report. Timetable, publications and payment-terms routes now exist; older claims that they are missing must not drive new work.</p>
+      <article class="audit-finding" id="auth-01">
+        <h3><span class="status pass">Fixed</span> AUTH-01: Unclaimed accounts can be taken over using an email address</h3>
+        <p><strong>Evidence:</strong> Reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Create a passwordless staff account, then submit its email and a new password to the public setup-password endpoint without authentication.</p>
+        <p><strong>Previous impact:</strong> Setup returned 200 and login with the chosen password returned 200. No invitation secret or proof of email ownership was required.</p>
+        <p><strong>Expected / acceptance:</strong> Require a single-use, expiring invitation or verified ownership before setting a password; reject email-only claims.</p>
+        <p><strong>Resolution:</strong> Admin-only account creation now returns a private invitation with a configurable expiry (24 hours by default), pending accounts support admin-only reissue that revokes older links, and password setup requires an invitation of the exact token type. An atomic versioned pending-to-active update enforces a single winner. Email-only, expired, malformed, wrong-type, superseded, replayed and deleted-account claims are rejected.</p>
+        <p><strong>Verification:</strong> Focused auth/savings tests: 38 passed. Latest full backend suite: 101 passed, 2 PostgreSQL-only tests skipped under SQLite. Frontend tests: 11 passed. Frontend lint and production build completed; existing unrelated lint warnings remain. Atomic invitation concurrency was source-reviewed but not exercised against live PostgreSQL.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/auth.py"><code>backend/app/api/routes/auth.py</code></a> &middot; <a href="../../backend/tests/test_auth.py"><code>backend/tests/test_auth.py</code></a> &middot; <a href="../../frontend/app/(auth)/setup-password/page.tsx"><code>frontend/app/(auth)/setup-password/page.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="auth-02">
+        <h3><span class="status fail">P0</span> AUTH-02: Refresh tokens are accepted as API access tokens</h3>
+        <p><strong>Evidence:</strong> Reproduced. <strong>Status:</strong> Open; application fix not implemented.</p>
+        <p><strong>Reproduction:</strong> Send a valid refresh token as the Bearer token to GET /api/auth/me.</p>
+        <p><strong>Actual / impact:</strong> The endpoint returned 200. Token decoding validates the signature and expiry but does not require type=access.</p>
+        <p><strong>Expected / acceptance:</strong> Reject refresh tokens on protected API routes and add a regression test.</p>
+        <p class="refs"><a href="../../backend/app/api/deps.py"><code>backend/app/api/deps.py:24</code></a> &middot; <a href="../../backend/app/core/security.py"><code>backend/app/core/security.py:28</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-01">
+        <h3><span class="status pass">Fixed</span> BILL-01: Two dates in one month produce a double charge</h3>
+        <p><strong>Evidence:</strong> Reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> For a student charged 500 per month, collect selected_months=[2026-05-01,2026-05-15].</p>
+        <p><strong>Previous impact:</strong> The API returned 201 and amount 1000 for a single May billing period. Amount calculation preceded calendar-month normalization.</p>
+        <p><strong>Expected / acceptance:</strong> Normalize and deduplicate months before computing the amount; verify receipt amount equals allocated months.</p>
+        <p><strong>Resolution:</strong> Selected dates are now normalized to calendar-month starts and deduplicated before the charge, cycle count, start month, allocations and receipt data are derived. Tests verify one May charge/allocation, normalized cross-month allocations, receipt consistency and already-paid protection.</p>
+        <p><strong>Verification:</strong> Focused payment tests for this fix: 11 passed. Latest full backend suite: 101 passed, 2 PostgreSQL-only tests skipped under SQLite. No schema, migration or API contract change.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-02">
+        <h3><span class="status pass">Fixed</span> BILL-02: Reversal amount and month allocation can disagree</h3>
+        <p><strong>Evidence:</strong> Reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Reverse a 500 payment for amount 1, or request amount 1000. Separately reverse a reversal.</p>
+        <p><strong>Previous impact:</strong> Partial reversal returned -1 and released the full month; over-reversal returned -1000. Reversing a reversal produced a positive payment without restoring paid periods, permitting recollection.</p>
+        <p><strong>Expected / acceptance:</strong> Define supported reversal semantics, enforce amount bounds, preserve allocations and prevent duplicate or unsupported reversals. Test concurrent requests on PostgreSQL.</p>
+        <p><strong>Resolution:</strong> Reversals are now full-only. Any caller-supplied amount is rejected, only positive original payments can be reversed, the correction always equals the exact negative original amount, and all allocations are released in the same transaction. PostgreSQL row locks serialize competing requests, so only one reversal can win. The UI no longer offers or sends a partial amount.</p>
+        <p><strong>Verification:</strong> Tests cover partial, equal and over-amount requests, reversal-of-reversal rejection, duplicate reversal rejection, full multi-month cancellation, allocation release/recollection, forged marker notes, maximum-length reasons and the frontend request body. Both PostgreSQL races (reversal/reversal and create/reversal) passed against a disposable local database. Full backend suite: 101 passed, 2 PostgreSQL-only tests skipped under SQLite; frontend: 11 passed; lint and production build completed with existing unrelated warnings.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a> &middot; <a href="../../frontend/components/app/reverse-payment-dialog.tsx"><code>frontend/components/app/reverse-payment-dialog.tsx</code></a> &middot; <a href="../../frontend/tests/reverse-payment-dialog.test.tsx"><code>frontend/tests/reverse-payment-dialog.test.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-03">
+        <h3><span class="status pass">Fixed</span> BILL-03: Academic rollover drops ordinary unpaid arrears</h3>
+        <p><strong>Evidence:</strong> Reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Roll a fully unpaid student at 500/month from May 2026-April 2027 into the next year with carry_forward_arrears enabled.</p>
+        <p><strong>Previous impact:</strong> The response reported arrears_created=0 and arrears_amount=0. Arrears calculation counted stored unpaid rows, but ordinary unpaid months have no stored rows.</p>
+        <p><strong>Expected / acceptance:</strong> Calculate all unpaid months in the source billing range before changing the student batch; preserve and test the carried balance.</p>
+        <p><strong>Resolution:</strong> Rollover now selects only students assigned to the source academic year (with an exact source-batch fallback for legacy rows that have no year ID), materializes each student's complete source billing overview before changing the class, batch or billing window, then carries its pending amount. A fully unpaid May-April year at 500/month creates 6000 arrears; two paid months reduce the carried amount to 5000. Arrears timestamps also use portable Python and SQL defaults so the record persists on both PostgreSQL and SQLite.</p>
+        <p><strong>Verification:</strong> Focused rollover and payment tests: 21 passed, 2 PostgreSQL-only tests skipped under SQLite; both skipped races passed separately on PostgreSQL. Full backend suite: 101 passed, 2 skipped. Full-unpaid and partially-paid balances are asserted in the API response and persisted <code>student_arrears</code> row, and a same-class student from another year is verified unchanged.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/utilities.py"><code>backend/app/api/routes/utilities.py</code></a> &middot; <a href="../../backend/app/services/billing.py"><code>backend/app/services/billing.py</code></a> &middot; <a href="../../backend/app/models/promotion.py"><code>backend/app/models/promotion.py</code></a> &middot; <a href="../../backend/tests/test_rollover.py"><code>backend/tests/test_rollover.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="auth-03">
+        <h3><span class="status warn">P1</span> AUTH-03: Expired-token retries fail for requests with a body</h3>
+        <p><strong>Evidence:</strong> Source-confirmed. <strong>Status:</strong> Open; application fix not implemented.</p>
+        <p><strong>Reproduction:</strong> Submit a POST, PATCH or PUT with an expired access token while the refresh token remains valid.</p>
+        <p><strong>Actual / impact:</strong> The proxy consumes req.arrayBuffer() on its first attempt and reads the same consumed body again after refresh. The retried request can throw instead of completing.</p>
+        <p><strong>Expected / acceptance:</strong> Buffer the request body once and reuse it for the authenticated retry; cover collection and save requests.</p>
+        <p class="refs"><a href="../../frontend/app/api/backend/%5B...path%5D/route.ts"><code>frontend/app/api/backend/[...path]/route.ts:25</code></a> &middot; <a href="../../frontend/app/api/backend/%5B...path%5D/route.ts"><code>frontend/app/api/backend/[...path]/route.ts:88</code></a></p>
+      </article>
+      <article class="audit-finding" id="api-01">
+        <h3><span class="status pass">Fixed</span> API-01: Marks and gallery-photo list routes are shadowed</h3>
+        <p><strong>Evidence:</strong> Reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Request GET /api/exams/marks?exam_id=&lt;valid UUID&gt; or GET /api/cms/photos with authentication.</p>
+        <p><strong>Previous impact:</strong> Both returned 422: the dynamic UUID route captured the literal marks or photos segment. The academic marks view called the broken endpoint.</p>
+        <p><strong>Expected / acceptance:</strong> Register static list routes ahead of dynamic routes and verify both valid lists and missing record responses.</p>
+        <p><strong>Resolution:</strong> The static <code>/marks</code> and <code>/photos</code> routes are now registered before the dynamic UUID detail routes, so list requests resolve to the intended handlers while unknown exam/content UUIDs still return 404.</p>
+        <p><strong>Verification:</strong> Focused backend route tests passed: <code>tests/test_static_route_ordering.py</code> verified marks list, photo list, unknown exam detail, and unknown content detail behavior.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/exams.py"><code>backend/app/api/routes/exams.py</code></a> &middot; <a href="../../backend/app/api/routes/cms.py"><code>backend/app/api/routes/cms.py</code></a> &middot; <a href="../../backend/tests/test_static_route_ordering.py"><code>backend/tests/test_static_route_ordering.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-04">
+        <h3><span class="status pass">Fixed</span> BILL-04: Assigned discounts do not affect collection</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Assign a student discount, then calculate or collect that student's monthly fee.</p>
+        <p><strong>Previous impact:</strong> Discount assignments were stored, but billing read <code>StudentFee.expected_fee_amount</code> without consuming <code>StudentDiscount</code>. Fee structures had a separate rollover application path.</p>
+        <p><strong>Expected / acceptance:</strong> Connect agreed discount rules to payable amounts and reports; verify rounding and historical fee behavior.</p>
+        <p><strong>Resolution:</strong> Billing now calculates monthly payable fees through assigned student discounts, applying percentage discounts against the gross monthly fee, subtracting fixed discounts, rounding once to cents, and clamping at zero. Payment collection and billing overview use the discounted helper, and report queries apply equivalent SQL discount calculations.</p>
+        <p><strong>Verification:</strong> Focused discount tests passed: <code>tests/test_discounts.py</code> verified reduced collection amount, balances, reports, rounding, clamping, duplicate guards, removal, and inactive-discount assignment behavior.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/fee_mgmt.py"><code>backend/app/api/routes/fee_mgmt.py</code></a> &middot; <a href="../../backend/app/services/billing.py"><code>backend/app/services/billing.py</code></a> &middot; <a href="../../backend/app/services/reporting.py"><code>backend/app/services/reporting.py</code></a> &middot; <a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/tests/test_discounts.py"><code>backend/tests/test_discounts.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="import-01">
+        <h3><span class="status pass">Fixed</span> IMPORT-01: Malformed optional DOB can abort a non-atomic import</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Import a workbook with an invalid mapped date of birth and atomic=false.</p>
+        <p><strong>Previous impact:</strong> DOB conversion could raise outside row-level handling; the outer handler rolled back and rethrew instead of returning a row error.</p>
+        <p><strong>Expected / acceptance:</strong> Validate each row before persistence and return row-specific errors; ensure valid rows survive a non-atomic import.</p>
+        <p><strong>Resolution:</strong> Optional DOB parsing is now inside the row validation path. Invalid DOB values append a row-specific <code>date_of_birth must be a valid date</code> error and continue when <code>atomic=false</code>; <code>atomic=true</code> still rolls back the whole import if any row error exists.</p>
+        <p><strong>Verification:</strong> Focused student import tests passed for both non-atomic survival of valid rows and atomic rollback on invalid DOB.</p>
+        <p class="refs"><a href="../../backend/app/api/routes/students.py"><code>backend/app/api/routes/students.py</code></a> &middot; <a href="../../backend/tests/test_students.py"><code>backend/tests/test_students.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-05">
+        <h3><span class="status pass">Fixed</span> BILL-05: Reversal changes historical non-contiguous receipt labels</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Collect May and July, reverse the payment, then retrieve the original receipt.</p>
+        <p><strong>Previous impact:</strong> Reversal detached the original allocation rows; the fallback used start month plus month count and could label May-June.</p>
+        <p><strong>Expected / acceptance:</strong> Keep immutable allocation history so original and reversal receipts retain the exact paid months.</p>
+        <p><strong>Resolution:</strong> Payments now store immutable month snapshots in <code>payment_month_allocations</code>. Receipt rendering and API responses prefer this allocation history, while reversal frees the live billing periods for recollection without changing original or reversal receipt month labels.</p>
+        <p><strong>Verification:</strong> Focused reversal test passed: collecting May and July, reversing, retrieving both receipts, rendering the original PDF, and recollecting the same months all preserve <code>May 2026, Jul 2026</code>. Migration <code>0026_payment_month_allocation_history.py</code> adds and backfills the immutable history table.</p>
+        <p class="refs"><a href="../../backend/app/models/payment_month_allocation.py"><code>backend/app/models/payment_month_allocation.py</code></a> &middot; <a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/alembic/versions/0026_payment_month_allocation_history.py"><code>backend/alembic/versions/0026_payment_month_allocation_history.py</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-01">
+        <h3><span class="status pass">Fixed</span> UI-01: Asynchronously loaded artwork can remain invisible</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Load the homepage with student-creativity data arriving after the reveal provider's 100ms scan.</p>
+        <p><strong>Previous impact:</strong> New <code>.reveal</code> cards were not observed and could retain <code>opacity:0</code>. The observer disconnect function was also returned from the timer callback instead of the React effect.</p>
+        <p><strong>Expected / acceptance:</strong> Observe asynchronously inserted elements or reveal them on mount; disconnect observers on effect cleanup. Verify under throttled responses.</p>
+        <p><strong>Resolution:</strong> The reveal provider now keeps a single <code>IntersectionObserver</code> active for the route, uses a <code>MutationObserver</code> to observe async inserts, and disconnects both observers from the React cleanup path.</p>
+        <p><strong>Verification:</strong> Frontend tests passed and production build completed. Runtime throttled browser verification was not repeated in this turn.</p>
+        <p class="refs"><a href="../../frontend/components/ui/scroll-reveal-provider.tsx"><code>frontend/components/ui/scroll-reveal-provider.tsx</code></a> &middot; <a href="../../frontend/components/public/student-creativity.tsx"><code>frontend/components/public/student-creativity.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-02">
+        <h3><span class="status pass">Fixed</span> UI-02: Desktop dropdown navigation requires a pointer</h3>
+        <p><strong>Evidence:</strong> Browser-reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> At desktop width, tab to About Us or Student Corner and try opening its submenu with the keyboard.</p>
+        <p><strong>Previous impact:</strong> Dropdown state was changed by mouse enter/leave; the parent link navigated instead of providing a keyboard toggle.</p>
+        <p><strong>Expected / acceptance:</strong> Use an accessible disclosure control with keyboard activation, Escape handling and predictable focus.</p>
+        <p><strong>Resolution:</strong> Desktop dropdown parents are now disclosure buttons with <code>aria-haspopup</code>, <code>aria-expanded</code>, <code>aria-controls</code>, keyboard activation, and Escape close behavior while preserving hover support.</p>
+        <p><strong>Verification:</strong> <code>frontend/tests/public-accessibility.test.tsx</code> verifies keyboard opening for the desktop dropdown.</p>
+        <p class="refs"><a href="../../frontend/components/public/nav.tsx"><code>frontend/components/public/nav.tsx</code></a> &middot; <a href="../../frontend/tests/public-accessibility.test.tsx"><code>frontend/tests/public-accessibility.test.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-03">
+        <h3><span class="status pass">Fixed</span> UI-03: Mobile navigation lacks modal focus management</h3>
+        <p><strong>Evidence:</strong> Browser-reproduced before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Open the public mobile menu and navigate with Tab or Escape.</p>
+        <p><strong>Previous impact:</strong> The overlay declared a modal but had no focus transfer, trap, Escape handler or trigger-focus restoration.</p>
+        <p><strong>Expected / acceptance:</strong> Apply the shared modal interaction pattern and verify keyboard behavior at mobile and tablet widths.</p>
+        <p><strong>Resolution:</strong> The mobile menu now moves focus into the panel, traps Tab navigation, closes on Escape, restores focus to the trigger, and prevents background body scroll while open.</p>
+        <p><strong>Verification:</strong> <code>frontend/tests/public-accessibility.test.tsx</code> verifies Escape close and trigger-focus restoration.</p>
+        <p class="refs"><a href="../../frontend/components/public/nav.tsx"><code>frontend/components/public/nav.tsx</code></a> &middot; <a href="../../frontend/tests/public-accessibility.test.tsx"><code>frontend/tests/public-accessibility.test.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-04">
+        <h3><span class="status pass">Fixed</span> UI-04: Shared dialogs have no accessible name</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Open an application dialog with a screen reader.</p>
+        <p><strong>Previous impact:</strong> <code>DialogTitle</code> had an ID, but the <code>role=dialog</code> container did not reference it with <code>aria-labelledby</code> and had no <code>aria-label</code>.</p>
+        <p><strong>Expected / acceptance:</strong> Connect each title to its dialog and verify accessible names and focus behavior.</p>
+        <p><strong>Resolution:</strong> The shared dialog now provides a title ID through context and sets <code>aria-labelledby</code> on the dialog container, so normal <code>DialogTitle</code> usage supplies the accessible name.</p>
+        <p><strong>Verification:</strong> <code>frontend/tests/public-accessibility.test.tsx</code> verifies the dialog can be queried by its title as its accessible name.</p>
+        <p class="refs"><a href="../../frontend/components/ui/dialog.tsx"><code>frontend/components/ui/dialog.tsx</code></a> &middot; <a href="../../frontend/tests/public-accessibility.test.tsx"><code>frontend/tests/public-accessibility.test.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-05">
+        <h3><span class="status pass">Fixed</span> UI-05: Gallery photo deletion is hidden from keyboard users</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Try tabbing to a gallery photo's delete button in CMS.</p>
+        <p><strong>Previous impact:</strong> The button used <code>hidden</code> with <code>group-hover:flex</code>, so it was absent from the tab order until pointer hover.</p>
+        <p><strong>Expected / acceptance:</strong> Keep the action discoverable on keyboard focus and touch; retain a useful accessible label.</p>
+        <p><strong>Resolution:</strong> The photo delete action remains rendered and focusable, becomes visible on group focus as well as hover, stays visible on small touch layouts, and has a descriptive <code>aria-label</code>.</p>
+        <p><strong>Verification:</strong> Frontend lint, tests, and production build completed successfully; no browser CMS session was run in this turn.</p>
+        <p class="refs"><a href="../../frontend/app/(app)/cms/page.tsx"><code>frontend/app/(app)/cms/page.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="report-01">
+        <h3><span class="status pass">Fixed</span> REPORT-01: CSV export ignores visible search and class filters</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Filter monthly student reports by search text or class, then export CSV.</p>
+        <p><strong>Previous impact:</strong> The table sent <code>search</code> and <code>class_code</code>; the export URL sent only <code>month</code> and <code>payment_state</code>, exporting a different set.</p>
+        <p><strong>Expected / acceptance:</strong> Pass identical active filters to table and export requests and verify exported rows.</p>
+        <p><strong>Resolution:</strong> The monthly-students export URL is now built from the same active table filters: month, payment state, debounced search, and debounced class code.</p>
+        <p><strong>Verification:</strong> <code>frontend/tests/public-accessibility.test.tsx</code> verifies the generated CSV URL includes trimmed search and class filters.</p>
+        <p class="refs"><a href="../../frontend/app/(app)/reports/tabs/reports-tab.tsx"><code>frontend/app/(app)/reports/tabs/reports-tab.tsx</code></a> &middot; <a href="../../frontend/tests/public-accessibility.test.tsx"><code>frontend/tests/public-accessibility.test.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="ui-06">
+        <h3><span class="status pass">Fixed</span> UI-06: Data failures appear as empty results or zero totals</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Make the reports or CMS API unavailable, then open the affected view.</p>
+        <p><strong>Previous impact:</strong> Several query consumers fell back to zero, empty lists or no-data text without a distinct error state, making failure look like valid business data.</p>
+        <p><strong>Expected / acceptance:</strong> Provide visible errors and retry actions; reserve empty and zero states for successful responses.</p>
+        <p><strong>Resolution:</strong> Reports summary, charts and monthly-student table now show explicit error panels with retry actions. CMS content, creativity, testimonials and website settings panels also distinguish failed queries from valid empty states.</p>
+        <p><strong>Verification:</strong> Frontend lint, tests, and production build completed successfully; API-unavailable browser verification was not repeated in this turn.</p>
+        <p class="refs"><a href="../../frontend/app/(app)/reports/tabs/reports-tab.tsx"><code>frontend/app/(app)/reports/tabs/reports-tab.tsx</code></a> &middot; <a href="../../frontend/app/(app)/cms/page.tsx"><code>frontend/app/(app)/cms/page.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="bill-06">
+        <h3><span class="status pass">Fixed</span> BILL-06: Next-due month count differs across views</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Use a quarterly student with the first month paid and compare student snapshot versus collection.</p>
+        <p><strong>Previous impact:</strong> The snapshot used offset modulo cycle length while collection used the complementary remainder, yielding one versus two remaining months.</p>
+        <p><strong>Expected / acceptance:</strong> Use the same agreed cycle calculation in both views and cover partially paid cycles.</p>
+        <p><strong>Resolution:</strong> Backend billing snapshots now use the same complementary remainder calculation as the collection view when a student is partway through a cycle.</p>
+        <p><strong>Verification:</strong> Backend regression test verifies a quarterly May-start student with May paid reports <code>Jun-Jul 2026</code> as pending next due. Full backend suite passed: 112 passed, 2 skipped.</p>
+        <p class="refs"><a href="../../backend/app/services/billing.py"><code>backend/app/services/billing.py</code></a> &middot; <a href="../../frontend/app/(app)/collect/page.tsx"><code>frontend/app/(app)/collect/page.tsx</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a></p>
+      </article>
+      <article class="audit-finding" id="perf-01">
+        <h3><span class="status pass">Fixed</span> PERF-01: Homepage adds repeated configuration requests before images</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix; regression-tested after it. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Load the homepage over a slow connection.</p>
+        <p><strong>Previous impact:</strong> The public layout and hero, video, countdown, marquee and popup components independently requested website config. Hero images waited for client fetch completion; all slide images then mounted together.</p>
+        <p><strong>Expected / acceptance:</strong> Share configuration, render the first image promptly and defer later slides. Measure request count and LCP before and after.</p>
+        <p><strong>Resolution:</strong> The public layout now seeds a shared website-config context. Homepage marquee, popup banner, hero slideshow, videos and countdown read that shared config instead of issuing duplicate client requests. Hero slides render immediately from configured slides or defaults.</p>
+        <p><strong>Verification:</strong> <code>frontend/tests/public-accessibility.test.tsx</code> verifies shared-config consumers render without client config fetches. Production build completed. LCP was not measured in this turn.</p>
+        <p class="refs"><a href="../../frontend/app/(public)/layout.tsx"><code>frontend/app/(public)/layout.tsx</code></a> &middot; <a href="../../frontend/components/public/website-config-context.tsx"><code>frontend/components/public/website-config-context.tsx</code></a> &middot; <a href="../../frontend/components/public/hero-slideshow.tsx"><code>frontend/components/public/hero-slideshow.tsx</code></a> &middot; <a href="../../frontend/components/public/marquee.tsx"><code>frontend/components/public/marquee.tsx</code></a> &middot; <a href="../../frontend/components/public/popup-banner.tsx"><code>frontend/components/public/popup-banner.tsx</code></a> &middot; <a href="../../frontend/components/public/our-videos.tsx"><code>frontend/components/public/our-videos.tsx</code></a> &middot; <a href="../../frontend/components/public/countdown.tsx"><code>frontend/components/public/countdown.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="perf-02">
+        <h3><span class="status pass">Fixed</span> PERF-02: Public layout has no explicit backend request deadline</h3>
+        <p><strong>Evidence:</strong> Source-confirmed before the fix. <strong>Status:</strong> Resolved on 2026-09-06.</p>
+        <p><strong>Reproduction:</strong> Open a public route while its config backend accepts a connection but responds slowly.</p>
+        <p><strong>Previous impact:</strong> The layout awaited config without an <code>AbortSignal</code> deadline. A timeout in the homepage fetch did not bound this separate layout request.</p>
+        <p><strong>Expected / acceptance:</strong> Bound config fetch time and provide a stable fallback; measure time to first byte under a stalled backend.</p>
+        <p><strong>Resolution:</strong> The public layout config fetch now uses an abort controller with a 3-second deadline and still returns fallback config on failure.</p>
+        <p><strong>Verification:</strong> Production build completed while the backend was unavailable and used the fallback path. Stalled-backend TTFB was not load-tested in this turn.</p>
+        <p class="refs"><a href="../../frontend/app/(public)/layout.tsx"><code>frontend/app/(public)/layout.tsx</code></a></p>
+      </article>
+      <article class="audit-finding" id="test-01">
+        <h3><span class="status warn">P2</span> TEST-01: Passing tests do not cover the reproduced critical defects</h3>
+        <p><strong>Evidence:</strong> Coverage gap. <strong>Status:</strong> Open; application fix not implemented.</p>
+        <p><strong>Reproduction:</strong> Compare existing tests with the cases above.</p>
+        <p><strong>Actual / impact:</strong> Focused regressions now cover several reproduced defects, but the suite still does not exercise complete browser-level billing, import, receipt, report filtering and permission workflows.</p>
+        <p><strong>Expected / acceptance:</strong> Keep focused regressions for each fixed defect, then add browser coverage for collection, imports, receipts, report filtering and permissions.</p>
+        <p class="refs"><a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py:1</code></a> &middot; <a href="../../backend/tests/conftest.py"><code>backend/tests/conftest.py:22</code></a> &middot; <a href="../../frontend/tests/smoke.test.tsx"><code>frontend/tests/smoke.test.tsx:1</code></a></p>
+      </article>
+      <article class="audit-finding" id="test-02">
+        <h3><span class="status warn">P2</span> TEST-02: Schema creation tests do not verify deployment migrations</h3>
+        <p><strong>Evidence:</strong> Coverage gap. <strong>Status:</strong> Open; application fix not implemented.</p>
+        <p><strong>Reproduction:</strong> Run the existing backend test suite and compare its setup with deployment.</p>
+        <p><strong>Actual / impact:</strong> Tests call metadata.create_all, bypassing Alembic migrations. A sole Alembic head does not establish upgrade/downgrade correctness or PostgreSQL concurrency safety.</p>
+        <p><strong>Expected / acceptance:</strong> Exercise migrations on a disposable PostgreSQL database, and test concurrent receipt/reversal invariants.</p>
+        <p class="refs"><a href="../../backend/tests/conftest.py"><code>backend/tests/conftest.py:22</code></a> &middot; <a href="../../backend/alembic"><code>backend/alembic:1</code></a></p>
+      </article>
+      <h3 id="fix-order">Recommended Fix Order</h3>
+      <ol>
+        <li>Resolve the remaining P0 token-type issue and the P1 expired-token retry issue with focused regression tests.</li>
+        <li>Add browser-level workflow coverage for collection, imports, receipts, report filtering and permissions.</li>
+        <li>Exercise migrations and concurrent receipt/reversal invariants on a disposable PostgreSQL database.</li>
+        <li>Run live frontend/API journeys on a disposable PostgreSQL database, check migrations and concurrency, then complete responsive verification.</li>
+      </ol>
+      <p><strong>Implementation decisions:</strong> Reversals now use full-only semantics. Discount stacking applies additive percentage discounts against gross monthly fee, then fixed discounts, then one final cent rounding and zero clamp. No decision is needed to read this report.</p>
+      <p><strong>Deferred:</strong> P3 redesign and optional visual polish. Export/report scalability remains a load-test item; no production lag threshold was measured.</p>
+      <p><strong>Environment limits:</strong> Browser checks used a temporary production server at localhost:3100, which has been stopped. Logs showed backend ECONNREFUSED and prerender-cache EPERM under the sandbox; live integration and cache regeneration were not verified. Temporary browser profiles were removed; the 12 verification screenshots remain.</p>
+      <p><strong>Impact:</strong> Fixed findings now include backend and frontend application changes. No dependency changes were added in the latest update.</p>
+    </section>
+
+    <details id="previous-report">
+      <summary>Previous report snapshot (2026-08-23; historical, not the current open backlog)</summary>
+    <section>
+      <h2>Open Issues (Historical)</h2>
+      <article class="card issue">
+        <h3>1. Test Coverage Is Better, Still Narrow</h3>
+        <p>Complete browser-level workflows still lack focused tests, especially collect payment, student CRUD, report filtering, permission-based navigation, uploads, and public forms.</p>
+        <p><strong>Priority:</strong> Medium.</p>
+      </article>
+
+      <article class="card issue">
+        <h3>2. Export/Reporting Scale Needs Production Validation</h3>
+        <p>Export and reporting endpoints still need production-size performance validation. Large datasets may require materialized summaries if report latency grows.</p>
+        <p><strong>Priority:</strong> Watch.</p>
+      </article>
+
+      <article class="card issue">
+        <h3>3. Frontend Build Must Stay Covered in CI</h3>
+        <p>CI should run the frontend production build so release readiness does not depend on one local machine. If <code>EPERM</code> appears around <code>frontend/.next/trace</code>, clean the generated build directory and check local file locks.</p>
+        <p><strong>Priority:</strong> Watch.</p>
+      </article>
+
+      <article class="card issue">
+        <h3>4. Stale Audit Documents Need Cleanup</h3>
+        <p><code>FEATURE_AUDIT.md</code>, <code>PENDING_FEATURES.md</code>, and <code>APPLICATION_ANALYSIS.md</code> still contain older findings that are partly outdated. They should be updated or archived so future work is not planned from stale information.</p>
+        <p><strong>Priority:</strong> Low.</p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Need To Fix</h2>
+      <div class="grid">
+        <article class="card issue">
+          <h3>Frontend Workflow Tests</h3>
+          <p>Add focused component/integration tests for collect payment, student create/edit, report filtering, permission-based navigation, uploads, and public form behavior.</p>
+        </article>
+        <article class="card issue">
+          <h3>Backend Regression Coverage</h3>
+          <p>Add small backend tests for future write/action routes as they are added so permission and payload validation do not regress.</p>
+        </article>
+        <article class="card issue">
+          <h3>Production-Size Report Tests</h3>
+          <p>Load-test export and reporting endpoints with production-size datasets. Add materialized summaries only if real latency requires them.</p>
+        </article>
+        <article class="card issue">
+          <h3>CI Quality Gates</h3>
+          <p>Run backend tests, frontend tests, frontend production build, and migrations in CI before release.</p>
+        </article>
+        <article class="card issue">
+          <h3>Validation Cleanup</h3>
+          <p>Add more semantic validation for WhatsApp utility endpoints and public form submissions. Normalize export and balance response contracts where inconsistencies remain.</p>
+        </article>
+        <article class="card issue">
+          <h3>Documentation Cleanup</h3>
+          <p>Update or archive stale audit documents so only current errors and remaining work are visible.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Open Backlog</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Item</th>
+            <th>Area</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>P2</td><td>Add broader backend and frontend tests</td><td>Quality</td></tr>
+          <tr><td>Watch</td><td>Load-test export/report performance with production-size data</td><td>Performance</td></tr>
+          <tr><td>Watch</td><td>Keep frontend production build covered in CI</td><td>Release</td></tr>
+          <tr><td>P3</td><td>Update or archive stale audit documents</td><td>Documentation</td></tr>
+          <tr><td>P3</td><td>Add stronger validation for WhatsApp utilities and public forms</td><td>Validation</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    </details>
+
+    <footer>
+      <p>Maintained as a standalone HTML report under <code>reports/codebase-report/</code>.</p>
+    </footer>
+  </main>
+</body>
+</html>

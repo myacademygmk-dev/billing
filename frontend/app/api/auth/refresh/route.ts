@@ -6,7 +6,10 @@ import { env } from '@/lib/env';
 export async function POST() {
   const refreshToken = cookies().get('refresh_token')?.value;
   if (!refreshToken) {
-    return NextResponse.json({ detail: 'No refresh token' }, { status: 401 });
+    const response = NextResponse.json({ detail: 'No refresh token' }, { status: 401 });
+    response.cookies.delete('access_token');
+    response.cookies.delete('refresh_token');
+    return response;
   }
 
   const res = await fetch(`${env.apiBaseUrl}/auth/refresh`, {

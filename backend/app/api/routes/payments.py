@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user, require_permission
+from app.api.deps import require_admin_user, require_any_permission, require_permission
 from app.core.database import get_db
 from app.models.enums import PaymentMode
 from app.models.payment import Payment
@@ -155,7 +155,7 @@ def create_payment(
 @router.get("", response_model=dict)
 def list_payments(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("collect", "transactions", "reports", "students")),
     student_id: uuid.UUID | None = None,
     mode: PaymentMode | None = None,
     bill_no: str | None = None,
@@ -297,7 +297,7 @@ def reverse_payment(
 def get_payment_receipt(
     payment_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("collect", "transactions", "reports", "students")),
 ) -> PaymentRead:
     payment = db.get(Payment, payment_id)
     if not payment:
@@ -309,7 +309,7 @@ def get_payment_receipt(
 def download_receipt_pdf(
     payment_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("collect", "transactions", "reports", "students")),
 ) -> Response:
     payment = db.get(Payment, payment_id)
     if not payment:
