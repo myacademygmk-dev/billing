@@ -9,12 +9,11 @@ it('saves a class batch, accepts zero, and excludes already recorded students', 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
     if (init?.method === 'POST') return new Response('[]', { status: 201 });
     return new Response(JSON.stringify(String(url).includes('/exams/marks')
-      ? { items: [{ student_id: 'one', subject_id: 'math', marks_obtained: '80' }] }
+      ? { items: [{ student_id: 'one', subject_id: 'math', marks_obtained: '80', max_marks: 100 }] }
       : { items: [{ id: 'one', name: 'Anu', student_code: 'S001' }, { id: 'two', name: 'Bala', student_code: 'S002' }], total: 2 }), { status: 200 });
   });
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Toaster><ClassMarksDialog examId="exam" classes={[{ id: 'class', class_name: '10', section: null, subjects: [{ id: 'math', name: 'Mathematics', max_marks: 100 }] }]} onClose={vi.fn()} /></Toaster></QueryClientProvider>);
   fireEvent.change(screen.getByLabelText('Class roster'), { target: { value: 'class' } });
-  fireEvent.change(screen.getByLabelText('Roster subject'), { target: { value: 'math' } });
   const input = await screen.findByRole('spinbutton', { name: /Bala/ });
   expect((screen.getByRole('spinbutton', { name: /Anu/ }) as HTMLInputElement).disabled).toBe(true);
   fireEvent.change(input, { target: { value: '101' } });
@@ -23,4 +22,43 @@ it('saves a class batch, accepts zero, and excludes already recorded students', 
   fireEvent.click(screen.getByRole('button', { name: 'Save 1 marks' }));
   await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(true));
   expect(JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')?.[1]?.body))).toEqual({ exam_id: 'exam', marks: [{ student_id: 'two', subject_id: 'math', marks_obtained: 0, max_marks: 100 }] });
+});
+
+it('pastes across subjects, keeps zero, skips saved cells and moves down with Enter', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+    if (init?.method === 'POST') return new Response('[]', { status: 201 });
+    return new Response(JSON.stringify(String(url).includes('/exams/marks')
+      ? { items: [{ student_id: 'two', subject_id: 'science', marks_obtained: '40', max_marks: 50 }] }
+      : { items: [{ id: 'one', name: 'Anu', student_code: 'S001' }, { id: 'two', name: 'Bala', student_code: 'S002' }], total: 2 }), { status: 200 });
+  });
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Toaster><ClassMarksDialog examId="exam" classes={[{ id: 'class', class_name: '10', section: null, subjects: [{ id: 'math', name: 'Math', max_marks: 100 }, { id: 'science', name: 'Science', max_marks: 50 }] }]} onClose={vi.fn()} /></Toaster></QueryClientProvider>);
+  const start = await screen.findByRole('spinbutton', { name: /Anu.*Math/ });
+  fireEvent.paste(start, { clipboardData: { getData: () => '0\t49.5\n85\t30' } });
+  expect((start as HTMLInputElement).value).toBe('0');
+  expect((screen.getByRole('spinbutton', { name: /Bala.*Science/ }) as HTMLInputElement).value).toBe('40');
+  fireEvent.keyDown(start, { key: 'Enter' });
+  expect(document.activeElement).toBe(screen.getByRole('spinbutton', { name: /Bala.*Math/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save 3 marks' }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(true));
+  const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')?.[1]?.body));
+  expect(body.marks).toHaveLength(3);
+  expect(body.marks.map((mark: { marks_obtained: number }) => mark.marks_obtained)).toEqual([0, 49.5, 85]);
+});
+
+it('preserves entries on failure and refuses to discard edits without confirmation', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+    if (init?.method === 'POST') return new Response(JSON.stringify({ detail: 'Another user recorded a mark' }), { status: 409 });
+    return new Response(JSON.stringify(String(url).includes('/exams/marks') ? { items: [] } : { items: [{ id: 'one', name: 'Anu', student_code: 'S001' }], total: 1 }), { status: 200 });
+  });
+  const onClose = vi.fn();
+  vi.spyOn(window, 'confirm').mockReturnValue(false);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Toaster><ClassMarksDialog examId="exam" classes={[{ id: 'class', class_name: '10', section: null, subjects: [{ id: 'math', name: 'Math', max_marks: 100 }] }]} onClose={onClose} /></Toaster></QueryClientProvider>);
+  const input = await screen.findByRole('spinbutton', { name: /Anu/ });
+  fireEvent.change(input, { target: { value: '45' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save 1 marks' }));
+  await screen.findByRole('button', { name: 'Reload saved marks' });
+  expect((input as HTMLInputElement).value).toBe('45');
+  fireEvent.click(screen.getByRole('button', { name: /^Close$/ }));
+  expect(window.confirm).toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
 });

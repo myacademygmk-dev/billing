@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get('access_token')?.value;
+  const refreshToken = req.cookies.get('refresh_token')?.value;
 
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/setup-password');
   const isAppRoute =
@@ -20,16 +21,10 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/cms') ||
     pathname.startsWith('/fees');
 
-  if (isAppRoute && !token) {
+  if (isAppRoute && !token && !refreshToken) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthRoute && token) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 

@@ -21,12 +21,14 @@ def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm], options={"require": ["exp", "sub", "type"]})
+        if payload.get("type") != "access":
+            raise ValueError("access token required")
         sub = payload.get("sub")
         if not sub:
             raise ValueError("missing sub")
         user_id = uuid.UUID(sub)
-    except (PyJWTError, ValueError):
+    except (PyJWTError, ValueError, TypeError, AttributeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = db.get(User, user_id)
@@ -42,13 +44,18 @@ def require_admin_user(current_user: User = Depends(get_current_user)) -> User:
 
 
 def require_permission(permission: str):
+    return require_any_permission(permission)
+
+
+def require_any_permission(*permissions: str):
+    """Allow a read shared by explicitly authorized workflows."""
     def dependency(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role == UserRole.admin:
             return current_user
-        if permission not in (current_user.permissions or []):
+        if not set(permissions).intersection(current_user.permissions or []):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission required: {permission}",
+                detail=f"Permission required: {' or '.join(permissions)}",
             )
         return current_user
 

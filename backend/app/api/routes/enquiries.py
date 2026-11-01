@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.enquiry import Enquiry
 from app.models.user import User
@@ -46,7 +46,7 @@ def submit_enquiry(
 @router.get("", response_model=dict)
 def list_enquiries(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("students")),
     status: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),

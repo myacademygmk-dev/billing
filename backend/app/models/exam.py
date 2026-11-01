@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text, Uuid, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -29,6 +29,10 @@ class Exam(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 class Mark(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """A single mark entry: student + subject + exam."""
     __tablename__ = "marks"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "student_id", "subject_id", name="uq_marks_exam_student_subject"),
+        CheckConstraint("max_marks > 0 AND marks_obtained >= 0 AND marks_obtained <= max_marks", name="ck_marks_score_range"),
+    )
 
     exam_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("exams.id"), nullable=False)
     student_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("students.id"), nullable=False)

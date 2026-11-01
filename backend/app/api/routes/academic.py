@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_admin_user, require_any_permission
 from app.core.database import get_db
 from app.models.academic import AcademicYear, ClassSection, Subject
 from app.models.user import User
@@ -47,7 +47,7 @@ def create_academic_year(
 
 
 @router.get("/years", response_model=list[AcademicYearRead])
-def list_academic_years(db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> list[AcademicYearRead]:
+def list_academic_years(db: Session = Depends(get_db), _: User = Depends(require_any_permission("academic", "exams", "fees"))) -> list[AcademicYearRead]:
     years = db.execute(select(AcademicYear).order_by(AcademicYear.start_date.desc())).scalars().all()
     return [AcademicYearRead.model_validate(y) for y in years]
 
@@ -99,7 +99,7 @@ def create_class_section(
 @router.get("/classes", response_model=list[ClassSectionRead])
 def list_class_sections(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("academic", "exams", "fees")),
     academic_year_id: uuid.UUID | None = None,
 ) -> list[ClassSectionRead]:
     stmt = select(ClassSection).options(selectinload(ClassSection.subjects))
@@ -137,7 +137,7 @@ def create_subject(
 def list_subjects(
     class_section_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("academic", "exams", "fees")),
 ) -> list[SubjectRead]:
     subjects = db.execute(select(Subject).where(Subject.class_section_id == class_section_id).order_by(Subject.name)).scalars().all()
     return [SubjectRead.model_validate(s) for s in subjects]

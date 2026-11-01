@@ -29,6 +29,8 @@ services:
       CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'
       RECEIPT_PREFIX: ${RECEIPT_PREFIX:-FEE-}
       APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - billing_uploads:/app/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -55,6 +57,7 @@ services:
       HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api}
       BACKEND_API_BASE_URL: http://backend:8000/api
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - "4000:3000"
     depends_on:
@@ -75,6 +78,7 @@ services:
 
 volumes:
   billing_pgdata:
+  billing_uploads:
 
 networks:
   backend:

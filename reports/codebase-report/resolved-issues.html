@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resolved Product Issues</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #172033; background: #f4f7fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { width: min(920px, calc(100% - 32px)); margin: 48px auto; }
+    header, article { border: 1px solid #dbe3ef; border-radius: 16px; background: #fff; box-shadow: 0 8px 28px rgba(23, 32, 51, .06); }
+    header { padding: 24px; margin-bottom: 20px; }
+    article { padding: 24px; }
+    article + article { margin-top: 20px; }
+    h1, h2 { margin: 0; line-height: 1.25; }
+    h1 { font-size: 1.75rem; }
+    h2 { font-size: 1.15rem; }
+    h2, p, li, a, code { overflow-wrap: anywhere; }
+    p, li { line-height: 1.65; }
+    .muted { color: #62708a; }
+    .status { display: inline-block; margin-right: 8px; border-radius: 999px; padding: 3px 9px; color: #116329; background: #dcfce7; font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+    code { border-radius: 5px; padding: 2px 5px; background: #eef2f7; font-size: .88em; }
+    a { color: #245ac7; }
+    @media (max-width: 540px) { main { margin: 20px auto; } header, article { padding: 18px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Resolved Product Issues</h1>
+      <p class="muted">Verified application fixes moved out of the open-issues audit. Last updated: 2026-09-06.</p>
+    </header>
+
+    <article id="auth-01">
+      <h2><span class="status">Resolved</span>AUTH-01: Unclaimed accounts could be taken over using an email address</h2>
+      <p><strong>Original evidence:</strong> Reproduced. The former public setup endpoint accepted a pending account's email and a caller-chosen password without proving ownership.</p>
+      <p><strong>Acceptance:</strong> Require a single-use, expiring invitation or verified ownership before setting a password; reject email-only claims.</p>
+      <p><strong>Implemented:</strong> Admin-only account creation now issues a signed, time-limited invitation. Password setup accepts only an invitation token and password, checks the exact token type and account version, and atomically transitions the account from pending to active. Reissuing an invitation invalidates the previous link. The frontend keeps the secret in the URL fragment, removes it after reading, and lets administrators copy or reissue links for pending users.</p>
+      <p><strong>Regression coverage:</strong> Email-only claims; valid setup; replay; expired, malformed and wrong-type tokens; deleted accounts; reissue authorization; old-link invalidation; login preservation; and rate limiting.</p>
+      <p><strong>Verification:</strong> Targeted auth/savings tests passed (38); the latest full backend suite passed (101, with 2 PostgreSQL-only skips); frontend tests passed (11); lint and production build completed. Existing unrelated lint warnings remain. Atomic invitation concurrency is enforced by the conditional database update and reviewed in source; a live invitation concurrency test was not run.</p>
+      <p><strong>Database/deployment:</strong> No schema or migration change. Optional <code>JWT_INVITATION_EXP_HOURS</code> controls the expiry and defaults to 24 hours.</p>
+      <p><a href="../../backend/app/api/routes/auth.py"><code>backend/app/api/routes/auth.py</code></a> &middot; <a href="../../backend/app/core/security.py"><code>backend/app/core/security.py</code></a> &middot; <a href="../../backend/tests/test_auth.py"><code>backend/tests/test_auth.py</code></a> &middot; <a href="../../frontend/app/(auth)/setup-password/page.tsx"><code>frontend/app/(auth)/setup-password/page.tsx</code></a></p>
+    </article>
+
+    <article id="bill-01">
+      <h2><span class="status">Resolved</span>BILL-01: Two dates in one month produced a double charge</h2>
+      <p><strong>Original evidence:</strong> Reproduced. For a student charged 500 per month, <code>selected_months=[2026-05-01, 2026-05-15]</code> created a 1000 payment while allocating only one May billing period.</p>
+      <p><strong>Acceptance:</strong> Normalize and deduplicate months before computing the amount; verify the receipt amount equals the allocated months.</p>
+      <p><strong>Implemented:</strong> Payment creation now converts every selected date to the first day of its calendar month and deduplicates that canonical list before calculating the month count, amount, start month, database allocations, or receipt data. May 1 and May 15 therefore create one May allocation and one 500 charge.</p>
+      <p><strong>Regression coverage:</strong> Same-month different-day inputs; arbitrary dates across two months; normalized allocation rows; amount-to-allocation equality; billing start and cycle count; receipt amount and period label; and prevention of a different-day retry for an already-paid month.</p>
+      <p><strong>Verification:</strong> Focused payment tests for this fix passed (11); the latest full backend suite passed (101, with 2 PostgreSQL-only skips); frontend tests passed (11); frontend lint and production build completed. Existing unrelated lint warnings remain.</p>
+      <p><strong>Database/deployment:</strong> No schema, migration, dependency, or frontend contract change. Previously-created inconsistent payments are not automatically rewritten and should be reconciled against real payment records before any correction.</p>
+      <p><a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/app/services/billing.py"><code>backend/app/services/billing.py</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a></p>
+    </article>
+
+    <article id="bill-02">
+      <h2><span class="status">Resolved</span>BILL-02: Reversal amount and month allocation could disagree</h2>
+      <p><strong>Original evidence:</strong> Reproduced. A caller could reverse a 500 payment by 1 or 1000 while releasing the whole allocation, and could reverse the negative correction itself.</p>
+      <p><strong>Acceptance:</strong> Define supported reversal semantics, enforce amount bounds, preserve allocations, prevent duplicate or unsupported reversals, and test concurrent requests on PostgreSQL.</p>
+      <p><strong>Implemented:</strong> Reversals are full-only. The API rejects every caller-supplied amount and every non-positive target, records exactly the negative original amount, locks the original payment and its allocations, and releases all allocated months atomically. The locked duplicate check permits only one winner when requests race. The dialog explains full reversal and no longer offers or transmits a partial amount.</p>
+      <p><strong>Regression coverage:</strong> Partial, equal and excessive explicit amounts; reversal of a reversal; sequential duplicate reversal; full multi-month amount/allocation cancellation; month recollection after correction; forged marker notes; maximum-length reasons; UI copy and request body; simultaneous reversals; and a simultaneous recollection/reversal.</p>
+      <p><strong>Verification:</strong> Focused backend tests passed (21) with two PostgreSQL-only cases skipped under SQLite; both concurrency tests separately passed against a disposable local PostgreSQL database. Full backend suite passed (101, with 2 database-specific skips). Frontend tests passed (11); lint and production build completed. Existing unrelated lint warnings and expected backend-unavailable prerender fallback logs remain.</p>
+      <p><strong>Database/deployment:</strong> No schema or migration change. The disposable PostgreSQL test database was deleted after verification. Existing historical inconsistent reversal rows are not rewritten automatically.</p>
+      <p><a href="../../backend/app/api/routes/payments.py"><code>backend/app/api/routes/payments.py</code></a> &middot; <a href="../../backend/tests/test_payments.py"><code>backend/tests/test_payments.py</code></a> &middot; <a href="../../frontend/components/app/reverse-payment-dialog.tsx"><code>frontend/components/app/reverse-payment-dialog.tsx</code></a> &middot; <a href="../../frontend/tests/reverse-payment-dialog.test.tsx"><code>frontend/tests/reverse-payment-dialog.test.tsx</code></a></p>
+    </article>
+
+    <article id="bill-03">
+      <h2><span class="status">Resolved</span>BILL-03: Academic rollover dropped ordinary unpaid arrears</h2>
+      <p><strong>Original evidence:</strong> Reproduced. A fully unpaid May-April student at 500 per month rolled over with zero arrears because ordinary unpaid months had no stored allocation rows.</p>
+      <p><strong>Acceptance:</strong> Calculate all unpaid months in the source billing range before changing the student batch; preserve and test the carried balance.</p>
+      <p><strong>Implemented:</strong> Rollover selects only students assigned to the requested source academic year, with an exact source-batch fallback limited to legacy rows whose year ID is null. It computes the pending amount from the complete source billing overview before mutating the student's class, batch or billing window, so missing allocation rows count as unpaid months. Arrears timestamps use portable Python and database defaults so the new record persists in PostgreSQL and SQLite.</p>
+      <p><strong>Regression coverage:</strong> A fully unpaid 12-month source range persists 6000 arrears; paying two source months persists 5000; both tests verify the response, source academic year, stored arrears row and promoted student state. A same-class student from another academic year remains unchanged.</p>
+      <p><strong>Verification:</strong> Focused rollover/payment tests passed (21, with 2 PostgreSQL-only skips under SQLite); both skipped race cases separately passed on PostgreSQL. Full backend suite passed (101, with 2 skips). No frontend behavior changed for this issue.</p>
+      <p><strong>Database/deployment:</strong> No schema or migration change. Existing rollover records created before this fix are not automatically recalculated and require business-record reconciliation before correction.</p>
+      <p><a href="../../backend/app/api/routes/utilities.py"><code>backend/app/api/routes/utilities.py</code></a> &middot; <a href="../../backend/app/services/billing.py"><code>backend/app/services/billing.py</code></a> &middot; <a href="../../backend/app/models/promotion.py"><code>backend/app/models/promotion.py</code></a> &middot; <a href="../../backend/tests/test_rollover.py"><code>backend/tests/test_rollover.py</code></a></p>
+    </article>
+  </main>
+</body>
+</html>

@@ -183,6 +183,9 @@ export function AppShell({
     if (item.adminOnly && role !== 'admin') return false;
     if (role === 'admin') return true;
     if (item.permission === 'collect') return permissions.includes('collect') || permissions.includes('savings');
+    if (item.permission === 'academic') return permissions.includes('academic') || permissions.includes('exams');
+    if (item.href === '/students') return permissions.includes('students') || permissions.includes('attendance');
+    if (item.href === '/reports') return ['reports', 'transactions', 'expenses'].some((permission) => permissions.includes(permission));
     return permissions.includes(item.permission);
   }).map((item) =>
     item.permission === 'collect' && role !== 'admin' && !permissions.includes('collect')

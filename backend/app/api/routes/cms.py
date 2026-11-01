@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user, require_admin_user
+from app.api.deps import require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.cms import GalleryPhoto, WebContent
 from app.models.enums import ContentType
@@ -35,7 +35,7 @@ def create_content(
 @router.get("", response_model=dict)
 def list_content(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("cms")),
     content_type: ContentType | None = None,
     is_published: bool | None = None,
     page: int = Query(1, ge=1),
@@ -73,7 +73,7 @@ def add_photo(
 @router.get("/photos", response_model=dict)
 def list_photos(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("cms")),
     content_id: uuid.UUID | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -87,7 +87,7 @@ def list_photos(
 
 
 @router.get("/{content_id}", response_model=WebContentRead)
-def get_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> WebContentRead:
+def get_content(content_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_permission("cms"))) -> WebContentRead:
     content = db.execute(select(WebContent).where(WebContent.id == content_id).options(selectinload(WebContent.photos))).scalar_one_or_none()
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")

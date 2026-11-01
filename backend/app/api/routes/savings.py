@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user, require_permission
+from app.api.deps import require_admin_user, require_any_permission, require_permission
 from app.core.database import get_db
 from app.models.savings_entry import SavingsEntry
 from app.models.student import Student
@@ -59,7 +59,7 @@ def create_savings_entry(
 @router.get("", response_model=dict)
 def list_savings_entries(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("savings", "reports")),
     student_id: uuid.UUID | None = None,
     search: str | None = None,
     from_dt: datetime | None = Query(default=None, alias="from"),
@@ -94,7 +94,7 @@ def list_savings_entries(
 @router.get("/balances", response_model=dict)
 def list_student_savings_balances(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("savings", "reports")),
     search: str | None = None,
     class_name: str | None = None,
     class_prefix: str | None = None,

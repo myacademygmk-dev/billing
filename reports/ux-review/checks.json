@@ -1,0 +1,373 @@
+{
+  "checks": [
+    {
+      "name": "dashboard",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Dashboard",
+      "bodyText": " 2026\n\nRecent Fee Payments\n\nLatest payment activity\n\nView All\nStudent\tReceipt\tAmount\tPeriod\tDate\tAction\n\n-\n\tREC-001\t+₹500\tAug 2026\tAug 5, 2026\tReceipt",
+      "overflow": false
+    },
+    {
+      "name": "profile",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Profile",
+      "bodyText": "ory\n\n1 transaction\n\nExport CSV\nReceipt\tFee Period\tDate\tMode\tAmount\tNotes\tActions\nREC-001\tAug 2026\t05 Aug 2026\tcash\tRs. 500\tTuition payment\t\nPage 1 / 1",
+      "overflow": false
+    },
+    {
+      "name": "profile-family",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Profile",
+      "bodyText": "one\n\n-\n\nWhatsApp\n\n-\n\nFather occupation\n\n-\n\nMother occupation\n\n-\n\nStudent phone\n\n-\n\nStudent email\n\n-\n\nEmergency contact\n\n-\n\nEmergency phone\n\n-\n\nAddress",
+      "overflow": false
+    },
+    {
+      "name": "profile-enrollment",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Profile",
+      "bodyText": "Billing\nPersonal\nFamily & contact\nEnrollment\nEnrollment record\n\nAdmission number\n\n-\n\nJoined\n\n01 Jun 2025\n\nBatch\n\n-\nStudent status\nactive\nMark inactive",
+      "overflow": false
+    },
+    {
+      "name": "profile-status-dialog",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Profile",
+      "bodyText": "Billing\nPersonal\nFamily & contact\nEnrollment\nEnrollment record\n\nAdmission number\n\n-\n\nJoined\n\n01 Jun 2025\n\nBatch\n\n-\nStudent status\nactive\nMark inactive",
+      "overflow": false
+    },
+    {
+      "name": "savings",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Savings",
+      "bodyText": "500.00\nSavings Entries\nDate\tRoll No\tStudent\tMode\tAmount\tAdded By\tNotes\t\n9/8/2026, 3:30:00 PM\tS001\tAnanya Kumar\tCash\t₹500.00\tAdmin\tMonthly deposit\tEdit",
+      "overflow": false
+    },
+    {
+      "name": "payments",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Record Payment",
+      "bodyText": "✓ Selected\nNov 2026\n✓ Selected\n+ Show More Months\nPayment Mode\nCash\nUPI\nBank Transfer\nRemarks (optional)\n3 month(s) × ₹500\n₹1,500\nConfirm & Pay ₹1,500",
+      "overflow": false
+    },
+    {
+      "name": "academic",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Academics",
+      "bodyText": "res\nYear rollover\nAcademic Years\n2026-2027\n2026-06-01 → 2027-05-31\nCurrent\nClasses & Subjects\nAdd Class\n10 - A\nSubject\nMathematics (100)\nScience (100)",
+      "overflow": false
+    },
+    {
+      "name": "class-marks-dialog",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Academics",
+      "bodyText": "s\nAdd Mark\nEnter class marks\nNo marks recorded\n\nAdd marks for students in this exam.\n\nClass marks\nSelect class\n10 A\nSelect subject\nCancel\nSave 0 marks",
+      "overflow": false
+    },
+    {
+      "name": "fees",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Fee Structure & Discounts",
+      "bodyText": "00\t10\t2026-2027\tMonthly\tApply monthly fee\nDiscounts & Concessions\nAdd Discount\nName\tType\tValue\tDescription\tAction\nSibling concession\tPercentage\t10%\t-\t",
+      "overflow": false
+    },
+    {
+      "name": "students",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Management",
+      "bodyText": "1\tStudent 21\t10\t\n\n\tS022\tStudent 22\t10\t\n\n\tS023\tStudent 23\t10\t\n\n\tS024\tStudent 24\t10\t\n\n\tS025\tStudent 25\t10\t\nShowing 1–25 of 80 students\nPrev\n1\n2\n3\n4\nNext",
+      "overflow": false
+    },
+    {
+      "name": "student-attendance",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Student Management",
+      "bodyText": "\nSave\nSaturday, 12 Sept 2026\n|\nTotal: 0\nNo unsaved changes\n\nPresent\n\n0\n\nAbsent\n\n0\n\nLate / leave\n\n0 / 0\n\nUnmarked\n\n0\nSelect a class to view attendance.",
+      "overflow": false
+    },
+    {
+      "name": "reports",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Reports",
+      "bodyText": "\n\nJun\n\n20,000\n25.0k\n\nJul\n\n25,000\n30.0k\n\nAug\n\n30,000\n35.0k\n\nSep\n\n35,000\nPayment methods\n\nJan 2026 – Sep 2026\n\nCash\nRs. 30,000\n\n40%\n\nUpi\nRs. 45,000\n\n60%",
+      "overflow": false
+    },
+    {
+      "name": "reports-students",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Reports",
+      "bodyText": "ollected\n\nRs. 34,000\n\nCollected today\n\nRs. 2,500\nStudents paid\n85%\nStudent payment status\nSep 2026\nNo students found\n\nNo data for the selected filters",
+      "overflow": false
+    },
+    {
+      "name": "reports-transactions",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Reports",
+      "bodyText": "s\nCash\nUPI\nBank\nExport\nBill\tReceipt\tDate\tStudent\tPeriod\tMode\tAmount\tBy\t\n\tREC-001\t8/5/2026\t-\tAug 2026\tCash\t500\t-\t\nReceipt\nReverse\nPage 1 of 1\nPrev\nNext",
+      "overflow": false
+    },
+    {
+      "name": "reports-expenses",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Reports",
+      "bodyText": "ings\nINCOME (FEES)\n₹0\nEXPENSES\n₹0\nSAVINGS\n₹0\nAdd Expense\nNo expenses this month\n\nTrack rent, salary, electricity, and other expenses here\n\nAdd Expense",
+      "overflow": false
+    },
+    {
+      "name": "reports-savings",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Reports",
+      "bodyText": "s\n10\n11\n12\nCLASS-WISE SUMMARY\nUnknown\n1 students\n+₹NaN\n-₹NaN\n₹NaN\nRoll No\tStudent\tClass\tDeposited\tWithdrawn\tBalance\nS001\tAnanya Kumar\t-\t₹NaN\t₹NaN\t₹NaN",
+      "overflow": false
+    },
+    {
+      "name": "staff",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Staff",
+      "bodyText": "ce.\n\nStaff\nAttendance\nUser Accounts\nStaff Members (1)\nAdd Staff\nCode\tName\tRole\tPhone\tQualification\tSalary\tAction\nT001\tPriya Raman\tteacher\t-\t-\t₹20,000\t",
+      "overflow": false
+    },
+    {
+      "name": "staff-attendance",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Staff",
+      "bodyText": "an\nT001\nIN\n—\nOUT\n—\nNot Clocked In\nClock In\nMonthly Analytics\nNo data for this month\n\nAttendance records will appear here once staff start clocking in.",
+      "overflow": false
+    },
+    {
+      "name": "cms",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Website CMS",
+      "bodyText": "monials\nFeedback and testimonials from parents/students\nAchievements\n\n0 items\n\nAdd Achievement\n📭\n\nNo achievements yet. Click the button above to add.",
+      "overflow": false
+    },
+    {
+      "name": "website-settings",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Website CMS",
+      "bodyText": ".\", \"role\":\"...\", \"image\":\"...\"}]\n\nFormer Staff\n\nJSON array of former staff, e.g. [{\"name\":\"...\", \"role\":\"...\", \"years\":\"...\"}]\n\nSave Website Settings",
+      "overflow": false
+    },
+    {
+      "name": "settings",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Admin Settings",
+      "bodyText": "mic year to bulk-promote students and generate fresh billing data.\nStart Rollover Wizard\n\nDanger Zone\n\nDelete all students, fees, payments data\n\nReset",
+      "overflow": false
+    },
+    {
+      "name": "enquiries",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "Enquiries",
+      "bodyText": "cted\nDemo Scheduled\nEnrolled\nLost\n0 enquiries\nNo enquiries yet\n\nWhen parents submit the contact form on your website, their requests will appear here.",
+      "overflow": false
+    },
+    {
+      "name": "dashboard",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Dashboard",
+      "bodyText": " 2026\n\nRecent Fee Payments\n\nLatest payment activity\n\nView All\nStudent\tReceipt\tAmount\tPeriod\tDate\tAction\n\n-\n\tREC-001\t+₹500\tAug 2026\tAug 5, 2026\tReceipt",
+      "overflow": false
+    },
+    {
+      "name": "profile",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Student Profile",
+      "bodyText": "ory\n\n1 transaction\n\nExport CSV\nReceipt\tFee Period\tDate\tMode\tAmount\tNotes\tActions\nREC-001\tAug 2026\t05 Aug 2026\tcash\tRs. 500\tTuition payment\t\nPage 1 / 1",
+      "overflow": false
+    },
+    {
+      "name": "profile-family",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Student Profile",
+      "bodyText": "one\n\n-\n\nWhatsApp\n\n-\n\nFather occupation\n\n-\n\nMother occupation\n\n-\n\nStudent phone\n\n-\n\nStudent email\n\n-\n\nEmergency contact\n\n-\n\nEmergency phone\n\n-\n\nAddress",
+      "overflow": false
+    },
+    {
+      "name": "profile-enrollment",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Student Profile",
+      "bodyText": "Billing\nPersonal\nFamily & contact\nEnrollment\nEnrollment record\n\nAdmission number\n\n-\n\nJoined\n\n01 Jun 2025\n\nBatch\n\n-\nStudent status\nactive\nMark inactive",
+      "overflow": false
+    },
+    {
+      "name": "profile-status-dialog",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Student Profile",
+      "bodyText": "Billing\nPersonal\nFamily & contact\nEnrollment\nEnrollment record\n\nAdmission number\n\n-\n\nJoined\n\n01 Jun 2025\n\nBatch\n\n-\nStudent status\nactive\nMark inactive",
+      "overflow": false
+    },
+    {
+      "name": "savings",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Savings",
+      "bodyText": "500.00\nSavings Entries\nDate\tRoll No\tStudent\tMode\tAmount\tAdded By\tNotes\t\n9/8/2026, 3:30:00 PM\tS001\tAnanya Kumar\tCash\t₹500.00\tAdmin\tMonthly deposit\tEdit",
+      "overflow": false
+    },
+    {
+      "name": "payments",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Record Payment",
+      "bodyText": "✓ Selected\nNov 2026\n✓ Selected\n+ Show More Months\nPayment Mode\nCash\nUPI\nBank Transfer\nRemarks (optional)\n3 month(s) × ₹500\n₹1,500\nConfirm & Pay ₹1,500",
+      "overflow": false
+    },
+    {
+      "name": "academic",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Academics",
+      "bodyText": "res\nYear rollover\nAcademic Years\n2026-2027\n2026-06-01 → 2027-05-31\nCurrent\nClasses & Subjects\nAdd Class\n10 - A\nSubject\nMathematics (100)\nScience (100)",
+      "overflow": false
+    },
+    {
+      "name": "class-marks-dialog",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Academics",
+      "bodyText": "s\nAdd Mark\nEnter class marks\nNo marks recorded\n\nAdd marks for students in this exam.\n\nClass marks\nSelect class\n10 A\nSelect subject\nCancel\nSave 0 marks",
+      "overflow": false
+    },
+    {
+      "name": "fees",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Fee Structure & Discounts",
+      "bodyText": "00\t10\t2026-2027\tMonthly\tApply monthly fee\nDiscounts & Concessions\nAdd Discount\nName\tType\tValue\tDescription\tAction\nSibling concession\tPercentage\t10%\t-\t",
+      "overflow": false
+    },
+    {
+      "name": "students",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Student Management",
+      "bodyText": "1\tStudent 21\t10\t\n\n\tS022\tStudent 22\t10\t\n\n\tS023\tStudent 23\t10\t\n\n\tS024\tStudent 24\t10\t\n\n\tS025\tStudent 25\t10\t\nShowing 1–25 of 80 students\nPrev\n1\n2\n3\n4\nNext",
+      "overflow": false
+    },
+    {
+      "name": "student-attendance",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Student Management",
+      "bodyText": "\nSave\nSaturday, 12 Sept 2026\n|\nTotal: 0\nNo unsaved changes\n\nPresent\n\n0\n\nAbsent\n\n0\n\nLate / leave\n\n0 / 0\n\nUnmarked\n\n0\nSelect a class to view attendance.",
+      "overflow": false
+    },
+    {
+      "name": "reports",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Reports",
+      "bodyText": "\n\nJun\n\n20,000\n25.0k\n\nJul\n\n25,000\n30.0k\n\nAug\n\n30,000\n35.0k\n\nSep\n\n35,000\nPayment methods\n\nJan 2026 – Sep 2026\n\nCash\nRs. 30,000\n\n40%\n\nUpi\nRs. 45,000\n\n60%",
+      "overflow": false
+    },
+    {
+      "name": "reports-students",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Reports",
+      "bodyText": "ollected\n\nRs. 34,000\n\nCollected today\n\nRs. 2,500\nStudents paid\n85%\nStudent payment status\nSep 2026\nNo students found\n\nNo data for the selected filters",
+      "overflow": false
+    },
+    {
+      "name": "reports-transactions",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Reports",
+      "bodyText": "s\nCash\nUPI\nBank\nExport\nBill\tReceipt\tDate\tStudent\tPeriod\tMode\tAmount\tBy\t\n\tREC-001\t8/5/2026\t-\tAug 2026\tCash\t500\t-\t\nReceipt\nReverse\nPage 1 of 1\nPrev\nNext",
+      "overflow": false
+    },
+    {
+      "name": "reports-expenses",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Reports",
+      "bodyText": "ings\nINCOME (FEES)\n₹0\nEXPENSES\n₹0\nSAVINGS\n₹0\nAdd Expense\nNo expenses this month\n\nTrack rent, salary, electricity, and other expenses here\n\nAdd Expense",
+      "overflow": false
+    },
+    {
+      "name": "reports-savings",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Reports",
+      "bodyText": "s\n10\n11\n12\nCLASS-WISE SUMMARY\nUnknown\n1 students\n+₹NaN\n-₹NaN\n₹NaN\nRoll No\tStudent\tClass\tDeposited\tWithdrawn\tBalance\nS001\tAnanya Kumar\t-\t₹NaN\t₹NaN\t₹NaN",
+      "overflow": false
+    },
+    {
+      "name": "staff",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Staff",
+      "bodyText": "ce.\n\nStaff\nAttendance\nUser Accounts\nStaff Members (1)\nAdd Staff\nCode\tName\tRole\tPhone\tQualification\tSalary\tAction\nT001\tPriya Raman\tteacher\t-\t-\t₹20,000\t",
+      "overflow": false
+    },
+    {
+      "name": "staff-attendance",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Staff",
+      "bodyText": "an\nT001\nIN\n—\nOUT\n—\nNot Clocked In\nClock In\nMonthly Analytics\nNo data for this month\n\nAttendance records will appear here once staff start clocking in.",
+      "overflow": false
+    },
+    {
+      "name": "cms",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Website CMS",
+      "bodyText": "monials\nFeedback and testimonials from parents/students\nAchievements\n\n0 items\n\nAdd Achievement\n📭\n\nNo achievements yet. Click the button above to add.",
+      "overflow": false
+    },
+    {
+      "name": "website-settings",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Website CMS",
+      "bodyText": ".\", \"role\":\"...\", \"image\":\"...\"}]\n\nFormer Staff\n\nJSON array of former staff, e.g. [{\"name\":\"...\", \"role\":\"...\", \"years\":\"...\"}]\n\nSave Website Settings",
+      "overflow": false
+    },
+    {
+      "name": "settings",
+      "width": 390,
+      "scrollWidth": 384,
+      "heading": "Admin Settings",
+      "bodyText": "mic year to bulk-promote students and generate fresh billing data.\nStart Rollover Wizard\n\nDanger Zone\n\nDelete all students, fees, payments data\n\nReset",
+      "overflow": false
+    },
+    {
+      "name": "enquiries",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "Enquiries",
+      "bodyText": "cted\nDemo Scheduled\nEnrolled\nLost\n0 enquiries\nNo enquiries yet\n\nWhen parents submit the contact form on your website, their requests will appear here.",
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

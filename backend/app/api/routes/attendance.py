@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select, and_, extract
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import require_permission
 from app.core.database import get_db
 from app.models.attendance import StaffAttendance, StaffClockRecord, StudentAttendance
 from app.models.staff import Staff
@@ -78,7 +78,7 @@ def bulk_mark_student_attendance(
 def list_student_attendance(
     attendance_date: date = Query(alias="date"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
     class_name: str | None = None,
 ) -> dict:
     """Get all student attendance for a given date. Returns all active students with their status."""
@@ -119,7 +119,7 @@ def list_student_attendance(
 def student_attendance_summary(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
 ) -> AttendanceSummary:
@@ -145,7 +145,7 @@ def student_attendance_summary(
 def student_attendance_history(
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
 ) -> list[StudentAttendanceRead]:
@@ -203,7 +203,7 @@ def bulk_mark_staff_attendance(
 def list_staff_attendance(
     attendance_date: date = Query(alias="date"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
 ) -> dict:
     """Get all staff attendance for a given date."""
     from app.models.enums import StaffStatus
@@ -361,7 +361,7 @@ def staff_clock_out(
 @router.get("/staff/clock-records", response_model=list[StaffClockRecordRead])
 def list_clock_records(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     staff_id: uuid.UUID | None = Query(default=None),
@@ -385,7 +385,7 @@ def list_clock_records(
 @router.get("/staff/clock-analytics", response_model=list[StaffClockAnalytics])
 def staff_clock_analytics(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("attendance")),
     month: int = Query(ge=1, le=12),
     year: int = Query(ge=2020),
     staff_id: uuid.UUID | None = Query(default=None),

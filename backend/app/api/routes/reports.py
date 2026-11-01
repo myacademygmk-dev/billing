@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select, extract
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_any_permission, require_permission
 from app.core.database import get_db
 from app.models.enums import StudentStatus
 from app.models.payment import Payment
@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get("/summary", response_model=dict)
 def summary(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_any_permission("reports", "dashboard")),
     from_dt: datetime | None = Query(default=None, alias="from"),
     to_dt: datetime | None = Query(default=None, alias="to"),
     month: date | None = Query(default=None),
@@ -90,7 +90,7 @@ def summary(
 @router.get("/pending", response_model=list[dict])
 def pending(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("reports")),
     status: StudentStatus | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(200, ge=1, le=500),
@@ -119,7 +119,7 @@ def monthly_students(
     page: int = Query(1, ge=1),
     page_size: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("reports")),
 ) -> list[dict]:
     selected_month = normalize_month(month)
     stmt = monthly_students_query(selected_month, payment_state, search, class_code, class_name).where(
@@ -150,7 +150,7 @@ def monthly_students(
 def daily(
     report_date: date = Query(alias="date"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("reports")),
 ) -> list[dict]:
     start = datetime.combine(report_date, time.min, tzinfo=UTC)
     end = datetime.combine(report_date, time.max, tzinfo=UTC)
@@ -172,7 +172,7 @@ def annual_revenue(
     from_month: date | None = Query(default=None, alias="from", description="Start month (YYYY-MM-DD)"),
     to_month: date | None = Query(default=None, alias="to", description="End month (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("reports")),
 ) -> dict:
     """Annual revenue summary: monthly breakdown, mode breakdown, and totals.
     

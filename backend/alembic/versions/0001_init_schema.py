@@ -9,12 +9,10 @@ Create Date: 2026-02-01
 from __future__ import annotations
 
 import os
-import uuid
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from passlib.context import CryptContext
 
 
 revision = "0001_init_schema"
@@ -149,14 +147,8 @@ def upgrade() -> None:
         ).bindparams(prefix=receipt_prefix)
     )
 
-    pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    admin_id = uuid.uuid4()
-    admin_hash = pwd.hash("admin123")
-    op.execute(
-        sa.text(
-            "INSERT INTO users (id, username, password_hash, role, created_at) VALUES (:id, 'admin', :ph, 'admin', NOW())"
-        ).bindparams(id=admin_id, ph=admin_hash)
-    )
+    # Provision an administrator explicitly with python -m app.bootstrap_admin.
+    # Schema migrations must never install a publicly known credential.
 
     op.execute(
         """

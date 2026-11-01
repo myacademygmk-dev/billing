@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { StudentPicker } from '@/components/app/student-picker';
-import { ClassMarksDialog } from '@/components/app/class-marks-dialog';
+import { ExamsTab } from '@/components/app/exams-tab';
 import { BookOpen, GraduationCap, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -16,27 +15,27 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { EmptyState, EmptyStateIcon } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { SkeletonTable } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toaster';
 import { apiFetch } from '@/lib/api';
 
 type AcademicYear = { id: string; name: string; start_date: string; end_date: string; is_current: boolean };
 type ClassSection = { id: string; class_name: string; section: string | null; subjects: { id: string; name: string; code: string | null; max_marks: number }[] };
-type Exam = { id: string; name: string; exam_type: string; start_date?: string | null; end_date?: string | null };
-type MarkItem = { id: string; student_name?: string | null; subject_name?: string | null; marks_obtained: string; max_marks: number; grade?: string | null };
 
 export default function AcademicPage() {
   const [activeTab, setActiveTab] = useState<'academic' | 'exams'>('academic');
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const me = useQuery<{ role: string; permissions: string[] }>({ queryKey: ['auth-me'], queryFn: () => apiFetch('/auth/me') });
+  const canAcademic = me.data?.role === 'admin' || !!me.data?.permissions.includes('academic');
+  const canExams = me.data?.role === 'admin' || !!me.data?.permissions.includes('exams');
+  useEffect(() => { if (me.data && !canAcademic && canExams) setActiveTab('exams'); }, [me.data, canAcademic, canExams]);
   const years = useQuery<AcademicYear[]>({ queryKey: ['academicYears'], queryFn: () => apiFetch('/academic/years') });
   useEffect(() => {
     if (!selectedYear && years.data?.length) setSelectedYear((years.data.find((year) => year.is_current) ?? years.data[0]).id);
   }, [years.data, selectedYear]);
 
   const tabNav = (
-    <PageTabs<'academic' | 'exams'> label="Academic sections" items={[{ id: 'academic', label: 'Years & Classes', icon: GraduationCap }, { id: 'exams', label: 'Exams & Marks', icon: BookOpen }]} value={activeTab} onValueChange={setActiveTab} />
+    <PageTabs<'academic' | 'exams'> label="Academic sections" items={[...(canAcademic ? [{ id: 'academic' as const, label: 'Years & Classes', icon: GraduationCap }] : []), ...(canExams ? [{ id: 'exams' as const, label: 'Exams & Marks', icon: BookOpen }] : [])]} value={activeTab} onValueChange={setActiveTab} />
   );
 
   return (
@@ -46,12 +45,12 @@ export default function AcademicPage() {
           <option value="">Select academic year</option>
           {years.data?.map((year) => <option key={year.id} value={year.id}>{year.name}{year.is_current ? ' (current)' : ''}</option>)}
         </Select>
-        <div className="flex gap-4 text-sm font-medium text-[var(--accent)]"><Link href="/fees">Fee structures</Link><Link href="/settings">Year rollover</Link></div>
+        <Link className="text-sm font-medium text-[var(--accent)]" href="/settings">Year rollover</Link>
       </div>
       <div className="flex-1 min-h-0 bg-white overflow-auto">
         <div className="p-3 sm:p-4">
-          {activeTab === 'academic' && <AcademicTab selectedYear={selectedYear} setSelectedYear={setSelectedYear} />}
-          {activeTab === 'exams' && <ExamsTab key={selectedYear} yearId={selectedYear} />}
+          {activeTab === 'academic' && canAcademic && <AcademicTab selectedYear={selectedYear} setSelectedYear={setSelectedYear} />}
+          {activeTab === 'exams' && canExams && <ExamsTab key={selectedYear} yearId={selectedYear} />}
         </div>
       </div>
     </AppShell>
@@ -216,162 +215,6 @@ function AcademicTab({ selectedYear, setSelectedYear }: { selectedYear: string |
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  );
-}
-
-function ExamsTab({ yearId }: { yearId: string | null }) {
-  const { toast } = useToast();
-  const qc = useQueryClient();
-  const [showAddExam, setShowAddExam] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<string | null>(null);
-  const [showAddMark, setShowAddMark] = useState(false);
-  const [showClassMarks, setShowClassMarks] = useState(false);
-  const [examForm, setExamForm] = useState({ name: '', exam_type: 'quarterly', start_date: '', end_date: '' });
-  const [markForm, setMarkForm] = useState({ student_id: '', subject_id: '', marks_obtained: '', max_marks: '100' });
-  const [studentSearch, setStudentSearch] = useState('');
-  const [markClass, setMarkClass] = useState('');
-  const classes = useQuery<ClassSection[]>({ queryKey: ['classesForYear', yearId], queryFn: () => apiFetch(`/academic/classes?academic_year_id=${yearId}`), enabled: !!yearId });
-  const subjects = classes.data?.find((item) => item.id === markClass)?.subjects ?? [];
-
-  const years = useQuery<AcademicYear[]>({ queryKey: ['academicYears'], queryFn: () => apiFetch('/academic/years') });
-  const currentYear = years.data?.find((y) => y.id === yearId);
-
-  const exams = useQuery<{ items: Exam[]; total: number }>({
-    queryKey: ['exams', currentYear?.id],
-    queryFn: () => apiFetch(`/exams?academic_year_id=${currentYear?.id}`),
-    enabled: !!currentYear?.id,
-  });
-
-  const marks = useQuery<{ items: MarkItem[]; total: number }>({
-    queryKey: ['marks', selectedExam],
-    queryFn: () => apiFetch(`/exams/marks?exam_id=${selectedExam}`),
-    enabled: !!selectedExam,
-  });
-
-  const createExam = useMutation({
-    mutationFn: (data: Record<string, unknown>) => apiFetch('/exams', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['exams'] }); setShowAddExam(false); setExamForm({ name: '', exam_type: 'quarterly', start_date: '', end_date: '' }); toast({ title: 'Exam created', variant: 'success' }); },
-    onError: (e) => toast({ title: 'Failed', description: String(e.message || e), variant: 'error' }),
-  });
-
-  const createMark = useMutation({
-    mutationFn: (data: Record<string, unknown>) => apiFetch('/exams/marks', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['marks'] }); setShowAddMark(false); setMarkForm({ student_id: '', subject_id: '', marks_obtained: '', max_marks: '100' }); toast({ title: 'Mark recorded', variant: 'success' }); },
-    onError: (e) => toast({ title: 'Failed', description: String(e.message || e), variant: 'error' }),
-  });
-
-  return (
-    <>
-      <div className="page-grid">
-        <Card square transparent>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle as="h4">Exams {currentYear ? `(${currentYear.name})` : ''}</CardTitle>
-              <Button size="sm" disabled={!currentYear} onClick={() => setShowAddExam(true)}><Plus className="mr-1 h-3.5 w-3.5" />New Exam</Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {exams.isLoading ? (
-              <div className="flex items-center gap-2 py-4 text-[var(--muted)]"><Spinner size="sm" /> Loading</div>
-            ) : !exams.data?.items.length ? (
-              <EmptyState icon={<EmptyStateIcon type="calendar" size={28} />} title="No exams yet" description="Create an exam to start recording marks." compact action={<Button size="sm" onClick={() => setShowAddExam(true)}><Plus className="mr-1 h-3.5 w-3.5" />New Exam</Button>} />
-            ) : (
-              <div className="space-y-2">
-                {exams.data.items.map((exam) => (
-                  <button key={exam.id} onClick={() => setSelectedExam(exam.id)} className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${selectedExam === exam.id ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--field-border)] hover:bg-[var(--surface-subtle)]'}`}>
-                    <div className="font-semibold text-[var(--heading)]">{exam.name}</div>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted)]">
-                      <Badge variant="default">{exam.exam_type.replace('_', ' ')}</Badge>
-                      {exam.start_date && <span>{exam.start_date}</span>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {selectedExam && (
-          <Card square transparent>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle as="h4">Marks</CardTitle>
-                <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => setShowAddMark(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add Mark</Button><Button size="sm" disabled={!classes.data?.length} onClick={() => setShowClassMarks(true)}>Enter class marks</Button></div>
-              </div>
-            </CardHeader>
-            <CardContent className="px-0 sm:px-0">
-              {marks.isLoading ? (
-                <SkeletonTable rows={4} cols={4} />
-              ) : !marks.data?.items.length ? (
-                <EmptyState icon={<EmptyStateIcon type="data" size={28} />} title="No marks recorded" description="Add marks for students in this exam." compact />
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <THead><tr><TH>Student</TH><TH>Subject</TH><TH>Marks</TH><TH>Grade</TH></tr></THead>
-                    <TBody>
-                      {marks.data.items.map((m) => (
-                        <TR key={m.id}>
-                          <TD className="font-medium text-[var(--heading)]">{m.student_name ?? '-'}</TD>
-                          <TD>{m.subject_name ?? '-'}</TD>
-                          <TD><span className="font-medium">{m.marks_obtained}</span><span className="text-[var(--muted)]">/{m.max_marks}</span></TD>
-                          <TD>{m.grade ? <Badge variant="accent">{m.grade}</Badge> : '-'}</TD>
-                        </TR>
-                      ))}
-                    </TBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <Dialog open={showAddExam} onOpenChange={setShowAddExam}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Create Exam</DialogTitle></DialogHeader>
-          <DialogBody>
-            <div className="grid gap-4">
-              <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Exam Name *</label><Input placeholder="e.g. First Quarterly" value={examForm.name} onChange={(e) => setExamForm({ ...examForm, name: e.target.value })} /></div>
-              <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Type</label>
-                <Select value={examForm.exam_type} onChange={(e) => setExamForm({ ...examForm, exam_type: e.target.value })}>
-                  <option value="monthly_test">Monthly Test</option><option value="quarterly">Quarterly</option><option value="half_yearly">Half Yearly</option><option value="annual">Annual</option><option value="special">Special</option>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Start Date</label><Input type="date" value={examForm.start_date} onChange={(e) => setExamForm({ ...examForm, start_date: e.target.value })} /></div>
-                <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">End Date</label><Input type="date" value={examForm.end_date} onChange={(e) => setExamForm({ ...examForm, end_date: e.target.value })} /></div>
-              </div>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddExam(false)}>Cancel</Button>
-            <Button onClick={() => createExam.mutate({ ...examForm, academic_year_id: currentYear?.id, start_date: examForm.start_date || null, end_date: examForm.end_date || null })} disabled={!examForm.name} loading={createExam.isPending}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAddMark} onOpenChange={setShowAddMark}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Record Mark</DialogTitle></DialogHeader>
-          <DialogBody>
-            <div className="grid gap-4">
-              <div><label className="mb-1.5 block text-sm font-medium">Class</label><Select aria-label="Marks class" value={markClass} onChange={(event) => { setMarkClass(event.target.value); setStudentSearch(''); setMarkForm({ student_id: '', subject_id: '', marks_obtained: '', max_marks: '100' }); }}><option value="">Select class</option>{classes.data?.map((item) => <option key={item.id} value={item.id}>{item.class_name} {item.section}</option>)}</Select></div>
-              {markClass && <div><label className="mb-1.5 block text-sm font-medium">Student</label><StudentPicker value={studentSearch} className={classes.data?.find((item) => item.id === markClass)?.class_name} onChange={(value) => { setStudentSearch(value); setMarkForm({ ...markForm, student_id: '' }); }} onSelect={(student) => { setStudentSearch(`${student.name} (${student.student_code})`); setMarkForm({ ...markForm, student_id: student.id }); }} /></div>}
-              <div><label className="mb-1.5 block text-sm font-medium">Subject</label><Select aria-label="Marks subject" disabled={!markClass} value={markForm.subject_id} onChange={(event) => { const subject = subjects.find((item) => item.id === event.target.value); setMarkForm({ ...markForm, subject_id: event.target.value, max_marks: String(subject?.max_marks ?? 100) }); }}><option value="">Select subject</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</Select></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Marks *</label><Input type="number" placeholder="85" value={markForm.marks_obtained} onChange={(e) => setMarkForm({ ...markForm, marks_obtained: e.target.value })} /></div>
-                <div><label className="mb-1.5 block text-sm font-medium text-[var(--heading)]">Max Marks</label><Input type="number" value={markForm.max_marks} onChange={(e) => setMarkForm({ ...markForm, max_marks: e.target.value })} /></div>
-              </div>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddMark(false)}>Cancel</Button>
-            <Button onClick={() => createMark.mutate({ exam_id: selectedExam, ...markForm, marks_obtained: Number(markForm.marks_obtained), max_marks: Number(markForm.max_marks) })} disabled={!markForm.student_id || !markForm.subject_id || markForm.marks_obtained === '' || !Number.isFinite(Number(markForm.marks_obtained)) || Number(markForm.marks_obtained) < 0 || Number(markForm.max_marks) <= 0 || Number(markForm.marks_obtained) > Number(markForm.max_marks)} loading={createMark.isPending}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {showClassMarks && selectedExam && <ClassMarksDialog examId={selectedExam} classes={classes.data ?? []} onClose={() => setShowClassMarks(false)} />}
     </>
   );
 }

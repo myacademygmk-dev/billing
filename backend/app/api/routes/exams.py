@@ -5,15 +5,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin_user, require_permission
+from app.api.deps import require_admin_user, require_permission
 from app.core.database import get_db
 from app.models.exam import Exam, Mark
 from app.models.student import Student
-from app.models.academic import Subject
+from app.models.academic import Subject, ClassSection, AcademicYear
+from app.models.enums import StudentStatus
 from app.models.user import User
-from app.schemas.exam import BulkMarkCreate, ExamCreate, ExamRead, MarkCreate, MarkRead
+from app.schemas.exam import BulkMarkCreate, ExamCreate, ExamRead, MarkCreate, MarkRead, MarkEntry
 
 router = APIRouter()
 
@@ -26,6 +28,12 @@ def create_exam(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_user),
 ) -> ExamRead:
+    if not db.get(AcademicYear, payload.academic_year_id):
+        raise HTTPException(status_code=404, detail="Academic year not found")
+    if payload.class_section_id:
+        class_section = db.get(ClassSection, payload.class_section_id)
+        if not class_section or class_section.academic_year_id != payload.academic_year_id:
+            raise HTTPException(status_code=422, detail="Class must belong to the exam's academic year")
     exam = Exam(**payload.model_dump())
     db.add(exam)
     db.commit()
@@ -36,7 +44,7 @@ def create_exam(
 @router.get("", response_model=dict)
 def list_exams(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("exams")),
     academic_year_id: uuid.UUID | None = None,
     class_section_id: uuid.UUID | None = None,
     page: int = Query(1, ge=1),
@@ -60,11 +68,7 @@ def create_mark(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("exams")),
 ) -> MarkRead:
-    mark = Mark(**payload.model_dump(), entered_by=current_user.id)
-    db.add(mark)
-    db.commit()
-    db.refresh(mark)
-    return _mark_read(db, mark)
+    return _save_marks(db, payload.exam_id, [MarkEntry.model_validate(payload.model_dump())], current_user)[0]
 
 
 @router.post("/marks/bulk", response_model=list[MarkRead], status_code=201)
@@ -73,32 +77,77 @@ def bulk_create_marks(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("exams")),
 ) -> list[MarkRead]:
-    exam = db.get(Exam, payload.exam_id)
+    return _save_marks(db, payload.exam_id, payload.marks, current_user)
+
+
+def _save_marks(db: Session, exam_id: uuid.UUID, entries: list[MarkEntry], user: User) -> list[MarkRead]:
+    # Serialize competing sheets for this exam. Validate the entire batch before writing.
+    exam = db.execute(select(Exam).where(Exam.id == exam_id).with_for_update()).scalar_one_or_none()
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
+    students = {s.id: s for s in db.execute(select(Student).where(Student.id.in_({e.student_id for e in entries}))).scalars()}
+    subjects = {s.id: s for s in db.execute(select(Subject).where(Subject.id.in_({e.subject_id for e in entries}))).scalars()}
+    classes = {c.id: c for c in db.execute(select(ClassSection).where(ClassSection.id.in_({s.class_section_id for s in subjects.values()}))).scalars()}
+    recorded = set(db.execute(select(Mark.student_id, Mark.subject_id).where(Mark.exam_id == exam_id)).all())
+    seen = set()
+    for entry in entries:
+        key = (entry.student_id, entry.subject_id)
+        if key in seen or key in recorded:
+            raise HTTPException(status_code=409, detail="A student/subject mark is already recorded. Reload the sheet before saving.")
+        seen.add(key)
+        student, subject = students.get(entry.student_id), subjects.get(entry.subject_id)
+        if not student or not subject:
+            raise HTTPException(status_code=404, detail="Student or subject not found")
+        cls = classes[subject.class_section_id]
+        if cls.academic_year_id != exam.academic_year_id or (exam.class_section_id and cls.id != exam.class_section_id):
+            raise HTTPException(status_code=422, detail="Subject does not belong to this exam's class and academic year")
+        if student.status != StudentStatus.active or student.class_name != cls.class_name:
+            raise HTTPException(status_code=422, detail=f"{student.name} is not an active student in {cls.class_name}")
+        if entry.max_marks != subject.max_marks:
+            raise HTTPException(status_code=422, detail=f"Maximum for {subject.name} must be {subject.max_marks}")
     created = []
-    for entry in payload.marks:
+    for entry in entries:
         mark = Mark(
-            exam_id=payload.exam_id,
+            exam_id=exam_id,
             student_id=entry.student_id,
             subject_id=entry.subject_id,
             marks_obtained=entry.marks_obtained,
             max_marks=entry.max_marks,
             grade=entry.grade,
             remarks=entry.remarks,
-            entered_by=current_user.id,
+            entered_by=user.id,
         )
         db.add(mark)
         created.append(mark)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Marks changed while saving. Reload the sheet and try again.")
     return [_mark_read(db, m) for m in created]
+
+
+@router.get("/{exam_id}/roster", response_model=dict)
+def exam_roster(
+    exam_id: uuid.UUID,
+    class_section_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission("exams")),
+) -> dict:
+    exam, cls = db.get(Exam, exam_id), db.get(ClassSection, class_section_id)
+    if not exam or not cls:
+        raise HTTPException(status_code=404, detail="Exam or class not found")
+    if cls.academic_year_id != exam.academic_year_id or (exam.class_section_id and exam.class_section_id != cls.id):
+        raise HTTPException(status_code=422, detail="Class does not belong to this exam")
+    students = db.execute(select(Student).where(Student.class_name == cls.class_name, Student.status == StudentStatus.active).order_by(Student.student_code)).scalars().all()
+    return {"items": [{"id": str(s.id), "name": s.name, "student_code": s.student_code} for s in students], "total": len(students)}
 
 
 @router.get("/marks", response_model=dict)
 def list_marks(
     exam_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("exams")),
     student_id: uuid.UUID | None = None,
 ) -> dict:
     stmt = select(Mark).where(Mark.exam_id == exam_id)
@@ -109,7 +158,7 @@ def list_marks(
 
 
 @router.get("/{exam_id}", response_model=ExamRead)
-def get_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> ExamRead:
+def get_exam(exam_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(require_permission("exams"))) -> ExamRead:
     exam = db.get(Exam, exam_id)
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
@@ -150,7 +199,7 @@ def download_report_card(
     exam_id: uuid.UUID,
     student_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_permission("exams")),
 ) -> Response:
     from app.api.routes.settings import get_institution_branding
     from app.services.report_card_pdf import MarkEntry as PdfMarkEntry, render_report_card_pdf

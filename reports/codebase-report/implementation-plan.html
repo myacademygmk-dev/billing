@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing Product Completion — Change Plan</title>
+  <style>
+    :root { --bg:#f7f8fb; --panel:#fff; --text:#182230; --muted:#5b6678; --border:#d8dee8; --accent:#2563eb; --p1:#b42318; --p2:#b54708; --p3:#667085; --ok:#067647; --code:#101828; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .page { max-width:1160px; margin:auto; padding:36px 22px 64px; }
+    header { border-bottom:1px solid var(--border); padding-bottom:24px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem,5vw,3.2rem); line-height:1.08; }
+    h2 { margin:34px 0 14px; font-size:1.35rem; }
+    h3 { margin:24px 0 8px; font-size:1.05rem; }
+    p { margin:0 0 12px; }
+    .muted { color:var(--muted); }
+    .notice { margin:18px 0; padding:14px 16px; border:1px solid #bfdbfe; border-left:4px solid var(--accent); border-radius:8px; background:#eff6ff; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; }
+    .metric { font-size:1.8rem; font-weight:750; line-height:1; margin-bottom:5px; }
+    .p1 { color:var(--p1); } .p2 { color:var(--p2); } .p3 { color:var(--p3); } .ok { color:var(--ok); }
+    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); font-size:.92rem; }
+    th,td { padding:11px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    th { background:#f2f4f7; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+    tr:last-child td { border-bottom:0; }
+    code { color:var(--code); background:#f2f4f7; border-radius:4px; padding:1px 4px; font-size:.88em; }
+    ul,ol { margin:8px 0 14px 22px; padding:0; }
+    li { margin:5px 0; }
+    .status { display:inline-block; border-radius:999px; padding:2px 8px; font-size:.75rem; font-weight:700; }
+    .status-p1 { color:#912018; background:#fee4e2; } .status-p2 { color:#93370d; background:#ffead5; } .status-p3 { color:#475467; background:#eaecf0; }
+    .refs { color:var(--muted); font-size:.88rem; }
+    footer { margin-top:36px; padding-top:16px; border-top:1px solid var(--border); color:var(--muted); font-size:.88rem; }
+    @media (max-width:720px) { .page { padding:24px 14px 44px; } table { display:block; overflow-x:auto; white-space:normal; } th,td { min-width:150px; } h1 { font-size:2rem; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Billing Product Completion</h1>
+      <p class="muted">Implementation plan for confirmed P0/P1 findings · prepared after read-only product, UI/UX, and reliability audits</p>
+      <p><strong>Scope rule:</strong> no subjective P2/P3 redesigns will be implemented without explicit approval. Existing working-tree changes are user-owned and must be preserved.</p>
+    </header>
+
+    <div class="notice"><strong>Current classification:</strong> No P0 findings were confirmed. Five P1 areas require resolution before product completion.</div>
+
+    <section class="grid" aria-label="Finding summary">
+      <div class="card"><div class="metric p1">5</div><div>P1 areas</div></div>
+      <div class="card"><div class="metric p2">27+</div><div>P2 reliability and UX items</div></div>
+      <div class="card"><div class="metric p3">0</div><div>P3 items in scope</div></div>
+      <div class="card"><div class="metric ok">70/70</div><div>Backend tests passed locally</div></div>
+    </section>
+
+    <h2>P1 change backlog</h2>
+    <table>
+      <thead><tr><th>Priority / area</th><th>Evidence and required change</th><th>Files</th><th>Acceptance criteria</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="status status-p1">P1</span><br>Partial reversal</td>
+          <td>Partial reversal records only the requested amount but releases every billing period linked to the original payment. Define an allocation rule. Safest first release: reject partial reversals unless explicit month allocation is supplied.</td>
+          <td class="refs"><code>backend/app/api/routes/payments.py:211-245</code><br><code>backend/app/services/billing.py:400-404</code><br><code>frontend/components/app/reverse-payment-dialog.tsx</code></td>
+          <td>Full reversals remain valid. Partial reversals cannot reopen unrelated months. Pending totals, reports, and re-collection remain consistent.</td>
+        </tr>
+        <tr>
+          <td><span class="status status-p1">P1</span><br>Migration history</td>
+          <td><code>hero_slides</code> is added in both migrations 0021 and 0022. Confirm whether either revision has reached a shared database before selecting the repair strategy.</td>
+          <td class="refs"><code>backend/alembic/versions/0021_popup_banner.py:16-22</code><br><code>backend/alembic/versions/0022_hero_slides.py:16-20</code></td>
+          <td>Fresh upgrade reaches head without duplicate-column errors. Existing databases upgrade safely. Downgrade removes the column exactly once.</td>
+        </tr>
+        <tr>
+          <td><span class="status status-p1">P1</span><br>Academic rollover</td>
+          <td>Frontend requests <code>/academic</code>, while backend exposes <code>/academic/years</code>. Result fields also disagree: <code>promoted_count</code>/<code>completed_count</code> versus <code>promoted</code>/<code>completed</code>.</td>
+          <td class="refs"><code>frontend/app/(app)/settings/academic-rollover.tsx:138-142,167-170</code><br><code>backend/app/api/routes/academic.py:49-52</code><br><code>backend/app/api/routes/utilities.py:472-479</code><br><code>backend/app/schemas/promotion.py:35-42</code></td>
+          <td>Year selectors load. Successful rollover displays accurate promoted, completed, and arrears counts. Frontend types match the API contract.</td>
+        </tr>
+        <tr>
+          <td><span class="status status-p1">P1</span><br>Minimal Excel import</td>
+          <td>Backend requires only core student fields, but the frontend requires mappings for optional profile fields, so valid minimal workbooks cannot be submitted.</td>
+          <td class="refs"><code>frontend/app/(app)/settings/page.tsx:67-90,304-307</code><br><code>backend/app/api/routes/students.py:45-55</code></td>
+          <td>Required-only workbooks import successfully. Optional unmapped fields remain null/unchanged. Required-field validation and transaction modes remain strict.</td>
+        </tr>
+        <tr>
+          <td><span class="status status-p1">P1</span><br>Verification</td>
+          <td>Every P1 fix needs regression coverage before completion, with no changes to billing invariants merely to satisfy tests.</td>
+          <td class="refs"><code>backend/tests/test_payments.py</code><br><code>backend/tests/test_students.py</code><br><code>frontend/tests</code></td>
+          <td>Targeted tests pass, then the full affected matrix passes. An independent final review finds no unresolved critical or important issue.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Implementation sequence</h2>
+    <ol>
+      <li><strong>Decision gate:</strong> confirm partial-reversal semantics and whether migrations 0021/0022 have been deployed anywhere.</li>
+      <li><strong>One implementation agent:</strong> handle overlapping payment, migration, rollover, and import work in a shared implementation context.</li>
+      <li>Implement and test the partial-reversal invariant first.</li>
+      <li>Repair migration history using the deployment-safe strategy; run database upgrade/downgrade checks.</li>
+      <li>Align academic rollover endpoint and response contracts.</li>
+      <li>Relax only optional import mappings while retaining backend validation.</li>
+      <li>Delegate one verification agent for the required matrix.</li>
+      <li>Delegate one independent final reviewer to inspect the diff. Fix confirmed critical/important findings and repeat only failed or affected checks.</li>
+    </ol>
+
+    <h2>Required verification matrix</h2>
+    <table>
+      <thead><tr><th>Area</th><th>Check</th><th>Expected result</th></tr></thead>
+      <tbody>
+        <tr><td>Backend</td><td><code>cd backend &amp;&amp; .venv\Scripts\python.exe -m pytest</code></td><td>All tests pass, including new reversal, import, and rollover coverage.</td></tr>
+        <tr><td>Frontend</td><td><code>cd frontend &amp;&amp; npm.cmd run lint</code></td><td>No new lint errors; existing warnings documented or resolved where affected.</td></tr>
+        <tr><td>Frontend</td><td><code>cd frontend &amp;&amp; npm.cmd test</code></td><td>All tests pass, including rollover/import contract tests.</td></tr>
+        <tr><td>Frontend</td><td><code>cd frontend &amp;&amp; npm.cmd run build</code></td><td>Production build completes; backend-dependent generation behavior is documented.</td></tr>
+        <tr><td>Database</td><td>Upgrade from base and from the affected migration state; test downgrade path.</td><td>No duplicate-column or irreversible migration failure.</td></tr>
+        <tr><td>Diff hygiene</td><td><code>git diff --check</code></td><td>No whitespace errors and no unrelated files overwritten.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Deferred P2/P3 findings</h2>
+    <p class="muted">These remain documented but are outside this plan unless explicitly approved: fee/discount integration, expense categories, PDF download behavior, bill-number concurrency coverage, report/export boundary coverage, frontend error states, mobile overflow, focus management, contrast, label association, long-value wrapping, and mojibake cleanup.</p>
+
+    <h2>Decisions required before implementation</h2>
+    <ul>
+      <li>Should partial reversals be rejected until month-level allocation exists, or should allocation be implemented now?</li>
+      <li>Have migrations 0021 or 0022 been applied to any shared/production database?</li>
+    </ul>
+
+    <footer>Generated as a read-only planning artifact. Application source, tests, migrations, and database state were not modified.</footer>
+  </main>
+</body>
+</html>
